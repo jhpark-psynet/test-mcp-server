@@ -1,0 +1,17 @@
+{
+  "name": "test-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server with React components using FastMCP and OpenAI Apps SDK",
+  "scripts": {
+    "install:all": "npm run install:components && npm run install:server",
+    "install:components": "cd components && npm install",
+    "install:server": "uv pip install -r server/requirements.txt",
+    "build": "cd components && npm run build",
+    "build:watch": "cd components && npm run build -- --watch",
+    "server": "cd server && ../.venv/bin/python main.py",
+    "dev": "npm run build && npm run server"
+  },
+  "keywords": ["mcp", "fastmcp", "openai", "react"],
+  "author": "",
+  "license": "MIT"
+}
