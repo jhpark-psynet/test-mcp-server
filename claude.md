@@ -79,25 +79,68 @@ test-mcp-server/
 
 | 파일 | 역할 |
 |------|------|
-| `server/main.py` | MCP 서버 로직, Widget 등록, assets 로드 |
+| `server/main.py` | MCP 서버 로직 (레이어드 아키텍처) |
+| │ - Configuration | Config 클래스, 환경 변수 관리 |
+| │ - Logging | 구조화된 로깅 설정 |
+| │ - Domain models | Widget, ToolInput 스키마 |
+| │ - Assets loading | HTML 파일 로딩 (캐싱) |
+| │ - Widget registry | 위젯 빌드 및 인덱싱 |
+| │ - Metadata helpers | OpenAI 메타데이터 생성 |
+| │ - MCP server | 팩토리 함수로 서버 생성 |
+| │ - App factory | ASGI 앱 생성 (CORS 포함) |
 | `components/src/*/index.tsx` | React 컴포넌트 (빌드 대상) |
 | `components/build.ts` | Vite 빌드 스크립트 (해시 생성, HTML 생성) |
 | `components/assets/*.html` | Python이 읽어서 MCP 리소스로 전달 |
 | `package.json` (루트) | 통합 빌드 스크립트 |
+| `test_mcp.py` | MCP 서버 기능 테스트 스크립트 |
 
 ## 4. Development Guidelines
+
+### 아키텍처 패턴
+
+#### 팩토리 함수 (Factory Pattern)
+서버는 테스트 용이성을 위해 팩토리 함수로 구성됩니다:
+
+```python
+def create_mcp_server(cfg: Config) -> FastMCP:
+    """FastMCP 서버를 생성하고 핸들러를 등록."""
+    # 의존성 주입 가능 → 테스트 시 Mock Config 사용 가능
+
+def create_app(cfg: Config):
+    """ASGI 앱 생성 (CORS 포함)."""
+    # 프로덕션/테스트 환경 분리 가능
+```
+
+#### 레이어드 아키텍처
+`server/main.py`는 명확한 섹션으로 분리:
+1. **Configuration** - 환경 변수 기반 설정
+2. **Logging** - 구조화된 로깅
+3. **Domain models** - Widget, ToolInput
+4. **Assets loading** - HTML 로딩 로직
+5. **Widget registry** - 위젯 빌드/인덱싱
+6. **Metadata helpers** - OpenAI 메타데이터
+7. **MCP server** - 핸들러 등록
+8. **App factory** - ASGI 앱 생성
 
 ### 코딩 규칙
 
 #### Python (server/)
 - **스타일**: PEP 8 준수
 - **타입 힌팅**: 모든 함수에 타입 힌트 필수
-- **Docstring**: 모듈 레벨에 설명 필수
+- **Docstring**: 모듈 레벨 + 공개 함수에 설명 필수
 - **비동기**: MCP 핸들러는 `async def` 사용
+- **Immutability**: Config는 `frozen=True` dataclass
 
 ```python
+@dataclass(frozen=True)
+class Config:
+    """런타임/빌드 구성값 모음."""
+    app_name: str = "test-mcp-server"
+    host: str = os.getenv("HTTP_HOST", "0.0.0.0")
+
 async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
     """Handle tool call requests."""
+    logger.warning("Unknown tool call: %s", req.params.name)
     # ...
 ```
 
@@ -183,6 +226,25 @@ pkill -f "python main.py"
 - **전송 방식**: HTTP/SSE (Server-Sent Events)
 - **프로토콜**: MCP (Model Context Protocol)
 
+### 환경 변수 설정
+
+서버는 환경 변수로 설정을 커스터마이즈할 수 있습니다:
+
+```bash
+# 서버 설정
+HTTP_HOST=127.0.0.1        # 기본: 0.0.0.0
+HTTP_PORT=9000             # 기본: 8000
+
+# 로깅 레벨
+LOG_LEVEL=DEBUG            # 기본: INFO (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+
+# 예시: 다른 포트로 서버 실행
+HTTP_PORT=9000 npm run server
+
+# 예시: 디버그 모드
+LOG_LEVEL=DEBUG npm run server
+```
+
 ### OpenAI Widget Metadata
 MCP 응답에 포함되는 특수 메타데이터:
 
@@ -239,34 +301,61 @@ BASE_URL=http://your-domain.com:4444 npm run build
 ## 8. Tasks or Goals
 
 ### 현재 구현된 기능
-✅ FastMCP 2.0 기반 MCP 서버
+✅ FastMCP 2.0 기반 MCP 서버 (레이어드 아키텍처)
+✅ 팩토리 패턴으로 테스트 용이성 확보
+✅ 환경 변수 기반 설정 (Config 클래스)
+✅ 구조화된 로깅 (DEBUG/INFO/WARNING 레벨)
 ✅ React 컴포넌트 빌드 파이프라인
-✅ Tailwind CSS 통합
-✅ Example Widget (props 전달 예시)
+✅ Tailwind CSS + Zod 통합
+✅ Example Widget (props 전달 + 검증)
 ✅ Hot Reload (서버 자동 재시작)
+✅ Python 테스트 스크립트 (test_mcp.py)
 
 ### 우선순위 작업
 
-#### 1. 새 위젯 추가
+#### 1. 서버 테스트
+```bash
+# Python 테스트 스크립트 실행
+python test_mcp.py
+
+# 또는 가상환경에서
+.venv/bin/python test_mcp.py
+```
+
+테스트 항목:
+- Widget 로딩
+- Tools 리스트
+- Resources 리스트
+- Tool 호출 (props 전달)
+- Resource 읽기
+
+#### 2. 새 위젯 추가
 사용자가 새로운 위젯을 요청하면:
 
 1. `components/src/[widget-name]/index.tsx` 생성
-2. React 컴포넌트 작성 (Props 인터페이스 정의)
+2. React 컴포넌트 작성 (Zod 스키마 포함)
 3. `npm run build` 실행
-4. `server/main.py`의 `widgets` 리스트에 추가:
+4. `server/main.py`의 `build_widgets()` 함수에 추가:
    ```python
-   Widget(
-       identifier="widget-name",
-       title="Widget Title",
-       template_uri="ui://widget/widget-name.html",
-       invoking="Loading widget...",
-       invoked="Widget loaded",
-       html=_load_widget_html("widget-name"),
-       response_text="Rendered widget!",
-   )
+   def build_widgets(cfg: Config) -> list[Widget]:
+       example_html = load_widget_html("example", str(cfg.assets_dir))
+       new_widget_html = load_widget_html("widget-name", str(cfg.assets_dir))  # 추가
+
+       return [
+           Widget(...),  # 기존
+           Widget(  # 새 위젯
+               identifier="widget-name",
+               title="Widget Title",
+               template_uri="ui://widget/widget-name.html",
+               invoking="Loading widget...",
+               invoked="Widget loaded",
+               html=new_widget_html,
+               response_text="Rendered widget!",
+           ),
+       ]
    ```
 
-#### 2. Props 스키마 수정
+#### 3. Props 스키마 수정
 위젯의 입력 스키마를 변경할 때:
 
 1. `ToolInput` Pydantic 모델 수정 또는 새 모델 생성
@@ -274,12 +363,17 @@ BASE_URL=http://your-domain.com:4444 npm run build
 3. `_call_tool_request`에서 `structuredContent` 설정
 4. React 컴포넌트의 `Props` 인터페이스 동기화
 
-#### 3. 디버깅
+#### 4. 디버깅
 문제 발생 시 우선 확인:
 - `components/assets/` 폴더에 HTML 파일 존재 여부
-- 서버 콘솔 로그 (`FileNotFoundError` 확인)
+- 서버 콘솔 로그 확인 (로깅 레벨: INFO, WARNING, DEBUG)
+  ```bash
+  # 디버그 모드로 서버 실행
+  LOG_LEVEL=DEBUG npm run server
+  ```
 - `npm run build` 재실행
 - 서버 재시작
+- 테스트 스크립트 실행 (`python test_mcp.py`)
 
 ### 반복 작업
 - 위젯 추가 시마다 빌드 → 서버 등록 → 테스트
@@ -309,5 +403,5 @@ BASE_URL=http://your-domain.com:4444 npm run build
 
 ---
 
-**마지막 업데이트**: 2025-10-29
-**프로젝트 버전**: 1.0.0
+**마지막 업데이트**: 2025-10-30
+**프로젝트 버전**: 1.1.0 (레이어드 아키텍처, 팩토리 패턴, 환경 변수 설정)
