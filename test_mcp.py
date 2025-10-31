@@ -1,6 +1,6 @@
 """Test script for MCP server.
 
-This script tests the MCP server by directly importing and calling it.
+This script tests the MCP server by creating an instance and testing its handlers.
 """
 
 import asyncio
@@ -11,53 +11,100 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "server"))
 
 import mcp.types as types
-from server.main import mcp, widgets, WIDGETS_BY_ID
+from server.main import CONFIG, build_widgets, create_mcp_server
 
 
-async def test_list_tools():
+async def test_widget_loading():
+    """Test that widgets are loaded correctly."""
+    print("=" * 60)
+    print("1. Testing Widget Loading")
+    print("=" * 60)
+
+    # Build widgets using factory function
+    widgets = build_widgets(CONFIG)
+
+    print(f"\n✓ Loaded {len(widgets)} widget(s):\n")
+
+    for widget in widgets:
+        print(f"  • {widget.identifier}")
+        print(f"    Title: {widget.title}")
+        print(f"    Template URI: {widget.template_uri}")
+        print(f"    HTML Size: {len(widget.html)} bytes")
+        print(f"    Has HTML: {'✓' if widget.html else '✗'}")
+        print()
+
+    return widgets
+
+
+async def test_list_tools(mcp_server):
     """Test listing available tools."""
     print("=" * 60)
-    print("1. Testing Tools List")
+    print("2. Testing Tools List")
     print("=" * 60)
 
-    from server.main import _list_tools
-    tools = await _list_tools()
+    # Get the list_tools handler
+    handler = mcp_server._mcp_server.request_handlers.get(types.ListToolsRequest)
+    if handler is None:
+        # Try getting from registered handlers
+        tools_list = []
+        if hasattr(mcp_server._mcp_server, '_tool_manager'):
+            tools_list = await mcp_server._mcp_server._tool_manager.list_tools()
+        else:
+            # Fallback: call the list_tools directly from server
+            request = types.ListToolsRequest()
+            result = await mcp_server._mcp_server.request_handlers[types.ListToolsRequest](request)
+            if hasattr(result, 'root'):
+                tools_list = result.root.tools
+            else:
+                tools_list = result.tools
+    else:
+        request = types.ListToolsRequest()
+        result = await handler(request)
+        if hasattr(result, 'root'):
+            tools_list = result.root.tools
+        else:
+            tools_list = result.tools
 
-    print(f"\n✓ Found {len(tools)} tool(s):\n")
-    for tool in tools:
+    print(f"\n✓ Found {len(tools_list)} tool(s):\n")
+    for tool in tools_list:
         print(f"  • {tool.name}")
         print(f"    Title: {tool.title}")
         print(f"    Description: {tool.description}")
-        print(f"    Input Schema: {tool.inputSchema}")
         print()
 
-    return tools
+    return tools_list
 
 
-async def test_list_resources():
+async def test_list_resources(mcp_server):
     """Test listing available resources."""
     print("=" * 60)
-    print("2. Testing Resources List")
+    print("3. Testing Resources List")
     print("=" * 60)
 
-    from server.main import _list_resources
-    resources = await _list_resources()
+    request = types.ListResourcesRequest()
+    handler = mcp_server._mcp_server.request_handlers[types.ListResourcesRequest]
+    result = await handler(request)
 
-    print(f"\n✓ Found {len(resources)} resource(s):\n")
-    for resource in resources:
+    if hasattr(result, 'root'):
+        resources_list = result.root.resources
+    else:
+        resources_list = result.resources
+
+    print(f"\n✓ Found {len(resources_list)} resource(s):\n")
+    for resource in resources_list:
         print(f"  • {resource.name}")
         print(f"    URI: {resource.uri}")
         print(f"    MIME Type: {resource.mimeType}")
         print(f"    Description: {resource.description}")
         print()
 
-    return resources
+    return resources_list
 
 
-async def test_call_tool():
+async def test_call_tool(mcp_server):
     """Test calling a tool."""
     print("=" * 60)
-    print("3. Testing Tool Call (example-widget)")
+    print("4. Testing Tool Call (example-widget)")
     print("=" * 60)
 
     # Create tool call request
@@ -69,17 +116,15 @@ async def test_call_tool():
     )
 
     # Call the handler
-    from server.main import _call_tool_request
-    result = await _call_tool_request(request)
+    handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
+    result = await handler(request)
 
     print("\n✓ Tool executed successfully\n")
 
     # ServerResult contains the actual result
-    # Access it through the types.CallToolResult that was passed
     if hasattr(result, 'root'):
         tool_result = result.root
     else:
-        # Try to get the result directly
         tool_result = result
 
     print("Response Content:")
@@ -106,10 +151,10 @@ async def test_call_tool():
     return result
 
 
-async def test_read_resource():
+async def test_read_resource(mcp_server):
     """Test reading a resource."""
     print("=" * 60)
-    print("4. Testing Resource Read")
+    print("5. Testing Resource Read")
     print("=" * 60)
 
     # Create resource read request
@@ -120,8 +165,8 @@ async def test_read_resource():
     )
 
     # Call the handler
-    from server.main import _handle_read_resource
-    result = await _handle_read_resource(request)
+    handler = mcp_server._mcp_server.request_handlers[types.ReadResourceRequest]
+    result = await handler(request)
 
     print("\n✓ Resource read successfully\n")
 
@@ -142,23 +187,6 @@ async def test_read_resource():
     return result
 
 
-async def test_widget_loading():
-    """Test that widgets are loaded correctly."""
-    print("=" * 60)
-    print("5. Testing Widget Loading")
-    print("=" * 60)
-
-    print(f"\n✓ Loaded {len(widgets)} widget(s):\n")
-
-    for widget in widgets:
-        print(f"  • {widget.identifier}")
-        print(f"    Title: {widget.title}")
-        print(f"    Template URI: {widget.template_uri}")
-        print(f"    HTML Size: {len(widget.html)} bytes")
-        print(f"    Has HTML: {'✓' if widget.html else '✗'}")
-        print()
-
-
 async def main():
     """Run all tests."""
     print("\n" + "=" * 60)
@@ -170,17 +198,24 @@ async def main():
         # Test widget loading
         await test_widget_loading()
 
+        # Create MCP server instance
+        print("=" * 60)
+        print("Creating MCP Server Instance")
+        print("=" * 60)
+        mcp_server = create_mcp_server(CONFIG)
+        print("\n✓ MCP server instance created\n")
+
         # Test tools list
-        await test_list_tools()
+        await test_list_tools(mcp_server)
 
         # Test resources list
-        await test_list_resources()
+        await test_list_resources(mcp_server)
 
         # Test tool call
-        await test_call_tool()
+        await test_call_tool(mcp_server)
 
         # Test resource read
-        await test_read_resource()
+        await test_read_resource(mcp_server)
 
         print("\n" + "=" * 60)
         print("✓ All tests passed!")
