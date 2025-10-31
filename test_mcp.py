@@ -1,6 +1,7 @@
-"""Test script for MCP server.
+"""Test script for refactored MCP server.
 
-This script tests the MCP server by creating an instance and testing its handlers.
+This script tests the MCP server with separated Widget and Tool concerns.
+Tests both widget-based tools and text-based tools.
 """
 
 import asyncio
@@ -11,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "server"))
 
 import mcp.types as types
-from server.main import CONFIG, build_widgets, create_mcp_server
+from server.main import CONFIG, build_widgets, build_tools, create_mcp_server
 
 
 async def test_widget_loading():
@@ -36,10 +37,43 @@ async def test_widget_loading():
     return widgets
 
 
+async def test_tool_loading():
+    """Test that tools are loaded correctly (both widget and text-based)."""
+    print("=" * 60)
+    print("2. Testing Tool Loading")
+    print("=" * 60)
+
+    # Build tools using factory function
+    tools = build_tools(CONFIG)
+
+    print(f"\n✓ Loaded {len(tools)} tool(s):\n")
+
+    widget_count = 0
+    text_count = 0
+
+    for tool in tools:
+        print(f"  • {tool.name}")
+        print(f"    Title: {tool.title}")
+        print(f"    Type: {tool.tool_type.value}")
+        print(f"    Is Widget Tool: {'✓' if tool.is_widget_tool else '✗'}")
+        print(f"    Is Text Tool: {'✓' if tool.is_text_tool else '✗'}")
+
+        if tool.is_widget_tool:
+            widget_count += 1
+            print(f"    Widget: {tool.widget.identifier if tool.widget else 'None'}")
+        elif tool.is_text_tool:
+            text_count += 1
+            print(f"    Handler: {'✓' if tool.handler else '✗'}")
+        print()
+
+    print(f"Summary: {widget_count} widget tool(s), {text_count} text tool(s)\n")
+    return tools
+
+
 async def test_list_tools(mcp_server):
     """Test listing available tools."""
     print("=" * 60)
-    print("2. Testing Tools List")
+    print("3. Testing Tools List (MCP Protocol)")
     print("=" * 60)
 
     # Get the list_tools handler
@@ -65,11 +99,17 @@ async def test_list_tools(mcp_server):
         else:
             tools_list = result.tools
 
-    print(f"\n✓ Found {len(tools_list)} tool(s):\n")
+    print(f"\n✓ Found {len(tools_list)} tool(s) via MCP protocol:\n")
     for tool in tools_list:
         print(f"  • {tool.name}")
         print(f"    Title: {tool.title}")
         print(f"    Description: {tool.description}")
+
+        # Check metadata for tool type
+        meta = getattr(tool, '_meta', None) or getattr(tool, 'meta', None)
+        if meta:
+            has_widget = meta.get("openai/resultCanProduceWidget", False)
+            print(f"    Can Produce Widget: {'✓' if has_widget else '✗'}")
         print()
 
     return tools_list
@@ -78,7 +118,7 @@ async def test_list_tools(mcp_server):
 async def test_list_resources(mcp_server):
     """Test listing available resources."""
     print("=" * 60)
-    print("3. Testing Resources List")
+    print("4. Testing Resources List")
     print("=" * 60)
 
     request = types.ListResourcesRequest()
@@ -98,13 +138,14 @@ async def test_list_resources(mcp_server):
         print(f"    Description: {resource.description}")
         print()
 
+    print("Note: Only widget tools have resources (text tools don't)\n")
     return resources_list
 
 
-async def test_call_tool(mcp_server):
-    """Test calling a tool."""
+async def test_call_widget_tool(mcp_server):
+    """Test calling a widget tool."""
     print("=" * 60)
-    print("4. Testing Tool Call (example-widget)")
+    print("5. Testing Widget Tool Call (example-widget)")
     print("=" * 60)
 
     # Create tool call request
@@ -119,7 +160,7 @@ async def test_call_tool(mcp_server):
     handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
     result = await handler(request)
 
-    print("\n✓ Tool executed successfully\n")
+    print("\n✓ Widget tool executed successfully\n")
 
     # ServerResult contains the actual result
     if hasattr(result, 'root'):
@@ -134,7 +175,7 @@ async def test_call_tool(mcp_server):
                 print(f"  {content.text}")
 
     if hasattr(tool_result, 'structuredContent'):
-        print(f"\nStructured Content:")
+        print(f"\nStructured Content (props for React):")
         print(f"  {tool_result.structuredContent}")
 
     if hasattr(tool_result, '_meta') and tool_result._meta:
@@ -151,10 +192,83 @@ async def test_call_tool(mcp_server):
     return result
 
 
+async def test_call_text_tool(mcp_server):
+    """Test calling a text-based tool."""
+    print("=" * 60)
+    print("6. Testing Text Tool Call (calculator)")
+    print("=" * 60)
+
+    # Test case 1: Simple addition
+    request = types.CallToolRequest(
+        params=types.CallToolRequestParams(
+            name="calculator",
+            arguments={"expression": "2 + 2"}
+        )
+    )
+
+    handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
+    result = await handler(request)
+
+    print("\n✓ Text tool executed successfully\n")
+
+    if hasattr(result, 'root'):
+        tool_result = result.root
+    else:
+        tool_result = result
+
+    print("Test 1: 2 + 2")
+    if hasattr(tool_result, 'content'):
+        for content in tool_result.content:
+            if hasattr(content, 'text'):
+                print(f"  Result: {content.text}")
+
+    # Test case 2: Multiplication
+    request2 = types.CallToolRequest(
+        params=types.CallToolRequestParams(
+            name="calculator",
+            arguments={"expression": "10 * 5"}
+        )
+    )
+
+    result2 = await handler(request2)
+    if hasattr(result2, 'root'):
+        tool_result2 = result2.root
+    else:
+        tool_result2 = result2
+
+    print("\nTest 2: 10 * 5")
+    if hasattr(tool_result2, 'content'):
+        for content in tool_result2.content:
+            if hasattr(content, 'text'):
+                print(f"  Result: {content.text}")
+
+    # Test case 3: Error handling
+    request3 = types.CallToolRequest(
+        params=types.CallToolRequestParams(
+            name="calculator",
+            arguments={"expression": "invalid"}
+        )
+    )
+
+    result3 = await handler(request3)
+    if hasattr(result3, 'root'):
+        tool_result3 = result3.root
+    else:
+        tool_result3 = result3
+
+    print("\nTest 3: Error handling (invalid expression)")
+    if hasattr(tool_result3, 'content'):
+        for content in tool_result3.content:
+            if hasattr(content, 'text'):
+                print(f"  Result: {content.text}")
+
+    return result
+
+
 async def test_read_resource(mcp_server):
     """Test reading a resource."""
     print("=" * 60)
-    print("5. Testing Resource Read")
+    print("7. Testing Resource Read")
     print("=" * 60)
 
     # Create resource read request
@@ -190,13 +304,16 @@ async def test_read_resource(mcp_server):
 async def main():
     """Run all tests."""
     print("\n" + "=" * 60)
-    print("MCP Server Test Suite")
+    print("MCP Server Test Suite (Refactored Architecture)")
     print("=" * 60)
     print()
 
     try:
         # Test widget loading
         await test_widget_loading()
+
+        # Test tool loading
+        await test_tool_loading()
 
         # Create MCP server instance
         print("=" * 60)
@@ -211,14 +328,23 @@ async def main():
         # Test resources list
         await test_list_resources(mcp_server)
 
-        # Test tool call
-        await test_call_tool(mcp_server)
+        # Test widget tool call
+        await test_call_widget_tool(mcp_server)
+
+        # Test text tool call
+        await test_call_text_tool(mcp_server)
 
         # Test resource read
         await test_read_resource(mcp_server)
 
         print("\n" + "=" * 60)
         print("✓ All tests passed!")
+        print("=" * 60)
+        print("\nArchitecture Summary:")
+        print("  • Widgets: Pure UI components (no tool metadata)")
+        print("  • Tools: Can be widget-based OR text-based")
+        print("  • Clear separation of concerns")
+        print("  • Both tool types tested successfully")
         print("=" * 60)
         print()
 

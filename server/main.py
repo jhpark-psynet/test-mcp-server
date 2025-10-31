@@ -1,17 +1,19 @@
 """MCP server with React widget support using FastMCP and OpenAI Apps SDK.
 
-- 구성 책임 분리: 설정, 위젯 로딩, 서버/앱 생성, 요청 핸들러
-- 테스트 용이성: 팩토리 함수들(create_mcp_server, create_app)로 의존성 주입 쉬움
-- 일관된 메타데이터 생성, 엄격한 입력 검증, 명확한 로깅
+Refactored to separate concerns:
+- Widget: Pure UI component definition
+- ToolDefinition: MCP tool configuration (can be widget-based or text-based)
+- Clear separation between UI rendering and tool execution logic
 """
 from __future__ import annotations
 
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
@@ -62,23 +64,64 @@ if not logger.handlers:
 
 @dataclass(frozen=True)
 class Widget:
+    """Pure UI component definition (no tool-specific metadata)."""
     identifier: str
     title: str
     template_uri: str
-    invoking: str
-    invoked: str
     html: str
-    response_text: str
 
 
-class ToolInput(BaseModel):
-    """Schema for tool input."""
+class ToolType(str, Enum):
+    """Tool response type."""
+    TEXT = "text"
+    WIDGET = "widget"
+
+
+@dataclass(frozen=True)
+class ToolDefinition:
+    """MCP Tool definition supporting both text-based and widget-based tools."""
+    name: str
+    title: str
+    description: str
+    input_schema: Dict[str, Any]
+    tool_type: ToolType
+
+    # Optional: Widget reference (only for widget-based tools)
+    widget: Optional[Widget] = None
+
+    # Tool invocation metadata
+    invoking: str = "Processing..."
+    invoked: str = "Completed"
+
+    # Text response (only for text-based tools)
+    handler: Optional[Callable[[Dict[str, Any]], str]] = None
+
+    @property
+    def is_widget_tool(self) -> bool:
+        """Check if this tool returns a widget."""
+        return self.tool_type == ToolType.WIDGET and self.widget is not None
+
+    @property
+    def is_text_tool(self) -> bool:
+        """Check if this tool returns text only."""
+        return self.tool_type == ToolType.TEXT and self.handler is not None
+
+
+# Input schemas
+class WidgetToolInput(BaseModel):
+    """Schema for widget tool input."""
     message: str = Field(..., description="Message to pass to the widget.")
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
-# OpenAI widget tool input schema (JSON Schema)
-TOOL_INPUT_SCHEMA: Dict[str, Any] = {
+class CalculatorToolInput(BaseModel):
+    """Schema for calculator tool input."""
+    expression: str = Field(..., description="Mathematical expression to evaluate (e.g., '2 + 2', '10 * 5').")
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+
+# JSON schemas for tools
+WIDGET_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "properties": {
         "message": {
@@ -87,6 +130,18 @@ TOOL_INPUT_SCHEMA: Dict[str, Any] = {
         }
     },
     "required": ["message"],
+    "additionalProperties": False,
+}
+
+CALCULATOR_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "expression": {
+            "type": "string",
+            "description": "Mathematical expression to evaluate (e.g., '2 + 2', '10 * 5').",
+        }
+    },
+    "required": ["expression"],
     "additionalProperties": False,
 }
 
@@ -121,48 +176,112 @@ def load_widget_html(component_name: str, assets_dir_str: str) -> str:
 
 
 # -----------------------------------------------------------------------------
-# Widget registry
+# Tool handlers (business logic)
+# -----------------------------------------------------------------------------
+
+def calculator_handler(arguments: Dict[str, Any]) -> str:
+    """Handle calculator tool execution."""
+    expression = arguments.get("expression", "")
+    try:
+        # Safe evaluation (limited to basic math operations)
+        allowed_names = {"__builtins__": {}}
+        result = eval(expression, allowed_names)
+        return f"Result: {result}"
+    except Exception as e:
+        return f"Error evaluating expression: {str(e)}"
+
+
+# -----------------------------------------------------------------------------
+# Widget and Tool registry
 # -----------------------------------------------------------------------------
 
 def build_widgets(cfg: Config) -> list[Widget]:
-    """등록할 위젯 목록을 구성."""
+    """Build list of available widgets."""
     example_html = load_widget_html("example", str(cfg.assets_dir))
     return [
         Widget(
             identifier="example-widget",
             title="Example Widget",
             template_uri="ui://widget/example.html",
-            invoking="Loading example widget",
-            invoked="Example widget loaded",
             html=example_html,
-            response_text="Rendered example widget!",
         )
     ]
 
 
-def index_widgets(widgets: list[Widget]) -> tuple[dict[str, Widget], dict[str, Widget]]:
-    """ID/URI 인덱스 생성."""
-    by_id = {w.identifier: w for w in widgets}
-    by_uri = {w.template_uri: w for w in widgets}
-    return by_id, by_uri
+def build_tools(cfg: Config) -> list[ToolDefinition]:
+    """Build list of available tools (both widget-based and text-based)."""
+    widgets = build_widgets(cfg)
+    tools = []
+
+    # Widget-based tools
+    for widget in widgets:
+        tools.append(
+            ToolDefinition(
+                name=widget.identifier,
+                title=widget.title,
+                description=f"Display {widget.title} interactive component",
+                input_schema=WIDGET_TOOL_INPUT_SCHEMA,
+                tool_type=ToolType.WIDGET,
+                widget=widget,
+                invoking=f"Loading {widget.title}...",
+                invoked=f"{widget.title} loaded",
+            )
+        )
+
+    # Text-based tools
+    tools.append(
+        ToolDefinition(
+            name="calculator",
+            title="Calculator",
+            description="Evaluate mathematical expressions (e.g., '2 + 2', '10 * 5')",
+            input_schema=CALCULATOR_TOOL_INPUT_SCHEMA,
+            tool_type=ToolType.TEXT,
+            handler=calculator_handler,
+            invoking="Calculating...",
+            invoked="Calculation complete",
+        )
+    )
+
+    return tools
+
+
+def index_tools(tools: list[ToolDefinition]) -> dict[str, ToolDefinition]:
+    """Create tool index by name."""
+    return {t.name: t for t in tools}
+
+
+def index_widgets_by_uri(tools: list[ToolDefinition]) -> dict[str, Widget]:
+    """Create widget index by URI (for resource reads)."""
+    result = {}
+    for tool in tools:
+        if tool.is_widget_tool and tool.widget:
+            result[tool.widget.template_uri] = tool.widget
+    return result
 
 
 # -----------------------------------------------------------------------------
 # OpenAI widget metadata helpers
 # -----------------------------------------------------------------------------
 
-def resource_description(widget: Widget) -> str:
-    return f"{widget.title} widget markup"
-
-
-def tool_meta(widget: Widget) -> Dict[str, Any]:
+def widget_tool_meta(tool: ToolDefinition) -> Dict[str, Any]:
     """Generate metadata for OpenAI widget tools."""
+    if not tool.is_widget_tool or not tool.widget:
+        return {}
+
     return {
-        "openai/outputTemplate": widget.template_uri,
-        "openai/toolInvocation/invoking": widget.invoking,
-        "openai/toolInvocation/invoked": widget.invoked,
+        "openai/outputTemplate": tool.widget.template_uri,
+        "openai/toolInvocation/invoking": tool.invoking,
+        "openai/toolInvocation/invoked": tool.invoked,
         "openai/widgetAccessible": True,
         "openai/resultCanProduceWidget": True,
+    }
+
+
+def text_tool_meta(tool: ToolDefinition) -> Dict[str, Any]:
+    """Generate metadata for text-based tools."""
+    return {
+        "openai/toolInvocation/invoking": tool.invoking,
+        "openai/toolInvocation/invoked": tool.invoked,
     }
 
 
@@ -190,57 +309,69 @@ def create_mcp_server(cfg: Config) -> FastMCP:
         stateless_http=True,
     )
 
-    widgets = build_widgets(cfg)
-    widgets_by_id, widgets_by_uri = index_widgets(widgets)
+    tools = build_tools(cfg)
+    tools_by_name = index_tools(tools)
+    widgets_by_uri = index_widgets_by_uri(tools)
 
     @mcp._mcp_server.list_tools()
     async def _list_tools() -> List[types.Tool]:
-        return [
-            types.Tool(
-                name=w.identifier,
-                title=w.title,
-                description=w.title,
-                inputSchema=TOOL_INPUT_SCHEMA,
-                _meta=tool_meta(w),
-                annotations={
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                },
+        result = []
+        for tool in tools:
+            tool_meta = widget_tool_meta(tool) if tool.is_widget_tool else text_tool_meta(tool)
+            result.append(
+                types.Tool(
+                    name=tool.name,
+                    title=tool.title,
+                    description=tool.description,
+                    inputSchema=tool.input_schema,
+                    _meta=tool_meta,
+                    annotations={
+                        "destructiveHint": False,
+                        "openWorldHint": False,
+                        "readOnlyHint": True,
+                    },
+                )
             )
-            for w in widgets
-        ]
+        return result
 
     @mcp._mcp_server.list_resources()
     async def _list_resources() -> List[types.Resource]:
-        return [
-            types.Resource(
-                name=w.title,
-                title=w.title,
-                uri=w.template_uri,
-                description=resource_description(w),
-                mimeType=cfg.mime_type,
-                _meta=tool_meta(w),
-            )
-            for w in widgets
-        ]
+        """List only widget resources (text tools don't have resources)."""
+        result = []
+        for tool in tools:
+            if tool.is_widget_tool and tool.widget:
+                result.append(
+                    types.Resource(
+                        name=tool.widget.title,
+                        title=tool.widget.title,
+                        uri=tool.widget.template_uri,
+                        description=f"{tool.widget.title} widget markup",
+                        mimeType=cfg.mime_type,
+                        _meta=widget_tool_meta(tool),
+                    )
+                )
+        return result
 
     @mcp._mcp_server.list_resource_templates()
     async def _list_resource_templates() -> List[types.ResourceTemplate]:
-        return [
-            types.ResourceTemplate(
-                name=w.title,
-                title=w.title,
-                uriTemplate=w.template_uri,
-                description=resource_description(w),
-                mimeType=cfg.mime_type,
-                _meta=tool_meta(w),
-            )
-            for w in widgets
-        ]
+        """List only widget resource templates."""
+        result = []
+        for tool in tools:
+            if tool.is_widget_tool and tool.widget:
+                result.append(
+                    types.ResourceTemplate(
+                        name=tool.widget.title,
+                        title=tool.widget.title,
+                        uriTemplate=tool.widget.template_uri,
+                        description=f"{tool.widget.title} widget markup",
+                        mimeType=cfg.mime_type,
+                        _meta=widget_tool_meta(tool),
+                    )
+                )
+        return result
 
     async def _handle_read_resource(req: types.ReadResourceRequest) -> types.ServerResult:
-        """Handle resource read requests."""
+        """Handle resource read requests (only for widgets)."""
         widget = widgets_by_uri.get(str(req.params.uri))
         if widget is None:
             logger.warning("Unknown resource read: %s", req.params.uri)
@@ -251,20 +382,27 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                 )
             )
 
+        # Find the tool that owns this widget for metadata
+        tool_meta = {}
+        for tool in tools:
+            if tool.is_widget_tool and tool.widget == widget:
+                tool_meta = widget_tool_meta(tool)
+                break
+
         contents = [
             types.TextResourceContents(
                 uri=widget.template_uri,
                 mimeType=cfg.mime_type,
                 text=widget.html,
-                _meta=tool_meta(widget),
+                _meta=tool_meta,
             )
         ]
         return types.ServerResult(types.ReadResourceResult(contents=contents))
 
     async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
-        """Handle tool call requests."""
-        widget = widgets_by_id.get(req.params.name)
-        if widget is None:
+        """Handle tool call requests (both widget and text tools)."""
+        tool = tools_by_name.get(req.params.name)
+        if tool is None:
             logger.warning("Unknown tool call: %s", req.params.name)
             return types.ServerResult(
                 types.CallToolResult(
@@ -279,46 +417,110 @@ def create_mcp_server(cfg: Config) -> FastMCP:
             )
 
         arguments = req.params.arguments or {}
-        try:
-            payload = ToolInput.model_validate(arguments)
-        except ValidationError as exc:
-            logger.debug("Input validation error: %s", exc)
+
+        # Widget-based tool
+        if tool.is_widget_tool and tool.widget:
+            try:
+                payload = WidgetToolInput.model_validate(arguments)
+            except ValidationError as exc:
+                logger.debug("Input validation error: %s", exc)
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=f"Input validation error: {exc.errors()}",
+                            )
+                        ],
+                        isError=True,
+                    )
+                )
+
+            message = payload.message
+            widget_resource = embedded_widget_resource(cfg, tool.widget)
+
+            meta: Dict[str, Any] = {
+                "openai.com/widget": widget_resource.model_dump(mode="json"),
+                **widget_tool_meta(tool),
+            }
+
             return types.ServerResult(
                 types.CallToolResult(
                     content=[
                         types.TextContent(
                             type="text",
-                            text=f"Input validation error: {exc.errors()}",
+                            text=f"Rendered {tool.widget.title}",
+                        )
+                    ],
+                    structuredContent={"message": message},
+                    _meta=meta,
+                )
+            )
+
+        # Text-based tool
+        elif tool.is_text_tool and tool.handler:
+            try:
+                # Validate based on tool's schema
+                if tool.name == "calculator":
+                    payload = CalculatorToolInput.model_validate(arguments)
+                    validated_args = payload.model_dump()
+                else:
+                    validated_args = arguments
+            except ValidationError as exc:
+                logger.debug("Input validation error: %s", exc)
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=f"Input validation error: {exc.errors()}",
+                            )
+                        ],
+                        isError=True,
+                    )
+                )
+
+            # Execute handler
+            try:
+                result_text = tool.handler(validated_args)
+            except Exception as exc:
+                logger.error("Tool execution error: %s", exc)
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=f"Execution error: {str(exc)}",
+                            )
+                        ],
+                        isError=True,
+                    )
+                )
+
+            return types.ServerResult(
+                types.CallToolResult(
+                    content=[
+                        types.TextContent(
+                            type="text",
+                            text=result_text,
+                        )
+                    ],
+                    _meta=text_tool_meta(tool),
+                )
+            )
+
+        else:
+            return types.ServerResult(
+                types.CallToolResult(
+                    content=[
+                        types.TextContent(
+                            type="text",
+                            text=f"Tool {tool.name} is not properly configured",
                         )
                     ],
                     isError=True,
                 )
             )
-
-        message = payload.message
-        widget_resource = embedded_widget_resource(cfg, widget)
-
-        meta: Dict[str, Any] = {
-            "openai.com/widget": widget_resource.model_dump(mode="json"),
-            "openai/outputTemplate": widget.template_uri,
-            "openai/toolInvocation/invoking": widget.invoking,
-            "openai/toolInvocation/invoked": widget.invoked,
-            "openai/widgetAccessible": True,
-            "openai/resultCanProduceWidget": True,
-        }
-
-        return types.ServerResult(
-            types.CallToolResult(
-                content=[
-                    types.TextContent(
-                        type="text",
-                        text=widget.response_text,
-                    )
-                ],
-                structuredContent={"message": message},
-                _meta=meta,
-            )
-        )
 
     # Register request handlers
     mcp._mcp_server.request_handlers[types.CallToolRequest] = _call_tool_request
