@@ -11,7 +11,12 @@
     "server": "cd server && ../.venv/bin/python main.py",
     "dev": "npm run build && npm run server"
   },
-  "keywords": ["mcp", "fastmcp", "openai", "react"],
+  "keywords": [
+    "mcp",
+    "fastmcp",
+    "openai",
+    "react"
+  ],
   "author": "",
   "license": "MIT"
 }

@@ -361,4 +361,4 @@ if __name__ == "__main__":
 
     print(f"Starting MCP server on http://{CONFIG.host}:{CONFIG.port}")
     print(f"Assets directory: {CONFIG.assets_dir}")
-    uvicorn.run("server.main:app", host=CONFIG.host, port=CONFIG.port, reload=True)
+    uvicorn.run("main:app", host=CONFIG.host, port=CONFIG.port, reload=True)
