@@ -40,7 +40,57 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
 - **npm**: 패키지 관리 (루트 스크립트)
 - **uv**: Python 패키지 관리 (빠른 pip)
 
-## 3. Folder Structure
+## 3. Available Widgets
+
+서버에 포함된 빌트인 위젯:
+
+### 1. Example Widget (`example`)
+- **목적**: 기본 위젯 기능 데모
+- **Props**: `message` (string)
+- **위치**: `components/src/example/`
+- **사용법**: React 위젯과 props 전달 방식 학습용
+
+### 2. API Result Widget (`api-result`)
+- **목적**: 외부 API 응답 시각화
+- **Props**: `success`, `endpoint`, `data`, `error`, `timestamp`
+- **위치**: `components/src/api-result/`
+- **기능**:
+  - 성공 뷰: 데이터 요약 및 확장 가능한 JSON 뷰
+  - 에러 뷰: 상세한 에러 정보 표시
+  - 필드 뱃지 및 타입 인디케이터
+  - Tailwind CSS 반응형 디자인
+
+## 4. Available Tools
+
+서버가 제공하는 MCP 도구 3개:
+
+### 1. Calculator (텍스트 도구)
+- **이름**: `calculator`
+- **타입**: Text-based tool
+- **입력**: `expression` (string) - 계산할 수식
+- **출력**: 계산 결과 또는 에러 메시지
+- **예시**: `{"expression": "2 + 2"}` → `"Result: 4.0"`
+
+### 2. Example Widget (위젯 도구)
+- **이름**: `example-widget`
+- **타입**: Widget-based tool
+- **입력**: `message` (string, optional)
+- **출력**: 커스텀 메시지와 함께 예제 위젯 렌더링
+- **위젯**: Example Widget 컴포넌트 사용
+
+### 3. External Fetch (이중 모드 도구)
+- **이름**: `external-fetch`
+- **타입**: Widget 또는 Text 도구 (설정 가능)
+- **입력**:
+  - `query` (string) - API 엔드포인트 경로
+  - `response_mode` (string) - "text" 또는 "widget" (기본값: "text")
+  - `params` (object, optional) - 쿼리 파라미터
+- **출력**:
+  - Text 모드: 요약 및 JSON이 포함된 포맷팅된 텍스트
+  - Widget 모드: 인터랙티브 API Result 위젯
+- **요구사항**: `EXTERNAL_API_BASE_URL` 및 `EXTERNAL_API_KEY` 환경 변수 설정 필요
+
+## 5. Folder Structure
 
 ```
 test-mcp-server/
@@ -112,7 +162,7 @@ test-mcp-server/
 | `test_mcp.py` | MCP 서버 통합 테스트 (9개 테스트) |
 | `.env.example` | 환경 변수 예시 파일 (External API 설정 포함) |
 
-## 4. Development Guidelines
+## 6. Development Guidelines
 
 ### 아키텍처 패턴
 
@@ -190,7 +240,7 @@ function App({ message = "Hello from React!" }: AppProps) {
 - **최대 줄 길이**: 100자 (Python), 120자 (TypeScript)
 - **문자열**: Python은 double quotes, TypeScript는 single quotes 권장
 
-## 5. Common Commands
+## 7. Common Commands
 
 ### 초기 설정
 ```bash
@@ -237,7 +287,7 @@ lsof -i :8000
 pkill -f "python main.py"
 ```
 
-## 6. Integration / APIs
+## 8. Integration / APIs
 
 ### MCP Protocol
 - **엔드포인트**: `http://localhost:8000`
@@ -285,7 +335,65 @@ _meta = {
 BASE_URL=http://your-domain.com:4444 npm run build
 ```
 
-## 7. Important Notes
+## 9. Testing
+
+프로젝트는 종합적인 테스트 커버리지를 제공합니다:
+
+### Unit Tests (유닛 테스트)
+
+API 클라이언트를 독립적으로 테스트:
+
+```bash
+# 가상환경 활성화
+source .venv/bin/activate
+
+# API 클라이언트 유닛 테스트 실행
+pytest server/test_api_client.py -v
+```
+
+**테스트 커버리지** (`server/test_api_client.py`):
+- ✅ 성공적인 API 요청
+- ✅ HTTP 에러 처리 (404, 500)
+- ✅ 타임아웃 처리
+- ✅ 연결 에러 처리
+- ✅ 쿼리 파라미터 인코딩
+
+**결과**: 5/5 테스트 통과
+
+### Integration Tests (통합 테스트)
+
+전체 MCP 서버 테스트:
+
+```bash
+# MCP 서버 통합 테스트 실행
+.venv/bin/python test_mcp.py
+
+# 외부 API와 함께 테스트 (선택 사항)
+env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
+    EXTERNAL_API_KEY=dummy \
+    .venv/bin/python test_mcp.py
+```
+
+**테스트 커버리지** (`test_mcp.py`):
+- ✅ 위젯 로딩 (2개 위젯)
+- ✅ 도구 로딩 (3개 도구)
+- ✅ MCP 프로토콜 도구 리스트
+- ✅ MCP 프로토콜 리소스 리스트
+- ✅ 위젯 도구 실행 (example-widget)
+- ✅ 텍스트 도구 실행 (calculator)
+- ✅ 리소스 읽기 (위젯 HTML)
+- ✅ 외부 API fetch - 텍스트 모드
+- ✅ 외부 API fetch - 위젯 모드
+
+**결과**: 9/9 테스트 통과 (유닛 테스트 포함 총 14/14)
+
+### 테스트 전략
+
+- **유닛 테스트**: httpx를 mocking하여 API 클라이언트 격리 테스트
+- **통합 테스트**: 실제 MCP 프로토콜 흐름 검증
+- **외부 API 테스트**: JSONPlaceholder 공개 API로 실제 HTTP 요청 검증
+
+## 10. Important Notes
 
 ### ⚠️ 주의사항
 
@@ -316,7 +424,7 @@ BASE_URL=http://your-domain.com:4444 npm run build
 - **system Python 사용**: 반드시 `.venv`의 Python 사용
 - **components/ 내에서 서버 실행**: 경로 문제 발생
 
-## 8. Tasks or Goals
+## 11. Tasks or Goals
 
 ### 현재 구현된 기능
 ✅ FastMCP 2.0 기반 MCP 서버 (레이어드 아키텍처)
@@ -403,7 +511,7 @@ python test_mcp.py
 - 위젯 추가 시마다 빌드 → 서버 등록 → 테스트
 - Props 변경 시 Python + TypeScript 인터페이스 동기화 확인
 
-## 9. Persona or Tone
+## 12. Persona or Tone
 
 ### 커뮤니케이션 스타일
 - **언어**: 한국어 (코드 내 주석/문서는 영어 가능)

@@ -8,16 +8,23 @@ MCP server with React widget support using FastMCP and OpenAI Apps SDK.
 test-mcp-server/
 ├── server/              # Python FastMCP server
 │   ├── main.py         # MCP server entry point
+│   ├── api_client.py   # External API HTTP client
+│   ├── exceptions.py   # Custom exception classes
+│   ├── test_api_client.py  # API client unit tests
 │   └── requirements.txt
 ├── components/          # React UI components
 │   ├── src/            # React source code
-│   │   └── example/    # Example widget
+│   │   ├── example/    # Example widget
+│   │   ├── api-result/ # API response visualization widget
+│   │   └── index.css   # Shared styles
 │   ├── assets/         # Built HTML/JS/CSS (generated)
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── vite.config.ts
 │   └── build.ts        # Build script
+├── test_mcp.py          # MCP server integration tests
 ├── package.json         # Root build scripts
+├── .env.example         # Environment variables template
 └── README.md
 ```
 
@@ -33,6 +40,56 @@ React (TSX) → Build → HTML → MCP Server → ChatGPT (Render)
                               ↓
                         structuredContent (props)
 ```
+
+## Available Widgets
+
+The server includes two built-in widgets:
+
+### 1. Example Widget (`example`)
+- **Purpose**: Demonstrates basic widget functionality
+- **Props**: `message` (string)
+- **Location**: `components/src/example/`
+- **Usage**: Shows how to create a simple React widget with props
+
+### 2. API Result Widget (`api-result`)
+- **Purpose**: Visualizes external API responses
+- **Props**: `success`, `endpoint`, `data`, `error`, `timestamp`
+- **Location**: `components/src/api-result/`
+- **Features**:
+  - Success view with data summary and expandable JSON
+  - Error view with detailed error information
+  - Field badges and type indicators
+  - Responsive design with Tailwind CSS
+
+## Available Tools
+
+The server provides three MCP tools:
+
+### 1. Calculator (Text Tool)
+- **Name**: `calculator`
+- **Type**: Text-based tool
+- **Input**: `expression` (string) - Math expression to evaluate
+- **Output**: Calculated result or error message
+- **Example**: `{"expression": "2 + 2"}` → `"Result: 4.0"`
+
+### 2. Example Widget (Widget Tool)
+- **Name**: `example-widget`
+- **Type**: Widget-based tool
+- **Input**: `message` (string, optional)
+- **Output**: Renders the example widget with custom message
+- **Widget**: Uses the Example Widget component
+
+### 3. External Fetch (Dual-Mode Tool)
+- **Name**: `external-fetch`
+- **Type**: Widget or Text tool (configurable)
+- **Input**:
+  - `query` (string) - API endpoint path
+  - `response_mode` (string) - "text" or "widget" (default: "text")
+  - `params` (object, optional) - Query parameters
+- **Output**:
+  - Text mode: Formatted text with summary and JSON
+  - Widget mode: Interactive API Result widget
+- **Requirements**: `EXTERNAL_API_BASE_URL` and `EXTERNAL_API_KEY` environment variables
 
 ## Setup
 
@@ -335,12 +392,80 @@ Edit `server/main.py` and change the port:
 uvicorn.run("main:app", host="0.0.0.0", port=8001)
 ```
 
+## Testing
+
+The project includes comprehensive test coverage:
+
+### Unit Tests
+
+Test the API client in isolation:
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Run API client unit tests
+pytest server/test_api_client.py -v
+```
+
+**Test Coverage** (`server/test_api_client.py`):
+- ✅ Successful API requests
+- ✅ HTTP error handling (404, 500)
+- ✅ Timeout handling
+- ✅ Connection error handling
+- ✅ Query parameter encoding
+
+**Results**: 5/5 tests passing
+
+### Integration Tests
+
+Test the complete MCP server:
+
+```bash
+# Run MCP server integration tests
+.venv/bin/python test_mcp.py
+
+# With external API (optional)
+env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
+    EXTERNAL_API_KEY=dummy \
+    .venv/bin/python test_mcp.py
+```
+
+**Test Coverage** (`test_mcp.py`):
+- ✅ Widget loading (2 widgets)
+- ✅ Tool loading (3 tools)
+- ✅ MCP protocol tools list
+- ✅ MCP protocol resources list
+- ✅ Widget tool execution (example-widget)
+- ✅ Text tool execution (calculator)
+- ✅ Resource reading (widget HTML)
+- ✅ External API fetch - text mode
+- ✅ External API fetch - widget mode
+
+**Results**: 9/9 tests passing (14/14 total with unit tests)
+
 ## Tech Stack
 
-- **Python**: FastMCP 2.0, Uvicorn, Starlette
-- **React**: React 19, TypeScript
-- **Build**: Vite, esbuild
-- **MCP**: Model Context Protocol
+### Backend
+- **FastMCP 2.0**: MCP server framework
+- **httpx**: Async HTTP client for external API calls
+- **Uvicorn**: ASGI web server
+- **Starlette**: Web framework
+- **pytest**: Testing framework with async support
+
+### Frontend
+- **React 19**: UI component library
+- **TypeScript**: Type-safe JavaScript
+- **Tailwind CSS 4.1**: Utility-first CSS framework
+- **Zod**: Runtime type validation
+
+### Build Tools
+- **Vite 7**: Fast build tool and dev server
+- **esbuild**: JavaScript bundler
+- **npm**: Package manager
+
+### Protocol
+- **MCP (Model Context Protocol)**: Communication protocol between LLM clients and servers
 
 ## License
 
