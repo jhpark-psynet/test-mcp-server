@@ -359,6 +359,83 @@ async def test_external_fetch(mcp_server):
     return result
 
 
+async def test_external_fetch_widget_mode(mcp_server):
+    """Test external API fetch with widget mode (if configured)."""
+    print("=" * 60)
+    print("9. Testing External API Fetch (Widget Mode)")
+    print("=" * 60)
+
+    # Check if external API is configured
+    if not CONFIG.has_external_api:
+        print("\n⏭️  External API not configured, skipping test")
+        print("   Set EXTERNAL_API_BASE_URL and EXTERNAL_API_KEY to enable\n")
+        return None
+
+    print(f"\n✓ External API configured: {CONFIG.external_api_base_url}\n")
+
+    # Test with JSONPlaceholder API
+    request = types.CallToolRequest(
+        params=types.CallToolRequestParams(
+            name="external-fetch",
+            arguments={
+                "query": "/posts/1",
+                "response_mode": "widget",  # Widget mode
+            }
+        )
+    )
+
+    # Call the handler
+    handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
+    result = await handler(request)
+
+    print("✓ External API fetch (widget mode) executed\n")
+
+    # Extract result
+    if hasattr(result, 'root'):
+        tool_result = result.root
+    else:
+        tool_result = result
+
+    # Check for widget metadata
+    has_widget = False
+    meta_data = getattr(tool_result, 'meta', None) or getattr(tool_result, '_meta', None)
+
+    if meta_data and isinstance(meta_data, dict):
+        widget_meta = meta_data.get("openai.com/widget")
+        if widget_meta:
+            has_widget = True
+            print("Widget Response:")
+            print(f"  ✓ Widget metadata present")
+            print(f"  Template URI: {meta_data.get('openai/outputTemplate')}")
+            print(f"  Widget Accessible: {meta_data.get('openai/widgetAccessible')}")
+
+            # Show widget HTML size
+            if widget_meta.get('resource', {}).get('text'):
+                html_size = len(widget_meta['resource']['text'])
+                print(f"  HTML Size: {html_size} bytes")
+
+    # Check structured content
+    if hasattr(tool_result, 'structuredContent') and tool_result.structuredContent:
+        print(f"\nStructured Content (props for React):")
+        content = tool_result.structuredContent
+        print(f"  Success: {content.get('success')}")
+        print(f"  Endpoint: {content.get('endpoint')}")
+        if content.get('data'):
+            import json
+            data_preview = json.dumps(content.get('data'), indent=2)[:200]
+            print(f"  Data preview: {data_preview}...")
+
+    is_error = getattr(tool_result, 'isError', False)
+    if is_error:
+        print("\n  ⚠️  Request returned an error (check API configuration)")
+    elif has_widget:
+        print("\n  ✓ Widget response successful")
+    else:
+        print("\n  ⚠️  No widget metadata found")
+
+    return result
+
+
 async def main():
     """Run all tests."""
     print("\n" + "=" * 60)
@@ -397,6 +474,9 @@ async def main():
 
         # Test external API fetch (if configured)
         await test_external_fetch(mcp_server)
+
+        # Test external API fetch with widget mode (if configured)
+        await test_external_fetch_widget_mode(mcp_server)
 
         print("\n" + "=" * 60)
         print("✓ All tests passed!")

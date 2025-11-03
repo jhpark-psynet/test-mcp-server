@@ -333,12 +333,20 @@ def format_api_error_text(error: Exception, endpoint: str) -> str:
 def build_widgets(cfg: Config) -> list[Widget]:
     """Build list of available widgets."""
     example_html = load_widget_html("example", str(cfg.assets_dir))
+    api_result_html = load_widget_html("api-result", str(cfg.assets_dir))
+
     return [
         Widget(
             identifier="example-widget",
             title="Example Widget",
             template_uri="ui://widget/example.html",
             html=example_html,
+        ),
+        Widget(
+            identifier="api-result-widget",
+            title="API Result Widget",
+            template_uri="ui://widget/api-result.html",
+            html=api_result_html,
         )
     ]
 
@@ -718,17 +726,59 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                         )
                     )
 
-                # Widget mode: Will be implemented in Phase 3
+                # Widget mode: Return interactive UI
                 else:  # response_mode == "widget"
+                    # Find api-result widget
+                    api_result_widget = None
+                    for w in widgets_by_uri.values():
+                        if w.identifier == "api-result-widget":
+                            api_result_widget = w
+                            break
+
+                    if not api_result_widget:
+                        return types.ServerResult(
+                            types.CallToolResult(
+                                content=[
+                                    types.TextContent(
+                                        type="text",
+                                        text="API Result Widget not found. Build components first.",
+                                    )
+                                ],
+                                isError=True,
+                            )
+                        )
+
+                    # Create widget resource
+                    widget_resource = embedded_widget_resource(cfg, api_result_widget)
+
+                    # Prepare structured content for React component
+                    structured_content = {
+                        "success": True,
+                        "endpoint": query,
+                        "data": data,
+                        "timestamp": __import__("datetime").datetime.now().isoformat(),
+                    }
+
+                    # Widget metadata
+                    widget_meta: Dict[str, Any] = {
+                        "openai.com/widget": widget_resource.model_dump(mode="json"),
+                        "openai/outputTemplate": api_result_widget.template_uri,
+                        "openai/toolInvocation/invoking": "Loading API result...",
+                        "openai/toolInvocation/invoked": "API result loaded",
+                        "openai/widgetAccessible": True,
+                        "openai/resultCanProduceWidget": True,
+                    }
+
                     return types.ServerResult(
                         types.CallToolResult(
                             content=[
                                 types.TextContent(
                                     type="text",
-                                    text="Widget mode not yet implemented. Use response_mode='text' for now.",
+                                    text=f"Fetched data from {query}",
                                 )
                             ],
-                            isError=True,
+                            structuredContent=structured_content,
+                            _meta=widget_meta,
                         )
                     )
 
@@ -736,18 +786,95 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                 await api_client.close()
                 logger.error("External API error: %s", exc)
 
-                error_text = format_api_error_text(exc, query)
-                return types.ServerResult(
-                    types.CallToolResult(
-                        content=[
-                            types.TextContent(
-                                type="text",
-                                text=error_text,
-                            )
-                        ],
-                        isError=True,
+                # Text mode: Format error as text
+                if response_mode == "text":
+                    error_text = format_api_error_text(exc, query)
+                    return types.ServerResult(
+                        types.CallToolResult(
+                            content=[
+                                types.TextContent(
+                                    type="text",
+                                    text=error_text,
+                                )
+                            ],
+                            isError=True,
+                        )
                     )
-                )
+
+                # Widget mode: Show error in widget
+                else:  # response_mode == "widget"
+                    from exceptions import ApiTimeoutError, ApiHttpError, ApiConnectionError
+
+                    # Find api-result widget
+                    api_result_widget = None
+                    for w in widgets_by_uri.values():
+                        if w.identifier == "api-result-widget":
+                            api_result_widget = w
+                            break
+
+                    if not api_result_widget:
+                        return types.ServerResult(
+                            types.CallToolResult(
+                                content=[
+                                    types.TextContent(
+                                        type="text",
+                                        text=f"API Error: {str(exc)}",
+                                    )
+                                ],
+                                isError=True,
+                            )
+                        )
+
+                    # Determine error type and details
+                    error_type = type(exc).__name__
+                    error_message = str(exc)
+                    error_details = None
+
+                    if isinstance(exc, ApiTimeoutError):
+                        error_details = f"Timeout: {exc.timeout_seconds}s"
+                    elif isinstance(exc, ApiHttpError):
+                        error_details = f"Status: {exc.status_code}\n{exc.response_text[:500]}"
+                    elif isinstance(exc, ApiConnectionError):
+                        error_details = "Could not connect to the API server"
+
+                    # Create widget resource
+                    widget_resource = embedded_widget_resource(cfg, api_result_widget)
+
+                    # Prepare structured content for React component
+                    structured_content = {
+                        "success": False,
+                        "endpoint": query,
+                        "error": {
+                            "type": error_type,
+                            "message": error_message,
+                            "details": error_details,
+                        },
+                        "timestamp": __import__("datetime").datetime.now().isoformat(),
+                    }
+
+                    # Widget metadata
+                    widget_meta: Dict[str, Any] = {
+                        "openai.com/widget": widget_resource.model_dump(mode="json"),
+                        "openai/outputTemplate": api_result_widget.template_uri,
+                        "openai/toolInvocation/invoking": "Loading API error...",
+                        "openai/toolInvocation/invoked": "API error loaded",
+                        "openai/widgetAccessible": True,
+                        "openai/resultCanProduceWidget": True,
+                    }
+
+                    return types.ServerResult(
+                        types.CallToolResult(
+                            content=[
+                                types.TextContent(
+                                    type="text",
+                                    text=f"API request failed: {error_message}",
+                                )
+                            ],
+                            structuredContent=structured_content,
+                            _meta=widget_meta,
+                            isError=True,
+                        )
+                    )
 
         else:
             return types.ServerResult(
