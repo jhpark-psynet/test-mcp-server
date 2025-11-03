@@ -41,6 +41,18 @@ class Config:
     cors_allow_headers: tuple[str, ...] = ("*",)
     cors_allow_credentials: bool = False
 
+    # External API
+    external_api_base_url: str = os.getenv("EXTERNAL_API_BASE_URL", "")
+    external_api_key: str = os.getenv("EXTERNAL_API_KEY", "")
+    external_api_timeout_s: float = float(os.getenv("EXTERNAL_API_TIMEOUT_S", "10.0"))
+    external_api_auth_header: str = os.getenv("EXTERNAL_API_AUTH_HEADER", "Authorization")
+    external_api_auth_scheme: str = os.getenv("EXTERNAL_API_AUTH_SCHEME", "Bearer")
+
+    @property
+    def has_external_api(self) -> bool:
+        """Check if external API is configured."""
+        return bool(self.external_api_base_url and self.external_api_key)
+
 
 CONFIG = Config()
 
@@ -120,6 +132,21 @@ class CalculatorToolInput(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
+class ExternalToolInput(BaseModel):
+    """Schema for external API fetch tool input."""
+    query: str = Field(..., description="API endpoint path to fetch (e.g., '/users' or '/search').")
+    response_mode: str = Field(
+        default="text",
+        description="Response mode: 'text' for formatted text output, 'widget' for interactive UI.",
+        pattern="^(text|widget)$"
+    )
+    params: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Query parameters or request body for the API call."
+    )
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+
 # JSON schemas for tools
 WIDGET_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
     "type": "object",
@@ -142,6 +169,29 @@ CALCULATOR_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
         }
     },
     "required": ["expression"],
+    "additionalProperties": False,
+}
+
+EXTERNAL_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "query": {
+            "type": "string",
+            "description": "API endpoint path to fetch (e.g., '/users' or '/search').",
+        },
+        "response_mode": {
+            "type": "string",
+            "description": "Response mode: 'text' for formatted text output, 'widget' for interactive UI.",
+            "enum": ["text", "widget"],
+            "default": "text",
+        },
+        "params": {
+            "type": "object",
+            "description": "Query parameters or request body for the API call.",
+            "additionalProperties": True,
+        },
+    },
+    "required": ["query"],
     "additionalProperties": False,
 }
 
@@ -189,6 +239,91 @@ def calculator_handler(arguments: Dict[str, Any]) -> str:
         return f"Result: {result}"
     except Exception as e:
         return f"Error evaluating expression: {str(e)}"
+
+
+def format_api_response_text(data: Dict[str, Any], endpoint: str) -> str:
+    """Format successful API response as text.
+
+    Args:
+        data: JSON response data from API
+        endpoint: API endpoint that was called
+
+    Returns:
+        Formatted text string
+    """
+    import json
+
+    lines = [
+        "✅ API Response Success",
+        f"Endpoint: {endpoint}",
+        "",
+        "📊 Summary:",
+    ]
+
+    # Add basic stats
+    if isinstance(data, dict):
+        lines.append(f"  - Keys: {len(data)}")
+        lines.append(f"  - Top-level fields: {', '.join(list(data.keys())[:5])}")
+    elif isinstance(data, list):
+        lines.append(f"  - Items: {len(data)}")
+        if data and isinstance(data[0], dict):
+            lines.append(f"  - Item fields: {', '.join(list(data[0].keys())[:5])}")
+
+    lines.extend([
+        "",
+        "📄 Full Response:",
+        "```json",
+        json.dumps(data, indent=2, ensure_ascii=False)[:2000],  # Limit to 2000 chars
+        "```",
+    ])
+
+    return "\n".join(lines)
+
+
+def format_api_error_text(error: Exception, endpoint: str) -> str:
+    """Format API error as text.
+
+    Args:
+        error: Exception that occurred
+        endpoint: API endpoint that was called
+
+    Returns:
+        Formatted error text
+    """
+    from api_client import ExternalApiClient
+    from exceptions import ApiTimeoutError, ApiHttpError, ApiConnectionError
+
+    lines = [
+        "❌ API Request Failed",
+        f"Endpoint: {endpoint}",
+        "",
+    ]
+
+    if isinstance(error, ApiTimeoutError):
+        lines.extend([
+            "🕐 Error Type: Timeout",
+            f"Timeout: {error.timeout_seconds}s",
+            "The API did not respond within the configured timeout period.",
+        ])
+    elif isinstance(error, ApiHttpError):
+        lines.extend([
+            f"🚫 Error Type: HTTP {error.status_code}",
+            f"Status Code: {error.status_code}",
+            f"Response: {error.response_text[:500]}",
+        ])
+    elif isinstance(error, ApiConnectionError):
+        lines.extend([
+            "🔌 Error Type: Connection Error",
+            f"Details: {str(error)}",
+            "Could not connect to the API server.",
+        ])
+    else:
+        lines.extend([
+            "⚠️ Error Type: Unknown",
+            f"Details: {str(error)}",
+        ])
+
+    return "\n".join(lines)
 
 
 # -----------------------------------------------------------------------------
@@ -241,6 +376,27 @@ def build_tools(cfg: Config) -> list[ToolDefinition]:
             invoked="Calculation complete",
         )
     )
+
+    # External API tool (only if configured)
+    if cfg.has_external_api:
+        tools.append(
+            ToolDefinition(
+                name="external-fetch",
+                title="External API Fetch",
+                description=(
+                    "Fetch data from external API with dual response modes. "
+                    "Use 'text' mode for formatted output or 'widget' mode for interactive UI."
+                ),
+                input_schema=EXTERNAL_TOOL_INPUT_SCHEMA,
+                tool_type=ToolType.TEXT,  # Can return both text and widget based on response_mode
+                handler=None,  # Handled directly in _call_tool_request
+                invoking="Fetching from external API...",
+                invoked="API fetch complete",
+            )
+        )
+        logger.info("External API tool registered: %s", cfg.external_api_base_url)
+    else:
+        logger.debug("External API not configured, skipping external-fetch tool")
 
     return tools
 
@@ -508,6 +664,90 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                     _meta=text_tool_meta(tool),
                 )
             )
+
+        # External API fetch tool (special handling)
+        elif tool.name == "external-fetch":
+            from api_client import ExternalApiClient
+
+            try:
+                payload = ExternalToolInput.model_validate(arguments)
+            except ValidationError as exc:
+                logger.debug("Input validation error: %s", exc)
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=f"Input validation error: {exc.errors()}",
+                            )
+                        ],
+                        isError=True,
+                    )
+                )
+
+            query = payload.query
+            response_mode = payload.response_mode
+            params = payload.params
+
+            # Create API client
+            api_client = ExternalApiClient(
+                base_url=cfg.external_api_base_url,
+                api_key=cfg.external_api_key,
+                timeout_seconds=cfg.external_api_timeout_s,
+                auth_header=cfg.external_api_auth_header,
+                auth_scheme=cfg.external_api_auth_scheme,
+            )
+
+            # Call external API
+            try:
+                data = await api_client.fetch_json(query, params=params)
+                await api_client.close()
+
+                # Text mode: Format as text
+                if response_mode == "text":
+                    result_text = format_api_response_text(data, query)
+                    return types.ServerResult(
+                        types.CallToolResult(
+                            content=[
+                                types.TextContent(
+                                    type="text",
+                                    text=result_text,
+                                )
+                            ],
+                            _meta=text_tool_meta(tool),
+                        )
+                    )
+
+                # Widget mode: Will be implemented in Phase 3
+                else:  # response_mode == "widget"
+                    return types.ServerResult(
+                        types.CallToolResult(
+                            content=[
+                                types.TextContent(
+                                    type="text",
+                                    text="Widget mode not yet implemented. Use response_mode='text' for now.",
+                                )
+                            ],
+                            isError=True,
+                        )
+                    )
+
+            except Exception as exc:
+                await api_client.close()
+                logger.error("External API error: %s", exc)
+
+                error_text = format_api_error_text(exc, query)
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=error_text,
+                            )
+                        ],
+                        isError=True,
+                    )
+                )
 
         else:
             return types.ServerResult(

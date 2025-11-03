@@ -301,6 +301,64 @@ async def test_read_resource(mcp_server):
     return result
 
 
+async def test_external_fetch(mcp_server):
+    """Test external API fetch tool (if configured)."""
+    print("=" * 60)
+    print("8. Testing External API Fetch (external-fetch)")
+    print("=" * 60)
+
+    # Check if external API is configured
+    if not CONFIG.has_external_api:
+        print("\n⏭️  External API not configured, skipping test")
+        print("   Set EXTERNAL_API_BASE_URL and EXTERNAL_API_KEY to enable\n")
+        return None
+
+    print(f"\n✓ External API configured: {CONFIG.external_api_base_url}\n")
+
+    # Test with JSONPlaceholder API (free public API)
+    # Note: This test will only work if EXTERNAL_API_BASE_URL is set to https://jsonplaceholder.typicode.com
+    request = types.CallToolRequest(
+        params=types.CallToolRequestParams(
+            name="external-fetch",
+            arguments={
+                "query": "/posts/1",
+                "response_mode": "text",
+            }
+        )
+    )
+
+    # Call the handler
+    handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
+    result = await handler(request)
+
+    print("✓ External API fetch executed\n")
+
+    # Extract result
+    if hasattr(result, 'root'):
+        tool_result = result.root
+    else:
+        tool_result = result
+
+    print("Response:")
+    if hasattr(tool_result, 'content'):
+        for content in tool_result.content:
+            if hasattr(content, 'text'):
+                # Print first 500 chars
+                text = content.text
+                if len(text) > 500:
+                    print(f"  {text[:500]}...")
+                else:
+                    print(f"  {text}")
+
+    is_error = getattr(tool_result, 'isError', False)
+    if is_error:
+        print("\n  ⚠️  Request returned an error (check API configuration)")
+    else:
+        print("\n  ✓ Request successful")
+
+    return result
+
+
 async def main():
     """Run all tests."""
     print("\n" + "=" * 60)
@@ -336,6 +394,9 @@ async def main():
 
         # Test resource read
         await test_read_resource(mcp_server)
+
+        # Test external API fetch (if configured)
+        await test_external_fetch(mcp_server)
 
         print("\n" + "=" * 60)
         print("✓ All tests passed!")
