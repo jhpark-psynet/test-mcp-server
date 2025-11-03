@@ -193,6 +193,123 @@ BASE_URL=http://your-domain.com:4444 npm run build
 
 Default: `http://localhost:4444`
 
+### External API Configuration
+
+Configure external API integration for the `external-fetch` tool:
+
+```bash
+EXTERNAL_API_BASE_URL=https://api.example.com
+EXTERNAL_API_KEY=your-api-key-here
+EXTERNAL_API_TIMEOUT_S=10.0           # Optional, default: 10.0
+EXTERNAL_API_AUTH_HEADER=Authorization # Optional, default: Authorization
+EXTERNAL_API_AUTH_SCHEME=Bearer        # Optional, default: Bearer
+```
+
+See [External API Integration](#external-api-integration) for more details.
+
+## External API Integration
+
+The server supports fetching data from external APIs with two response modes:
+
+### Features
+
+- **Text Mode**: Formatted text output with summary and full JSON
+- **Widget Mode**: Interactive UI with data visualization
+- **Error Handling**: Comprehensive error handling (timeout, HTTP errors, connection errors)
+- **Authentication**: Configurable API key and authentication scheme
+
+### Configuration
+
+1. Create a `.env` file or set environment variables:
+
+```bash
+EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com
+EXTERNAL_API_KEY=dummy
+```
+
+2. Start the server with environment variables:
+
+```bash
+env EXTERNAL_API_BASE_URL=https://api.example.com EXTERNAL_API_KEY=your-key npm run server
+```
+
+### Usage
+
+#### Text Mode (Default)
+
+Request formatted text output:
+
+```python
+# Via MCP tool call
+{
+  "name": "external-fetch",
+  "arguments": {
+    "query": "/posts/1",
+    "response_mode": "text",
+    "params": {"userId": 1}  # Optional query params
+  }
+}
+```
+
+Output:
+```
+✅ API Response Success
+Endpoint: /posts/1
+
+📊 Summary:
+  - Keys: 4
+  - Top-level fields: userId, id, title, body
+
+📄 Full Response:
+{...}
+```
+
+#### Widget Mode
+
+Request interactive UI widget:
+
+```python
+# Via MCP tool call
+{
+  "name": "external-fetch",
+  "arguments": {
+    "query": "/posts/1",
+    "response_mode": "widget"
+  }
+}
+```
+
+Returns an interactive widget with:
+- Data summary and statistics
+- Field preview with badges
+- Expandable JSON view
+- Error visualization (if request fails)
+
+### Testing
+
+Run integration tests with external API:
+
+```bash
+env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
+    EXTERNAL_API_KEY=dummy \
+    .venv/bin/python test_mcp.py
+```
+
+The test suite includes:
+- Text mode API fetch test
+- Widget mode API fetch test
+- Error handling verification
+
+### API Client
+
+The `ExternalApiClient` class provides:
+- Async HTTP requests with `httpx`
+- Configurable timeout and authentication
+- Custom exception classes (`ApiTimeoutError`, `ApiHttpError`, `ApiConnectionError`)
+- Automatic retry and error formatting
+
+See `server/api_client.py` and `server/exceptions.py` for implementation details.
+
 ## Troubleshooting
 
 ### "Widget HTML not found"

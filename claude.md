@@ -50,18 +50,27 @@ test-mcp-server/
 │   │                          # - Widget 정의
 │   │                          # - MCP tools/resources 등록
 │   │                          # - HTTP/SSE 앱 설정
+│   │                          # - External API 통합
+│   ├── api_client.py          # ExternalApiClient (httpx 기반)
+│   ├── exceptions.py          # 커스텀 예외 클래스
+│   ├── test_api_client.py     # API 클라이언트 유닛 테스트
 │   └── requirements.txt       # Python 의존성
 │
 ├── components/                 # React 컴포넌트
 │   ├── src/                   # React 소스 코드
 │   │   ├── index.css          # 글로벌 CSS (Tailwind import)
-│   │   └── example/           # 예제 위젯
-│   │       └── index.tsx      # 컴포넌트 엔트리포인트
+│   │   ├── example/           # 예제 위젯
+│   │   │   └── index.tsx      # 컴포넌트 엔트리포인트
+│   │   └── api-result/        # API 결과 위젯 (Phase 3)
+│   │       └── index.tsx      # 성공/에러 뷰, JSON 프리뷰
 │   │
 │   ├── assets/                # 빌드 결과물 (생성됨)
 │   │   ├── example.html       # MCP 서버가 읽는 HTML
 │   │   ├── example-9252.js    # 해시된 JS 번들
-│   │   └── example-9252.css   # 해시된 CSS
+│   │   ├── example-9252.css   # 해시된 CSS
+│   │   ├── api-result.html    # API 결과 위젯 HTML
+│   │   ├── api-result-9252.js # API 결과 위젯 JS
+│   │   └── api-result-9252.css # API 결과 위젯 CSS
 │   │
 │   ├── package.json           # Node 의존성
 │   ├── tsconfig.json          # TypeScript 설정
@@ -70,6 +79,8 @@ test-mcp-server/
 │   └── build.ts               # 프로덕션 빌드 스크립트
 │
 ├── package.json               # 루트 빌드 스크립트
+├── test_mcp.py                # MCP 서버 통합 테스트 (9개 테스트)
+├── .env.example               # 환경 변수 예시 파일
 ├── .gitignore
 ├── README.md                  # 사용자 문서
 └── claude.md                  # 이 파일 (Claude용 컨텍스트)
@@ -80,19 +91,26 @@ test-mcp-server/
 | 파일 | 역할 |
 |------|------|
 | `server/main.py` | MCP 서버 로직 (레이어드 아키텍처) |
-| │ - Configuration | Config 클래스, 환경 변수 관리 |
+| │ - Configuration | Config 클래스, 환경 변수 관리 (External API 포함) |
 | │ - Logging | 구조화된 로깅 설정 |
-| │ - Domain models | Widget, ToolInput 스키마 |
+| │ - Domain models | Widget, ToolInput, ExternalToolInput 스키마 |
 | │ - Assets loading | HTML 파일 로딩 (캐싱) |
 | │ - Widget registry | 위젯 빌드 및 인덱싱 |
 | │ - Metadata helpers | OpenAI 메타데이터 생성 |
+| │ - Tool handlers | calculator, external-fetch (Text/Widget 모드) |
 | │ - MCP server | 팩토리 함수로 서버 생성 |
 | │ - App factory | ASGI 앱 생성 (CORS 포함) |
+| `server/api_client.py` | ExternalApiClient (httpx 기반 async HTTP 클라이언트) |
+| `server/exceptions.py` | 커스텀 예외 클래스 (ApiError, ApiTimeoutError 등) |
+| `server/test_api_client.py` | API 클라이언트 유닛 테스트 (5개 테스트) |
 | `components/src/*/index.tsx` | React 컴포넌트 (빌드 대상) |
+| `components/src/example/` | 예제 위젯 (props 검증, Zod 스키마) |
+| `components/src/api-result/` | API 결과 위젯 (성공/에러 뷰, JSON 프리뷰) |
 | `components/build.ts` | Vite 빌드 스크립트 (해시 생성, HTML 생성) |
 | `components/assets/*.html` | Python이 읽어서 MCP 리소스로 전달 |
 | `package.json` (루트) | 통합 빌드 스크립트 |
-| `test_mcp.py` | MCP 서버 기능 테스트 스크립트 |
+| `test_mcp.py` | MCP 서버 통합 테스트 (9개 테스트) |
+| `.env.example` | 환경 변수 예시 파일 (External API 설정 포함) |
 
 ## 4. Development Guidelines
 
@@ -309,7 +327,13 @@ BASE_URL=http://your-domain.com:4444 npm run build
 ✅ Tailwind CSS + Zod 통합
 ✅ Example Widget (props 전달 + 검증)
 ✅ Hot Reload (서버 자동 재시작)
-✅ Python 테스트 스크립트 (test_mcp.py)
+✅ Python 테스트 스크립트 (test_mcp.py - 9개 테스트)
+✅ **External API 통합 (Phase 1-3 완료)**
+✅ ExternalApiClient (httpx 기반 async 클라이언트)
+✅ 커스텀 예외 클래스 (ApiTimeoutError, ApiHttpError, ApiConnectionError)
+✅ external-fetch 툴 (Text & Widget 모드)
+✅ API Result Widget (인터랙티브 UI)
+✅ 이중 응답 모드 (텍스트/위젯)
 
 ### 우선순위 작업
 
@@ -403,5 +427,5 @@ python test_mcp.py
 
 ---
 
-**마지막 업데이트**: 2025-10-30
-**프로젝트 버전**: 1.1.0 (레이어드 아키텍처, 팩토리 패턴, 환경 변수 설정)
+**마지막 업데이트**: 2025-11-03
+**프로젝트 버전**: 2.0.0 (External API 통합, 이중 응답 모드, API Result Widget)
