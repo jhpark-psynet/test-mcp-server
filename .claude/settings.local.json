@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Read(//home/junho/Downloads/openai-apps-sdk-examples-main/**)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(npm run build:*)",
+      "Bash(python3:*)",
+      "Bash(.venv/bin/pip install:*)"
     ],
     "deny": [],
     "ask": []

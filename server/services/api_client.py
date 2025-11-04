@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from exceptions import ApiTimeoutError, ApiHttpError, ApiConnectionError
+from server.services.exceptions import ApiTimeoutError, ApiHttpError, ApiConnectionError
 
 logger = logging.getLogger("mcp-server.api-client")
 

@@ -64,12 +64,17 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
 
 서버가 제공하는 MCP 도구 3개:
 
-### 1. Calculator (텍스트 도구)
+### 1. Calculator (텍스트 도구) ⭐ AST 기반 안전
 - **이름**: `calculator`
 - **타입**: Text-based tool
 - **입력**: `expression` (string) - 계산할 수식
 - **출력**: 계산 결과 또는 에러 메시지
-- **예시**: `{"expression": "2 + 2"}` → `"Result: 4.0"`
+- **보안**: AST 파싱 기반 (eval() 사용 안 함)
+- **허용**: `+`, `-`, `*`, `/`, `//`, `%`, `**`, `abs()`, `round()`, `min()`, `max()`
+- **차단**: 변수명, import문, 임의 코드 실행
+- **예시**:
+  - `{"expression": "2 + 2"}` → `"Result: 4"`
+  - `{"expression": "malicious"}` → `"Error: Unsupported expression"`
 
 ### 2. Example Widget (위젯 도구)
 - **이름**: `example-widget`
@@ -90,77 +95,107 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
   - Widget 모드: 인터랙티브 API Result 위젯
 - **요구사항**: `EXTERNAL_API_BASE_URL` 및 `EXTERNAL_API_KEY` 환경 변수 설정 필요
 
-## 5. Folder Structure
+## 5. Folder Structure ⭐ Refactored (Phase 1 Complete)
 
 ```
 test-mcp-server/
-├── .venv/                      # Python 가상환경
-├── server/                     # Python MCP 서버
-│   ├── main.py                # 서버 엔트리포인트
-│   │                          # - Widget 정의
-│   │                          # - MCP tools/resources 등록
-│   │                          # - HTTP/SSE 앱 설정
-│   │                          # - External API 통합
-│   ├── api_client.py          # ExternalApiClient (httpx 기반)
-│   ├── exceptions.py          # 커스텀 예외 클래스
-│   ├── test_api_client.py     # API 클라이언트 유닛 테스트
-│   └── requirements.txt       # Python 의존성
-│
-├── components/                 # React 컴포넌트
-│   ├── src/                   # React 소스 코드
-│   │   ├── index.css          # 글로벌 CSS (Tailwind import)
-│   │   ├── example/           # 예제 위젯
-│   │   │   └── index.tsx      # 컴포넌트 엔트리포인트
-│   │   └── api-result/        # API 결과 위젯 (Phase 3)
-│   │       └── index.tsx      # 성공/에러 뷰, JSON 프리뷰
+├── .venv/                          # Python 가상환경
+├── server/                         # Python MCP 서버 (Modularized!)
+│   ├── main.py                    # 엔트리포인트 (933줄 → 32줄!)
+│   ├── main.py.backup             # 원본 파일 백업 (933줄)
+│   ├── config.py                  # 설정 관리
+│   ├── logging_config.py          # 로깅 설정
 │   │
-│   ├── assets/                # 빌드 결과물 (생성됨)
-│   │   ├── example.html       # MCP 서버가 읽는 HTML
-│   │   ├── example-9252.js    # 해시된 JS 번들
-│   │   ├── example-9252.css   # 해시된 CSS
-│   │   ├── api-result.html    # API 결과 위젯 HTML
-│   │   ├── api-result-9252.js # API 결과 위젯 JS
-│   │   └── api-result-9252.css # API 결과 위젯 CSS
+│   ├── models/                    # 도메인 모델
+│   │   ├── __init__.py
+│   │   ├── widget.py             # Widget, ToolType
+│   │   ├── tool.py               # ToolDefinition
+│   │   └── schemas.py            # Pydantic 스키마
 │   │
-│   ├── package.json           # Node 의존성
-│   ├── tsconfig.json          # TypeScript 설정
-│   ├── tailwind.config.ts     # Tailwind 설정
-│   ├── vite.config.ts         # Vite 설정 (dev용)
-│   └── build.ts               # 프로덕션 빌드 스크립트
+│   ├── services/                  # 비즈니스 로직
+│   │   ├── __init__.py
+│   │   ├── asset_loader.py       # HTML 자산 로딩
+│   │   ├── widget_registry.py    # 위젯 빌드
+│   │   ├── tool_registry.py      # 툴 빌드 및 인덱싱
+│   │   ├── response_formatter.py # API 응답 포맷팅
+│   │   ├── api_client.py         # ExternalApiClient (httpx)
+│   │   └── exceptions.py         # 커스텀 예외
+│   │
+│   ├── handlers/                  # 툴 핸들러
+│   │   ├── __init__.py
+│   │   └── calculator.py         # ⭐ AST 기반 안전한 계산기
+│   │
+│   ├── factory/                   # MCP 서버 팩토리
+│   │   ├── __init__.py
+│   │   ├── server_factory.py     # MCP 서버 생성
+│   │   └── metadata_builder.py   # OpenAI 메타데이터
+│   │
+│   ├── test_api_client.py         # API 클라이언트 유닛 테스트
+│   └── requirements.txt           # Python 의존성
 │
-├── package.json               # 루트 빌드 스크립트
-├── test_mcp.py                # MCP 서버 통합 테스트 (9개 테스트)
-├── .env.example               # 환경 변수 예시 파일
-├── .gitignore
-├── README.md                  # 사용자 문서
-└── claude.md                  # 이 파일 (Claude용 컨텍스트)
+├── components/                     # React 컴포넌트
+│   ├── src/                       # React 소스 코드
+│   │   ├── index.css              # 글로벌 CSS (Tailwind)
+│   │   ├── example/               # 예제 위젯
+│   │   │   └── index.tsx
+│   │   └── api-result/            # API 결과 위젯
+│   │       └── index.tsx          # 성공/에러 뷰, JSON 프리뷰
+│   │
+│   ├── assets/                    # 빌드 결과물 (생성됨)
+│   │   ├── example.html           # MCP 서버가 읽는 HTML
+│   │   ├── example-9252.js        # 해시된 JS 번들
+│   │   ├── example-9252.css       # 해시된 CSS
+│   │   ├── api-result.html
+│   │   ├── api-result-9252.js
+│   │   └── api-result-9252.css
+│   │
+│   ├── package.json               # Node 의존성
+│   ├── tsconfig.json              # TypeScript 설정
+│   ├── tailwind.config.ts         # Tailwind 설정
+│   ├── vite.config.ts             # Vite 설정
+│   └── build.ts                   # 빌드 스크립트
+│
+├── package.json                    # 루트 빌드 스크립트
+├── test_mcp.py                     # MCP 통합 테스트 (7/9 통과)
+├── .env.example                    # 환경 변수 예시
+├── REFACTORING_PLAN.md            # 리팩토링 계획 (Phase 1 ✅)
+├── IMPROVEMENT_RECOMMENDATIONS.md  # 개선 제안
+├── README.md                       # 사용자 문서
+└── claude.md                       # 이 파일 (Claude용)
 ```
 
-### 파일 역할 요약
+**Phase 1 Refactoring 성과** (2025-11-04):
+- ✅ main.py: 933줄 → 32줄 (96.6% 감소)
+- ✅ 17개 모듈로 분리 (레이어드 아키텍처)
+- ✅ AST 기반 안전한 계산기 (eval() 제거)
+- ✅ 통합 테스트: 7/9 통과
+
+### 파일 역할 요약 (Refactored)
 
 | 파일 | 역할 |
 |------|------|
-| `server/main.py` | MCP 서버 로직 (레이어드 아키텍처) |
-| │ - Configuration | Config 클래스, 환경 변수 관리 (External API 포함) |
-| │ - Logging | 구조화된 로깅 설정 |
-| │ - Domain models | Widget, ToolInput, ExternalToolInput 스키마 |
-| │ - Assets loading | HTML 파일 로딩 (캐싱) |
-| │ - Widget registry | 위젯 빌드 및 인덱싱 |
-| │ - Metadata helpers | OpenAI 메타데이터 생성 |
-| │ - Tool handlers | calculator, external-fetch (Text/Widget 모드) |
-| │ - MCP server | 팩토리 함수로 서버 생성 |
-| │ - App factory | ASGI 앱 생성 (CORS 포함) |
-| `server/api_client.py` | ExternalApiClient (httpx 기반 async HTTP 클라이언트) |
-| `server/exceptions.py` | 커스텀 예외 클래스 (ApiError, ApiTimeoutError 등) |
-| `server/test_api_client.py` | API 클라이언트 유닛 테스트 (5개 테스트) |
+| `server/main.py` | 엔트리포인트 (32줄, 로깅 + 앱 생성) |
+| `server/config.py` | Config 클래스, 환경 변수 관리 |
+| `server/logging_config.py` | 구조화된 로깅 설정 |
+| `server/models/widget.py` | Widget, ToolType 도메인 모델 |
+| `server/models/tool.py` | ToolDefinition 도메인 모델 |
+| `server/models/schemas.py` | Pydantic 스키마 (입력 검증) |
+| `server/services/asset_loader.py` | HTML 파일 로딩 (캐싱) |
+| `server/services/widget_registry.py` | 위젯 빌드 및 인덱싱 |
+| `server/services/tool_registry.py` | 툴 빌드 및 인덱싱 |
+| `server/services/response_formatter.py` | API 응답 포맷팅 |
+| `server/services/api_client.py` | ExternalApiClient (httpx async) |
+| `server/services/exceptions.py` | 커스텀 예외 클래스 |
+| `server/handlers/calculator.py` | ⭐ AST 기반 안전한 계산기 |
+| `server/factory/server_factory.py` | MCP 서버 생성 팩토리 |
+| `server/factory/metadata_builder.py` | OpenAI 메타데이터 생성 |
 | `components/src/*/index.tsx` | React 컴포넌트 (빌드 대상) |
-| `components/src/example/` | 예제 위젯 (props 검증, Zod 스키마) |
-| `components/src/api-result/` | API 결과 위젯 (성공/에러 뷰, JSON 프리뷰) |
-| `components/build.ts` | Vite 빌드 스크립트 (해시 생성, HTML 생성) |
-| `components/assets/*.html` | Python이 읽어서 MCP 리소스로 전달 |
-| `package.json` (루트) | 통합 빌드 스크립트 |
-| `test_mcp.py` | MCP 서버 통합 테스트 (9개 테스트) |
-| `.env.example` | 환경 변수 예시 파일 (External API 설정 포함) |
+| `components/src/example/` | 예제 위젯 (Zod 스키마) |
+| `components/src/api-result/` | API 결과 위젯 (JSON 프리뷰) |
+| `components/build.ts` | Vite 빌드 (해시, HTML 생성) |
+| `components/assets/*.html` | MCP 리소스로 전달 |
+| `test_mcp.py` | MCP 통합 테스트 (7/9 통과) |
+| `.env.example` | 환경 변수 예시 |
 
 ## 6. Development Guidelines
 

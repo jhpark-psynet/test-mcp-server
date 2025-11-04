@@ -6,27 +6,51 @@ MCP server with React widget support using FastMCP and OpenAI Apps SDK.
 
 ```
 test-mcp-server/
-├── server/              # Python FastMCP server
-│   ├── main.py         # MCP server entry point
-│   ├── api_client.py   # External API HTTP client
-│   ├── exceptions.py   # Custom exception classes
-│   ├── test_api_client.py  # API client unit tests
+├── server/                      # Python FastMCP server (Modularized!)
+│   ├── main.py                 # Entry point (32 lines!)
+│   ├── config.py               # Configuration
+│   ├── logging_config.py       # Logging setup
+│   ├── models/                 # Domain models
+│   │   ├── widget.py          # Widget, ToolType
+│   │   ├── tool.py            # ToolDefinition
+│   │   └── schemas.py         # Pydantic schemas
+│   ├── services/               # Business logic
+│   │   ├── asset_loader.py    # HTML asset loading
+│   │   ├── widget_registry.py # Widget registry
+│   │   ├── tool_registry.py   # Tool registry
+│   │   ├── response_formatter.py  # API formatters
+│   │   ├── api_client.py      # External API client
+│   │   └── exceptions.py      # Custom exceptions
+│   ├── handlers/               # Tool handlers
+│   │   └── calculator.py      # ⭐ Safe AST-based calculator
+│   ├── factory/                # MCP server factory
+│   │   ├── server_factory.py  # MCP server creation
+│   │   └── metadata_builder.py # OpenAI metadata
+│   ├── main.py.backup          # Original (933 lines)
+│   ├── test_api_client.py      # API client tests
 │   └── requirements.txt
-├── components/          # React UI components
-│   ├── src/            # React source code
-│   │   ├── example/    # Example widget
-│   │   ├── api-result/ # API response visualization widget
-│   │   └── index.css   # Shared styles
-│   ├── assets/         # Built HTML/JS/CSS (generated)
+├── components/                  # React UI components
+│   ├── src/                    # React source code
+│   │   ├── example/           # Example widget
+│   │   ├── api-result/        # API response widget
+│   │   └── index.css          # Shared styles
+│   ├── assets/                 # Built HTML/JS/CSS (generated)
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── vite.config.ts
-│   └── build.ts        # Build script
-├── test_mcp.py          # MCP server integration tests
-├── package.json         # Root build scripts
-├── .env.example         # Environment variables template
+│   └── build.ts                # Build script
+├── test_mcp.py                  # Integration tests (7/9 passing)
+├── package.json                 # Root build scripts
+├── .env.example                 # Environment variables
+├── REFACTORING_PLAN.md         # Refactoring plan (Phase 1 ✅)
 └── README.md
 ```
+
+**Recent Improvements** (Phase 1 Refactoring - Nov 2025):
+- ✅ Modularized `main.py`: 933 → 32 lines (96.6% reduction)
+- ✅ AST-based safe calculator (replaced eval())
+- ✅ Layered architecture: models, services, handlers, factory
+- ✅ 17 well-organized modules
 
 ## How It Works
 
@@ -65,12 +89,18 @@ The server includes two built-in widgets:
 
 The server provides three MCP tools:
 
-### 1. Calculator (Text Tool)
+### 1. Calculator (Text Tool) ⭐ Safe AST-Based
 - **Name**: `calculator`
 - **Type**: Text-based tool
 - **Input**: `expression` (string) - Math expression to evaluate
 - **Output**: Calculated result or error message
-- **Example**: `{"expression": "2 + 2"}` → `"Result: 4.0"`
+- **Security**: AST-based evaluation (safe, no eval())
+- **Allowed**: `+`, `-`, `*`, `/`, `//`, `%`, `**`, `abs()`, `round()`, `min()`, `max()`
+- **Blocked**: Variable names, imports, arbitrary code execution
+- **Example**:
+  - `{"expression": "2 + 2"}` → `"Result: 4"`
+  - `{"expression": "10 * 5"}` → `"Result: 50"`
+  - `{"expression": "malicious"}` → `"Error: Unsupported expression"`
 
 ### 2. Example Widget (Widget Tool)
 - **Name**: `example-widget`

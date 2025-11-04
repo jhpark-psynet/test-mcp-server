@@ -12,7 +12,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "server"))
 
 import mcp.types as types
-from server.main import CONFIG, build_widgets, build_tools, create_mcp_server
+from server.config import CONFIG
+from server.services import build_widgets, build_tools
+from server.factory import create_mcp_server
+from server.handlers import calculator_handler
 
 
 async def test_widget_loading():
@@ -44,7 +47,7 @@ async def test_tool_loading():
     print("=" * 60)
 
     # Build tools using factory function
-    tools = build_tools(CONFIG)
+    tools = build_tools(CONFIG, calculator_handler=calculator_handler)
 
     print(f"\n✓ Loaded {len(tools)} tool(s):\n")
 
