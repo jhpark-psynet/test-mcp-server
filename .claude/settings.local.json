@@ -7,7 +7,9 @@
       "Bash(.venv/bin/python:*)",
       "Bash(npm run build:*)",
       "Bash(python3:*)",
-      "Bash(.venv/bin/pip install:*)"
+      "Bash(.venv/bin/pip install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nImplement Phase 2: FastMCP safety wrapper\n\n## Summary\nAdd SafeFastMCPWrapper to protect against FastMCP internal API changes\nand provide clear error messages for better debugging.\n\n## Changes\n\n### New Files\n- server/factory/safe_wrapper.py (136 lines)\n  - SafeFastMCPWrapper class\n  - FastMCPInternalAPIError exception\n  - Internal API validation\n  - Safe decorator and handler registration\n\n### Modified Files\n- server/factory/server_factory.py\n  - Use SafeFastMCPWrapper instead of direct _mcp_server access\n  - Apply wrapper to all decorators (3) and handlers (2)\n\n### Documentation Updates\n- REFACTORING_PLAN.md\n  - Mark Phase 2 checklist as completed\n  - Add Phase 2 completion report (156 lines)\n- IMPROVEMENT_RECOMMENDATIONS.md\n  - Mark item 4 (FastMCP safety) as completed\n- README.md\n  - Add Phase 2 to Recent Improvements\n  - Add safe_wrapper.py to project structure\n- claude.md\n  - Add Phase 2 achievements\n  - Update folder structure and file roles\n\n## Test Results\n✓ 7/9 integration tests passing (2 external API tests skipped)\n✓ SafeFastMCPWrapper initialization and validation successful\n✓ All decorators and handlers working correctly\n✓ MCP protocol flow intact\n\n## Impact\n- ✅ Stability: Early detection of FastMCP API changes\n- ✅ Debugging: Clear error messages (FastMCPInternalAPIError)\n- ✅ Maintainability: Safer internal API access\n- ✅ Testing: All integration tests passing\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

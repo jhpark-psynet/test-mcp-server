@@ -30,23 +30,30 @@ from server.factory.metadata_builder import (
     text_tool_meta,
     embedded_widget_resource,
 )
+from server.factory.safe_wrapper import SafeFastMCPWrapper
 
 logger = logging.getLogger(__name__)
 
 
 def create_mcp_server(cfg: Config) -> FastMCP:
-    """FastMCP 서버를 생성하고 핸들러를 등록.
+    """FastMCP 서버를 생성하고 핸들러를 등록 (SafeFastMCPWrapper 사용).
 
     Args:
         cfg: Server configuration
 
     Returns:
         Configured FastMCP server instance
+
+    Raises:
+        FastMCPInternalAPIError: If FastMCP internal API is incompatible
     """
     mcp = FastMCP(
         name=cfg.app_name,
         stateless_http=True,
     )
+
+    # Wrap FastMCP with safety layer
+    wrapper = SafeFastMCPWrapper(mcp)
 
     # Build tools and create indices
     tools = build_tools(cfg, calculator_handler=calculator_handler)
@@ -55,7 +62,7 @@ def create_mcp_server(cfg: Config) -> FastMCP:
 
     logger.info(f"Registered {len(tools)} tools")
 
-    @mcp._mcp_server.list_tools()
+    @wrapper.list_tools_decorator()()
     async def _list_tools() -> List[types.Tool]:
         """List all available MCP tools."""
         result = []
@@ -77,7 +84,7 @@ def create_mcp_server(cfg: Config) -> FastMCP:
             )
         return result
 
-    @mcp._mcp_server.list_resources()
+    @wrapper.list_resources_decorator()()
     async def _list_resources() -> List[types.Resource]:
         """List only widget resources (text tools don't have resources)."""
         result = []
@@ -95,7 +102,7 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                 )
         return result
 
-    @mcp._mcp_server.list_resource_templates()
+    @wrapper.list_resource_templates_decorator()()
     async def _list_resource_templates() -> List[types.ResourceTemplate]:
         """List only widget resource templates."""
         result = []
@@ -463,9 +470,9 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                 )
             )
 
-    # Register request handlers
-    mcp._mcp_server.request_handlers[types.CallToolRequest] = _call_tool_request
-    mcp._mcp_server.request_handlers[types.ReadResourceRequest] = _handle_read_resource
+    # Register request handlers using safe wrapper
+    wrapper.register_request_handler(types.CallToolRequest, _call_tool_request)
+    wrapper.register_request_handler(types.ReadResourceRequest, _handle_read_resource)
 
     return mcp
 

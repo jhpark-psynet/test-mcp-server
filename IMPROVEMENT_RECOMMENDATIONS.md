@@ -152,9 +152,13 @@ def verify_assets(cfg: Config):
 - REFACTORING_PLAN.md Phase 4 참조
 - 각 파일의 내용으로 고유한 해시 생성
 
-#### 4. FastMCP 핸들러 등록 안정화 ⏳ **계획됨** (Phase 2)
-- SafeFastMCPWrapper 구현 예정
-- REFACTORING_PLAN.md Phase 2 참조
+#### 4. FastMCP 핸들러 등록 안정화 ✅ **완료** (Phase 2)
+- **구현**: `server/factory/safe_wrapper.py`에 SafeFastMCPWrapper 구현
+- **안정성**: FastMCP 내부 API 변경 감지 및 명확한 에러 메시지 제공
+- **검증**: 초기화 시 내부 구조 검증 (`_validate_internal_api()`)
+- **적용**: `server_factory.py`에서 모든 데코레이터 및 핸들러 등록에 사용
+- **테스트**: 통합 테스트 7/9 통과 (기능 유지)
+- **결과**: 라이브러리 변경에 안전하게 대응
 
 #### 5. 자동화 테스트 확장 ⏳ **진행 중**
 - 통합 테스트: 7/9 통과 (외부 API 2개 제외)

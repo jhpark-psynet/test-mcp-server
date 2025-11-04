@@ -127,6 +127,7 @@ test-mcp-server/
 │   │
 │   ├── factory/                   # MCP 서버 팩토리
 │   │   ├── __init__.py
+│   │   ├── safe_wrapper.py       # ⭐ SafeFastMCPWrapper (Phase 2)
 │   │   ├── server_factory.py     # MCP 서버 생성
 │   │   └── metadata_builder.py   # OpenAI 메타데이터
 │   │
@@ -170,6 +171,12 @@ test-mcp-server/
 - ✅ AST 기반 안전한 계산기 (eval() 제거)
 - ✅ 통합 테스트: 7/9 통과
 
+**Phase 2 Refactoring 성과** (2025-11-04):
+- ✅ SafeFastMCPWrapper 구현 (136줄)
+- ✅ FastMCP 비공개 API 안전 접근
+- ✅ 초기화 시 내부 API 검증
+- ✅ 통합 테스트: 7/9 통과 (기능 유지)
+
 ### 파일 역할 요약 (Refactored)
 
 | 파일 | 역할 |
@@ -187,6 +194,7 @@ test-mcp-server/
 | `server/services/api_client.py` | ExternalApiClient (httpx async) |
 | `server/services/exceptions.py` | 커스텀 예외 클래스 |
 | `server/handlers/calculator.py` | ⭐ AST 기반 안전한 계산기 |
+| `server/factory/safe_wrapper.py` | ⭐ SafeFastMCPWrapper (Phase 2) |
 | `server/factory/server_factory.py` | MCP 서버 생성 팩토리 |
 | `server/factory/metadata_builder.py` | OpenAI 메타데이터 생성 |
 | `components/src/*/index.tsx` | React 컴포넌트 (빌드 대상) |
