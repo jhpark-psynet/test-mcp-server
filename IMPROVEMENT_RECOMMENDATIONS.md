@@ -173,3 +173,12 @@ def verify_assets(cfg: Config):
 - [README.md](./README.md) - 업데이트된 프로젝트 문서
 - [claude.md](./claude.md) - 업데이트된 아키텍처 문서
 
+
+#### Pydantic 환경변수 검증 ✅ **완료** (Phase 3)
+- **구현**: `server/config.py`를 Pydantic BaseSettings로 리팩토링
+- **검증**: Field validators (log_level, API URL, assets_dir)
+- **타입 안전성**: 모든 필드에 타입 검증 및 범위 제한
+- **.env 지원**: 자동 로딩 및 검증
+- **에러 메시지**: 명확한 ValidationError로 디버깅 용이
+- **결과**: 설정 오류 조기 발견, 타입 안전성 확보
+

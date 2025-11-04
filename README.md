@@ -61,6 +61,13 @@ test-mcp-server/
 - ✅ Clear error messages for debugging
 - ✅ All integration tests passing (7/9)
 
+**Phase 3** (Pydantic Settings):
+- ✅ Config refactoring: dataclass → Pydantic BaseSettings
+- ✅ Automatic environment variable validation
+- ✅ .env file support with auto-loading
+- ✅ Type safety with Field validators (port, log level, API URL)
+- ✅ All integration tests passing (7/9)
+
 ## How It Works
 
 1. **React Components** → Build to HTML/JS/CSS in `components/assets/`
