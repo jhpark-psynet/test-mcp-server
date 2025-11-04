@@ -26,7 +26,7 @@ const artifacts: BuildArtifact[] = [];
 /**
  * Generate content-based hash for a file.
  */
-function generateFileHash(filePath: string, length: number = 4): string {
+function generateFileHash(filePath: string, length: number = 8): string {
   const content = fs.readFileSync(filePath);
   return crypto
     .createHash("sha256")
@@ -143,7 +143,7 @@ ${cssLink}</head>
  * Main build process.
  */
 async function main() {
-  console.log("Building widgets with content-based hashing...\n");
+  console.log("Building widgets...\n");
 
   // Build all widgets
   for (const file of entries) {
@@ -164,21 +164,33 @@ async function main() {
   for (const artifact of artifacts) {
     const html = generateHtml(artifact, normalizedBaseUrl);
 
-    // Write live HTML (used by MCP server)
+    // Write both hashed and live HTML
+    const hashedHtmlPath = path.join(outDir, `${artifact.name}-${artifact.jsHash}.html`);
     const liveHtmlPath = path.join(outDir, `${artifact.name}.html`);
+
+    fs.writeFileSync(hashedHtmlPath, html, { encoding: "utf8" });
     fs.writeFileSync(liveHtmlPath, html, { encoding: "utf8" });
-    console.log(`  Generated ${artifact.name}.html`);
+
+    console.log(`  ✓ ${artifact.name}.html`);
   }
 
-  console.log("\n✓ Build complete!");
+  // Print summary
+  console.log("\n" + "=".repeat(60));
+  console.log("Build Summary");
+  console.log("=".repeat(60));
+  console.log(`Widgets built: ${artifacts.length}`);
+  console.log(`Output directory: ${outDir}/`);
   console.log("\nArtifacts:");
   for (const artifact of artifacts) {
     console.log(`  ${artifact.name}:`);
-    console.log(`    JS:  ${path.basename(artifact.jsPath)} (hash: ${artifact.jsHash})`);
-    if (artifact.cssHash) {
-      console.log(`    CSS: ${path.basename(artifact.cssPath)} (hash: ${artifact.cssHash})`);
+    console.log(`    JS:  ${path.basename(artifact.jsPath)}`);
+    if (artifact.cssPath) {
+      console.log(`    CSS: ${path.basename(artifact.cssPath)}`);
     }
+    console.log(`    HTML: ${artifact.name}.html`);
   }
+  console.log("=".repeat(60));
+  console.log("\n✅ Build complete!\n");
 }
 
 main().catch((err) => {

@@ -68,6 +68,13 @@ test-mcp-server/
 - ✅ Type safety with Field validators (port, log level, API URL)
 - ✅ All integration tests passing (7/9)
 
+**Phase 4** (Content-Based Cache Busting):
+- ✅ SHA-256 hash from file contents (not version)
+- ✅ Unique hash for each file (8-character hex)
+- ✅ Automatic cache invalidation on code changes
+- ✅ Efficient caching when code unchanged
+- ✅ Improved build output with artifact summary
+
 ## How It Works
 
 1. **React Components** → Build to HTML/JS/CSS in `components/assets/`
@@ -159,7 +166,8 @@ npm run build
 This will:
 - Build React components from `components/src/*/index.tsx`
 - Generate HTML/JS/CSS in `components/assets/`
-- Hash filenames for cache busting
+- Hash filenames with content-based SHA-256 (8 chars)
+- Create HTML files referencing hashed assets
 
 ### 3. Run the Server
 
@@ -168,6 +176,64 @@ npm run server
 ```
 
 The MCP server will start on `http://0.0.0.0:8000`
+
+## Build Process
+
+### Cache Busting
+
+The build process uses **content-based hashing** for proper cache invalidation:
+
+1. **Build widgets**: Each widget is compiled to JS/CSS
+2. **Generate hashes**: SHA-256 hash of file contents (8 characters)
+3. **Rename files**: `example.js` → `example-40f54552.js`
+4. **Generate HTML**: References hashed files
+
+**Benefits**:
+- ✅ Automatic cache invalidation when code changes
+- ✅ Efficient caching when code is unchanged
+- ✅ Unique URLs for each version
+- ✅ No stale client-side code
+
+**Example**:
+```
+components/assets/
+├── example-40f54552.js       # Content hash: 40f54552
+├── example-40f54552.html     # Versioned HTML
+├── example-797e89ff.css      # Content hash: 797e89ff
+└── example.html              # Live HTML (used by server)
+```
+
+**How it works**:
+
+When you update `src/example/index.tsx`:
+```bash
+npm run build
+
+# Before: example-40f54552.js
+# After:  example-a1b2c3d4.js  ← New hash!
+```
+
+- HTML automatically updated to reference new hash
+- Browsers fetch new version (cache miss)
+- Old versions remain cached until code changes
+
+**Testing cache busting**:
+```bash
+# 1. Initial build
+npm run build
+ls components/assets/example-*.js  # example-40f54552.js
+
+# 2. Rebuild without changes (hash stays same)
+npm run build
+ls components/assets/example-*.js  # example-40f54552.js ← Same!
+
+# 3. Modify code
+echo "console.log('test');" >> components/src/example/index.tsx
+
+# 4. Rebuild (hash changes)
+npm run build
+ls components/assets/example-*.js  # example-a1b2c3d4.js ← New!
+```
 
 ## Development Workflow
 
