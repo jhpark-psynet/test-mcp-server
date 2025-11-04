@@ -75,6 +75,13 @@ test-mcp-server/
 - ✅ Efficient caching when code unchanged
 - ✅ Improved build output with artifact summary
 
+**Phase 5** (Build Verification):
+- ✅ Automated build verification script
+- ✅ HTML/JS/CSS existence checks
+- ✅ HTML reference validation
+- ✅ Integration into npm build script
+- ✅ Clear error messages for debugging
+
 ## How It Works
 
 1. **React Components** → Build to HTML/JS/CSS in `components/assets/`
@@ -234,6 +241,55 @@ echo "console.log('test');" >> components/src/example/index.tsx
 npm run build
 ls components/assets/example-*.js  # example-a1b2c3d4.js ← New!
 ```
+
+## Build Verification
+
+The build process includes automatic verification to catch issues early:
+
+```bash
+# Build and verify (recommended)
+npm run build
+
+# Build without verification
+npm run build:only
+
+# Verify existing build
+npm run build:verify
+```
+
+**What is verified**:
+- ✅ HTML files exist for all widgets
+- ✅ JS files exist for all widgets
+- ✅ HTML references point to existing files
+- ✅ No broken asset references
+
+**Example output**:
+```
+Verifying widget builds...
+============================================================
+Widget: example
+  HTML: ✅ example.html
+  JS:   ✅ example-40f54552.js
+  CSS:  ✅ example-797e89ff.css
+  HTML → JS:  ✅ example-40f54552.js
+  HTML → CSS: ✅ example-797e89ff.css
+
+Widget: api-result
+  HTML: ✅ api-result.html
+  JS:   ✅ api-result-c935fb46.js
+  CSS:  ✅ api-result-797e89ff.css
+  HTML → JS:  ✅ api-result-c935fb46.js
+  HTML → CSS: ✅ api-result-797e89ff.css
+
+============================================================
+✅ All widget builds verified successfully!
+
+Verified 2 widget(s):
+  - example
+  - api-result
+```
+
+If verification fails, the build process will exit with an error and show what's missing. Fix the build and try again.
 
 ## Development Workflow
 

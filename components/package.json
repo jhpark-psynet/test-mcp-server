@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsx build.ts",
+    "build": "tsx build.ts && tsx verify-build.ts",
+    "build:only": "tsx build.ts",
+    "verify": "tsx verify-build.ts",
+    "build:watch": "tsx build.ts --watch",
     "dev": "vite",
     "serve": "serve -s ./assets -p 4444 --cors"
   },

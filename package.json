@@ -7,7 +7,8 @@
     "install:components": "cd components && npm install",
     "install:server": "uv pip install -r server/requirements.txt",
     "build": "cd components && npm run build",
-    "build:watch": "cd components && npm run build -- --watch",
+    "build:verify": "cd components && npm run verify",
+    "build:watch": "cd components && npm run build:watch",
     "server": "cd server && ../.venv/bin/python main.py",
     "dev": "npm run build && npm run server"
   },
