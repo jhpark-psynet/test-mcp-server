@@ -14,10 +14,10 @@ def format_api_response_text(data: Dict[str, Any], endpoint: str) -> str:
         Formatted text string
     """
     lines = [
-        "✅ API Response Success",
+        "API Response Success",
         f"Endpoint: {endpoint}",
         "",
-        "📊 Summary:",
+        "Summary:",
     ]
 
     # Add basic stats
@@ -31,7 +31,7 @@ def format_api_response_text(data: Dict[str, Any], endpoint: str) -> str:
 
     lines.extend([
         "",
-        "📄 Full Response:",
+        "Full Response:",
         "```json",
         json.dumps(data, indent=2, ensure_ascii=False)[:2000],  # Limit to 2000 chars
         "```",
@@ -60,25 +60,25 @@ def format_api_error_text(error: Exception, endpoint: str) -> str:
 
     if isinstance(error, ApiTimeoutError):
         lines.extend([
-            "🕐 Error Type: Timeout",
+            "Error Type: Timeout",
             f"Timeout: {error.timeout_seconds}s",
             "The API did not respond within the configured timeout period.",
         ])
     elif isinstance(error, ApiHttpError):
         lines.extend([
-            f"🚫 Error Type: HTTP {error.status_code}",
+            f"Error Type: HTTP {error.status_code}",
             f"Status Code: {error.status_code}",
             f"Response: {error.response_text[:500]}",
         ])
     elif isinstance(error, ApiConnectionError):
         lines.extend([
-            "🔌 Error Type: Connection Error",
+            "Error Type: Connection Error",
             f"Details: {str(error)}",
             "Could not connect to the API server.",
         ])
     else:
         lines.extend([
-            "⚠️ Error Type: Unknown",
+            "Error Type: Unknown",
             f"Details: {str(error)}",
         ])
 
