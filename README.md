@@ -635,6 +635,22 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 ### Protocol
 - **MCP (Model Context Protocol)**: Communication protocol between LLM clients and servers
 
+## Documentation
+
+### Architecture & Design Patterns
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - 핵심 설계 패턴 및 아키텍처 결정 사항
+  - SafeFastMCPWrapper 패턴: FastMCP 내부 API 안전 래핑
+  - External API 툴 관리: 동적 툴 등록 구조
+  - 레이어드 아키텍처: 관심사 분리
+
+### Planning & Progress
+- **[REFACTORING_PLAN.md](./REFACTORING_PLAN.md)** - 전체 리팩토링 계획 및 Phase 1-5 완료 보고서
+- **[IMPROVEMENT_RECOMMENDATIONS.md](./IMPROVEMENT_RECOMMENDATIONS.md)** - 개선 제안 및 완료 상태 (6/6 완료)
+
+### Technical Documentation
+- **[claude.md](./claude.md)** - 상세 기술 문서 및 사용법
+- **[.env.example](./.env.example)** - 환경 변수 설정 예시
+
 ## License
 
 MIT
