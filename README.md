@@ -637,6 +637,14 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 
 ## Documentation
 
+### Getting Started
+- **[CUSTOMIZATION_GUIDE.md](./CUSTOMIZATION_GUIDE.md)** - 실제 프로젝트에 적용하기 ⭐ **필독!**
+  - 새로운 위젯 추가하기 (Weather Widget 예제)
+  - 새로운 툴 추가하기 (단순/복잡 툴)
+  - 외부 API 통합하기
+  - 테스트 및 배포 준비
+  - 예제 프로젝트 제거
+
 ### Architecture & Design Patterns
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - 핵심 설계 패턴 및 아키텍처 결정 사항
   - SafeFastMCPWrapper 패턴: FastMCP 내부 API 안전 래핑
