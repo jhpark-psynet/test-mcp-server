@@ -3,7 +3,7 @@ import path from 'path';
 import fg from 'fast-glob';
 
 const ASSETS_DIR = 'assets';
-const REQUIRED_WIDGETS = ['example', 'api-result'];
+const REQUIRED_WIDGETS = ['example'];
 
 interface VerificationResult {
   widget: string;

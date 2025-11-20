@@ -1,7 +1,10 @@
 """Tool handlers export."""
-from server.handlers.calculator import calculator_handler, safe_eval
+from server.handlers.sports import (
+    get_games_by_sport_handler,
+    get_game_details_handler,
+)
 
 __all__ = [
-    "calculator_handler",
-    "safe_eval",
+    "get_games_by_sport_handler",
+    "get_game_details_handler",
 ]

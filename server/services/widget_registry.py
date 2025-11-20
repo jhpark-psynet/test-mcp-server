@@ -16,7 +16,8 @@ def build_widgets(cfg: Config) -> List[Widget]:
         List of Widget instances
     """
     example_html = load_widget_html("example", str(cfg.assets_dir))
-    api_result_html = load_widget_html("api-result", str(cfg.assets_dir))
+    game_stats_html = load_widget_html("game-stats", str(cfg.assets_dir))
+    game_result_viewer_html = load_widget_html("game-result-viewer", str(cfg.assets_dir))
 
     return [
         Widget(
@@ -26,9 +27,15 @@ def build_widgets(cfg: Config) -> List[Widget]:
             html=example_html,
         ),
         Widget(
-            identifier="api-result-widget",
-            title="API Result Widget",
-            template_uri="ui://widget/api-result.html",
-            html=api_result_html,
+            identifier="game-stats-widget",
+            title="Game Stats Widget",
+            template_uri="ui://widget/game-stats.html",
+            html=game_stats_html,
+        ),
+        Widget(
+            identifier="game-result-viewer",
+            title="Game Result Viewer",
+            template_uri="ui://widget/game-result-viewer.html",
+            html=game_result_viewer_html,
         )
     ]

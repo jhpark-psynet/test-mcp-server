@@ -9,7 +9,8 @@
     "build": "cd components && npm run build",
     "build:verify": "cd components && npm run verify",
     "build:watch": "cd components && npm run build:watch",
-    "server": "cd server && ../.venv/bin/python main.py",
+    "serve": "cd components && npm run serve",
+    "server": ".venv/bin/uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload",
     "dev": "npm run build && npm run server"
   },
   "keywords": [

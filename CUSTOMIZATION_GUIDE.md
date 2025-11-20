@@ -2,7 +2,12 @@
 
 **목적**: 테스트 프로젝트를 실제 사용 사례에 맞게 커스터마이징하는 방법
 
-이 가이드는 example/api-result 위젯과 calculator 툴을 **실제 비즈니스 로직**으로 교체하는 방법을 단계별로 안내합니다.
+이 가이드는 example 위젯을 **실제 비즈니스 로직**으로 교체하고 새로운 툴을 추가하는 방법을 단계별로 안내합니다.
+
+**현재 프로젝트 상태**:
+- Sports MCP 툴 2개: `get_games_by_sport`, `get_game_details`
+- 위젯 3개: `example` (테스트용), `game-result-viewer`, `game-stats`
+- `example` 위젯은 툴 목록에서 제외됨 (테스트용으로 코드만 유지)
 
 ---
 
@@ -1024,76 +1029,51 @@ curl http://localhost:8000/health
 
 ---
 
-## 6. 예제 프로젝트 제거
+## 6. 예제 프로젝트 정리 상태
 
-테스트용 example/api-result를 제거하고 실제 위젯으로 교체:
+현재 프로젝트는 이미 정리가 완료된 상태입니다:
 
-### 6.1 파일 삭제
+### 6.1 제거된 항목
 
-```bash
-# React 컴포넌트 삭제
-rm -rf components/src/example
-rm -rf components/src/api-result
+✅ **api-result 위젯**: 완전히 제거됨
+- `components/src/api-result/` 삭제
+- `components/assets/api-result*` 삭제
+- `server/services/widget_registry.py`에서 제거
 
-# 빌드된 파일 삭제
-rm -f components/assets/example*
-rm -f components/assets/api-result*
-```
+✅ **calculator 툴**: 완전히 제거됨
+- `server/handlers/calculator.py` 삭제
+- `server/models/schemas.py`에서 CalculatorToolInput 삭제
+- `server/services/tool_registry.py`에서 제거
+- `server/factory/server_factory.py`에서 관련 코드 제거
 
-### 6.2 서버 코드 정리
+### 6.2 유지된 항목
 
-**파일**: `server/services/widget_registry.py`
+📌 **example 위젯**: 테스트용으로 코드만 유지
+- 소스 코드: `components/src/example/` 유지
+- 빌드 파일: `components/assets/example*` 유지
+- 툴 등록: **Skip 처리** (MCP Inspector에 표시 안 됨)
 
-```python
-def build_widgets(cfg: Config) -> List[Widget]:
-    """Build widget registry from HTML assets."""
-    widgets = []
+### 6.3 현재 활성화된 툴
 
-    # example, api-result 제거
-    # 실제 위젯만 등록
+프로덕션 환경에서 사용 가능한 툴:
 
-    widgets.append(
-        Widget(
-            identifier="weather",
-            title="Weather Widget",
-            ...
-        )
-    )
+1. **get_games_by_sport** (TEXT)
+   - 스포츠 경기 목록 조회
+   - Input: `date`, `sport`
 
-    # 다른 실제 위젯들...
+2. **get_game_details** (WIDGET)
+   - 경기 상세 통계 표시
+   - Input: `game_id`
+   - Widget: `game-stats-widget`
 
-    return widgets
-```
-
-**파일**: `server/services/tool_registry.py`
-
-```python
-def build_tools(cfg: Config) -> List[ToolDefinition]:
-    tools = []
-
-    # calculator는 유용하므로 유지 (선택)
-    tools.append(calculator_tool)
-
-    # example-widget 제거
-    # 실제 툴만 등록
-
-    tools.append(weather_widget_tool)
-    tools.append(get_weather_tool)
-
-    return tools
-```
-
-### 6.3 재빌드 및 테스트
+### 6.4 실제 사용 예시
 
 ```bash
-# 빌드
-npm run build
+# 서버 실행
+npm run server
 
-# 테스트 파일 업데이트
-# test_mcp.py에서 example 관련 테스트 제거
-
-# 테스트 실행
-python test_mcp.py
+# 등록된 툴 확인
+# → 2개 툴만 표시됨 (get_games_by_sport, get_game_details)
 ```
 
 ---

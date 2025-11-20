@@ -19,21 +19,21 @@ test-mcp-server/
 │   │   ├── widget_registry.py # Widget registry
 │   │   ├── tool_registry.py   # Tool registry
 │   │   ├── response_formatter.py  # API formatters
-│   │   ├── api_client.py      # External API client
+│   │   ├── sports_api_client.py   # Sports API client
 │   │   └── exceptions.py      # Custom exceptions
 │   ├── handlers/               # Tool handlers
-│   │   └── calculator.py      # ⭐ Safe AST-based calculator
+│   │   └── sports.py          # Sports data handlers
 │   ├── factory/                # MCP server factory
 │   │   ├── safe_wrapper.py    # ⭐ SafeFastMCPWrapper (Phase 2)
 │   │   ├── server_factory.py  # MCP server creation
 │   │   └── metadata_builder.py # OpenAI metadata
 │   ├── main.py.backup          # Original (933 lines)
-│   ├── test_api_client.py      # API client tests
 │   └── requirements.txt
 ├── components/                  # React UI components
 │   ├── src/                    # React source code
-│   │   ├── example/           # Example widget
-│   │   ├── api-result/        # API response widget
+│   │   ├── example/           # Example widget (테스트용)
+│   │   ├── game-stats/        # Game statistics widget
+│   │   ├── game-result-viewer/ # Game results viewer
 │   │   └── index.css          # Shared styles
 │   ├── assets/                 # Built HTML/JS/CSS (generated)
 │   ├── package.json
@@ -51,7 +51,6 @@ test-mcp-server/
 
 **Phase 1** (Modularization):
 - ✅ Modularized `main.py`: 933 → 32 lines (96.6% reduction)
-- ✅ AST-based safe calculator (replaced eval())
 - ✅ Layered architecture: models, services, handlers, factory
 - ✅ 17 well-organized modules
 
@@ -59,28 +58,28 @@ test-mcp-server/
 - ✅ SafeFastMCPWrapper for FastMCP internal API protection
 - ✅ Early detection of FastMCP API changes
 - ✅ Clear error messages for debugging
-- ✅ All integration tests passing (7/9)
 
 **Phase 3** (Pydantic Settings):
 - ✅ Config refactoring: dataclass → Pydantic BaseSettings
 - ✅ Automatic environment variable validation
 - ✅ .env file support with auto-loading
-- ✅ Type safety with Field validators (port, log level, API URL)
-- ✅ All integration tests passing (7/9)
+- ✅ Type safety with Field validators
 
 **Phase 4** (Content-Based Cache Busting):
-- ✅ SHA-256 hash from file contents (not version)
-- ✅ Unique hash for each file (8-character hex)
+- ✅ SHA-256 hash from file contents (8-character hex)
 - ✅ Automatic cache invalidation on code changes
 - ✅ Efficient caching when code unchanged
-- ✅ Improved build output with artifact summary
 
 **Phase 5** (Build Verification):
 - ✅ Automated build verification script
 - ✅ HTML/JS/CSS existence checks
 - ✅ HTML reference validation
-- ✅ Integration into npm build script
-- ✅ Clear error messages for debugging
+
+**Sports MCP Implementation**:
+- ✅ Sports API integration (get_games_by_sport, get_game_details)
+- ✅ Game stats widget with team/player statistics
+- ✅ Multi-league support (NBA, KBL, WKBL, etc.)
+- ✅ Clean tool architecture (2 production tools)
 
 ## How It Works
 
@@ -97,59 +96,80 @@ React (TSX) → Build → HTML → MCP Server → ChatGPT (Render)
 
 ## Available Widgets
 
-The server includes two built-in widgets:
+The server includes widgets for sports data visualization:
 
-### 1. Example Widget (`example`)
-- **Purpose**: Demonstrates basic widget functionality
+### 1. Example Widget (`example`) - Test Only
+- **Purpose**: Demonstrates basic widget functionality (테스트용)
 - **Props**: `message` (string)
 - **Location**: `components/src/example/`
-- **Usage**: Shows how to create a simple React widget with props
+- **Status**: Skip 처리 (MCP Inspector에 표시 안 됨)
 
-### 2. API Result Widget (`api-result`)
-- **Purpose**: Visualizes external API responses
-- **Props**: `success`, `endpoint`, `data`, `error`, `timestamp`
-- **Location**: `components/src/api-result/`
+### 2. Game Stats Widget (`game-stats`)
+- **Purpose**: Displays detailed game statistics with team and player stats
+- **Props**: `game_id`, `game_info`, `team_stats`, `player_stats`
+- **Location**: `components/src/game-stats/`
 - **Features**:
-  - Success view with data summary and expandable JSON
-  - Error view with detailed error information
-  - Field badges and type indicators
+  - Game header with team scores
+  - Team statistics table (FG, rebounds, assists, etc.)
+  - Player statistics table (points, rebounds, assists, shooting %)
   - Responsive design with Tailwind CSS
+- **Used by**: `get_game_details` tool
+
+### 3. Game Result Viewer (`game-result-viewer`)
+- **Purpose**: Visualizes game results and schedules
+- **Location**: `components/src/game-result-viewer/`
+- **Features**:
+  - Game list with scores and status
+  - League and arena information
+  - Responsive design
 
 ## Available Tools
 
-The server provides three MCP tools:
+The server provides sports data MCP tools:
 
-### 1. Calculator (Text Tool) ⭐ Safe AST-Based
-- **Name**: `calculator`
+### 1. Get Games by Sport (Text Tool)
+- **Name**: `get_games_by_sport`
 - **Type**: Text-based tool
-- **Input**: `expression` (string) - Math expression to evaluate
-- **Output**: Calculated result or error message
-- **Security**: AST-based evaluation (safe, no eval())
-- **Allowed**: `+`, `-`, `*`, `/`, `//`, `%`, `**`, `abs()`, `round()`, `min()`, `max()`
-- **Blocked**: Variable names, imports, arbitrary code execution
-- **Example**:
-  - `{"expression": "2 + 2"}` → `"Result: 4"`
-  - `{"expression": "10 * 5"}` → `"Result: 50"`
-  - `{"expression": "malicious"}` → `"Error: Unsupported expression"`
-
-### 2. Example Widget (Widget Tool)
-- **Name**: `example-widget`
-- **Type**: Widget-based tool
-- **Input**: `message` (string, optional)
-- **Output**: Renders the example widget with custom message
-- **Widget**: Uses the Example Widget component
-
-### 3. External Fetch (Dual-Mode Tool)
-- **Name**: `external-fetch`
-- **Type**: Widget or Text tool (configurable)
 - **Input**:
-  - `query` (string) - API endpoint path
-  - `response_mode` (string) - "text" or "widget" (default: "text")
-  - `params` (object, optional) - Query parameters
-- **Output**:
-  - Text mode: Formatted text with summary and JSON
-  - Widget mode: Interactive API Result widget
-- **Requirements**: `EXTERNAL_API_BASE_URL` and `EXTERNAL_API_KEY` environment variables
+  - `date` (string) - Date in YYYYMMDD format (e.g., "20251118")
+  - `sport` (string) - Sport type: basketball, baseball, or football
+- **Output**: Formatted text with game schedules and results
+- **Features**:
+  - Lists games by league (NBA, KBL, WKBL, etc.)
+  - Shows scores, time, arena, and game state
+  - Includes game IDs for detailed queries
+  - Team alias support (e.g., "Warriors" → "Golden State")
+- **Example**:
+  ```json
+  {"date": "20251118", "sport": "basketball"}
+  ```
+  Returns:
+  ```
+  ## Basketball Games on 20251118
+
+  ### [NBA]
+  - **클리블랜드** 118 - 106 **밀워키** (Finished, W)
+    - Arena: 로킷 모기지 필드하우스
+    - Game ID: `OT2025313104229`
+  ```
+
+### 2. Get Game Details (Widget Tool)
+- **Name**: `get_game_details`
+- **Type**: Widget-based tool
+- **Input**:
+  - `game_id` (string) - Game ID from get_games_by_sport result
+- **Output**: Interactive widget with detailed game statistics
+- **Widget**: Uses the Game Stats Widget component
+- **Features**:
+  - Game header with final scores
+  - Team statistics (FG%, rebounds, assists, turnovers, etc.)
+  - Player statistics (points, rebounds, assists, shooting %, etc.)
+  - Sortable tables with responsive design
+- **Note**: Only available for finished games (state='f')
+- **Example**:
+  ```json
+  {"game_id": "OT2025313104237"}
+  ```
 
 ## Setup
 
@@ -432,108 +452,73 @@ EXTERNAL_API_AUTH_SCHEME=Bearer        # Optional, default: Bearer
 
 See [External API Integration](#external-api-integration) for more details.
 
-## External API Integration
+## Sports API Integration
 
-The server supports fetching data from external APIs with two response modes:
+The server integrates with a sports data API to provide game schedules and detailed statistics:
 
 ### Features
 
-- **Text Mode**: Formatted text output with summary and full JSON
-- **Widget Mode**: Interactive UI with data visualization
-- **Error Handling**: Comprehensive error handling (timeout, HTTP errors, connection errors)
-- **Authentication**: Configurable API key and authentication scheme
+- **Multi-league Support**: NBA, KBL, WKBL, and more
+- **Game Schedules**: List games by date and sport
+- **Detailed Statistics**: Team and player stats with interactive widgets
+- **Real-time Data**: Fetch current game results and scores
+- **Team Aliases**: Support for common team name variations
 
-### Configuration
+### API Client
 
-1. Create a `.env` file or set environment variables:
-
-```bash
-EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com
-EXTERNAL_API_KEY=dummy
-```
-
-2. Start the server with environment variables:
-
-```bash
-env EXTERNAL_API_BASE_URL=https://api.example.com EXTERNAL_API_KEY=your-key npm run server
-```
+The `SportsApiClient` class (`server/services/sports_api_client.py`) provides:
+- Mock data for development and testing
+- Structured data models for games, teams, and players
+- Support for multiple leagues and sports
+- Extensible architecture for real API integration
 
 ### Usage
 
-#### Text Mode (Default)
-
-Request formatted text output:
+#### Get Games by Sport
 
 ```python
 # Via MCP tool call
 {
-  "name": "external-fetch",
+  "name": "get_games_by_sport",
   "arguments": {
-    "query": "/posts/1",
-    "response_mode": "text",
-    "params": {"userId": 1}  # Optional query params
+    "date": "20251118",
+    "sport": "basketball"
   }
 }
 ```
 
-Output:
-```
-✅ API Response Success
-Endpoint: /posts/1
+Returns formatted text with game list, scores, and game IDs.
 
-📊 Summary:
-  - Keys: 4
-  - Top-level fields: userId, id, title, body
-
-📄 Full Response:
-{...}
-```
-
-#### Widget Mode
-
-Request interactive UI widget:
+#### Get Game Details
 
 ```python
 # Via MCP tool call
 {
-  "name": "external-fetch",
+  "name": "get_game_details",
   "arguments": {
-    "query": "/posts/1",
-    "response_mode": "widget"
+    "game_id": "OT2025313104237"
   }
 }
 ```
 
 Returns an interactive widget with:
-- Data summary and statistics
-- Field preview with badges
-- Expandable JSON view
-- Error visualization (if request fails)
+- Game header with team names and scores
+- Team statistics table
+- Player statistics table with detailed metrics
+- Responsive design for different screen sizes
 
 ### Testing
 
-Run integration tests with external API:
+Run sports tools tests:
 
 ```bash
-env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
-    EXTERNAL_API_KEY=dummy \
-    .venv/bin/python test_mcp.py
+.venv/bin/python test_sports_tools.py
 ```
 
 The test suite includes:
-- Text mode API fetch test
-- Widget mode API fetch test
-- Error handling verification
-
-### API Client
-
-The `ExternalApiClient` class provides:
-- Async HTTP requests with `httpx`
-- Configurable timeout and authentication
-- Custom exception classes (`ApiTimeoutError`, `ApiHttpError`, `ApiConnectionError`)
-- Automatic retry and error formatting
-
-See `server/api_client.py` and `server/exceptions.py` for implementation details.
+- get_games_by_sport handler test
+- get_game_details handler test
+- Data structure validation
 
 ## Troubleshooting
 
@@ -600,17 +585,22 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 ```
 
 **Test Coverage** (`test_mcp.py`):
-- ✅ Widget loading (2 widgets)
-- ✅ Tool loading (3 tools)
+- ✅ Widget loading
+- ✅ Tool loading (2 sports tools)
 - ✅ MCP protocol tools list
 - ✅ MCP protocol resources list
-- ✅ Widget tool execution (example-widget)
-- ✅ Text tool execution (calculator)
+- ✅ Widget tool execution (get_game_details)
+- ✅ Text tool execution (get_games_by_sport)
 - ✅ Resource reading (widget HTML)
-- ✅ External API fetch - text mode
-- ✅ External API fetch - widget mode
 
-**Results**: 9/9 tests passing (14/14 total with unit tests)
+**Results**: Tests passing for sports functionality
+
+**Sports Tools Tests** (`test_sports_tools.py`):
+- ✅ get_games_by_sport handler
+- ✅ get_game_details handler
+- ✅ Data validation
+
+**Results**: 2/2 tests passing
 
 ## Tech Stack
 

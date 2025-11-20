@@ -12,8 +12,9 @@ from pydantic import ValidationError
 from server.config import Config
 from server.models import (
     WidgetToolInput,
-    CalculatorToolInput,
     ExternalToolInput,
+    GetGamesBySportInput,
+    GetGameDetailsInput,
 )
 from server.services import (
     build_tools,
@@ -24,7 +25,10 @@ from server.services import (
     ExternalApiClient,
 )
 from server.services.exceptions import ApiTimeoutError, ApiHttpError, ApiConnectionError
-from server.handlers import calculator_handler
+from server.handlers import (
+    get_games_by_sport_handler,
+    get_game_details_handler,
+)
 from server.factory.metadata_builder import (
     widget_tool_meta,
     text_tool_meta,
@@ -56,7 +60,11 @@ def create_mcp_server(cfg: Config) -> FastMCP:
     wrapper = SafeFastMCPWrapper(mcp)
 
     # Build tools and create indices
-    tools = build_tools(cfg, calculator_handler=calculator_handler)
+    tools = build_tools(
+        cfg,
+        get_games_by_sport_handler=get_games_by_sport_handler,
+        get_game_details_handler=get_game_details_handler,
+    )
     tools_by_name = index_tools(tools)
     widgets_by_uri = index_widgets_by_uri(tools)
 
@@ -167,51 +175,110 @@ def create_mcp_server(cfg: Config) -> FastMCP:
 
         arguments = req.params.arguments or {}
 
-        # Widget-based tool
-        if tool.is_widget_tool and tool.widget:
-            try:
+        # Validate input using tool's schema
+        try:
+            # Use Pydantic model based on tool name
+            if tool.name == "get_games_by_sport":
+                payload = GetGamesBySportInput.model_validate(arguments)
+            elif tool.name == "get_game_details":
+                payload = GetGameDetailsInput.model_validate(arguments)
+            elif tool.is_widget_tool:
                 payload = WidgetToolInput.model_validate(arguments)
-            except ValidationError as exc:
-                logger.debug("Input validation error: %s", exc)
-                return types.ServerResult(
-                    types.CallToolResult(
-                        content=[
-                            types.TextContent(
-                                type="text",
-                                text=f"Input validation error: {exc.errors()}",
-                            )
-                        ],
-                        isError=True,
-                    )
-                )
+            else:
+                # No validation for unknown tools
+                payload = None
 
-            message = payload.message
-            widget_resource = embedded_widget_resource(cfg, tool.widget)
-
-            meta: Dict[str, Any] = {
-                "openai.com/widget": widget_resource.model_dump(mode="json"),
-                **widget_tool_meta(tool),
-            }
-
+            validated_args = payload.model_dump() if payload else arguments
+        except ValidationError as exc:
+            logger.debug("Input validation error: %s", exc)
             return types.ServerResult(
                 types.CallToolResult(
                     content=[
                         types.TextContent(
                             type="text",
-                            text=f"Rendered {tool.widget.title}",
+                            text=f"Input validation error: {exc.errors()}",
                         )
                     ],
-                    structuredContent={"message": message},
-                    _meta=meta,
+                    isError=True,
                 )
             )
+
+        # Widget-based tool
+        if tool.is_widget_tool and tool.widget:
+            # get_game_details: has custom handler
+            if tool.name == "get_game_details" and tool.handler:
+                # Execute handler to get structured data
+                try:
+                    structured_data = tool.handler(validated_args)
+                except Exception as exc:
+                    logger.error("Tool execution error: %s", exc)
+                    return types.ServerResult(
+                        types.CallToolResult(
+                            content=[
+                                types.TextContent(
+                                    type="text",
+                                    text=f"Execution error: {str(exc)}",
+                                )
+                            ],
+                            isError=True,
+                        )
+                    )
+
+                # Create widget resource
+                widget_resource = embedded_widget_resource(cfg, tool.widget)
+
+                # Widget metadata
+                widget_meta: Dict[str, Any] = {
+                    "openai.com/widget": widget_resource.model_dump(mode="json"),
+                    "openai/outputTemplate": tool.widget.template_uri,
+                    "openai/toolInvocation/invoking": tool.invoking,
+                    "openai/toolInvocation/invoked": tool.invoked,
+                    "openai/widgetAccessible": True,
+                    "openai/resultCanProduceWidget": True,
+                }
+
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=f"Game details loaded for {validated_args['game_id']}",
+                            )
+                        ],
+                        structuredContent=structured_data,
+                        _meta=widget_meta,
+                    )
+                )
+
+            # Standard widget tools (example-widget, api-result-widget)
+            else:
+                message = validated_args.get("message", "")
+                widget_resource = embedded_widget_resource(cfg, tool.widget)
+
+                meta: Dict[str, Any] = {
+                    "openai.com/widget": widget_resource.model_dump(mode="json"),
+                    **widget_tool_meta(tool),
+                }
+
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=f"Rendered {tool.widget.title}",
+                            )
+                        ],
+                        structuredContent={"message": message},
+                        _meta=meta,
+                    )
+                )
 
         # Text-based tool
         elif tool.is_text_tool and tool.handler:
             try:
                 # Validate based on tool's schema
-                if tool.name == "calculator":
-                    payload = CalculatorToolInput.model_validate(arguments)
+                if tool.name == "get_games_by_sport":
+                    payload = GetGamesBySportInput.model_validate(arguments)
                     validated_args = payload.model_dump()
                 else:
                     validated_args = arguments

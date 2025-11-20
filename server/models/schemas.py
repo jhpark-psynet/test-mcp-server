@@ -10,15 +10,6 @@ class WidgetToolInput(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
-class CalculatorToolInput(BaseModel):
-    """Calculator tool input schema."""
-    expression: str = Field(
-        ...,
-        description="Mathematical expression to evaluate (e.g., '2 + 2', '10 * 5')."
-    )
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
-
-
 class ExternalToolInput(BaseModel):
     """External API fetch tool input schema."""
     query: str = Field(
@@ -37,6 +28,29 @@ class ExternalToolInput(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
+class GetGamesBySportInput(BaseModel):
+    """Get games by sport tool input schema."""
+    date: str = Field(
+        ...,
+        description="Date to query (YYYYMMDD format, e.g., '20251118')."
+    )
+    sport: str = Field(
+        ...,
+        description="Sport type to query.",
+        pattern="^(basketball|baseball|football)$"
+    )
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+
+class GetGameDetailsInput(BaseModel):
+    """Get game details tool input schema (widget-based)."""
+    game_id: str = Field(
+        ...,
+        description="Game ID to query (from get_games_by_sport result)."
+    )
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+
 # JSON schemas for MCP tools
 WIDGET_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
     "type": "object",
@@ -47,18 +61,6 @@ WIDGET_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
         }
     },
     "required": ["message"],
-    "additionalProperties": False,
-}
-
-CALCULATOR_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "expression": {
-            "type": "string",
-            "description": "Mathematical expression to evaluate (e.g., '2 + 2', '10 * 5').",
-        }
-    },
-    "required": ["expression"],
     "additionalProperties": False,
 }
 
@@ -82,5 +84,34 @@ EXTERNAL_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
         }
     },
     "required": ["query"],
+    "additionalProperties": False,
+}
+
+GET_GAMES_BY_SPORT_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "date": {
+            "type": "string",
+            "description": "Date to query (YYYYMMDD format, e.g., '20251118')."
+        },
+        "sport": {
+            "type": "string",
+            "enum": ["basketball", "baseball", "football"],
+            "description": "Sport type to query."
+        }
+    },
+    "required": ["date", "sport"],
+    "additionalProperties": False,
+}
+
+GET_GAME_DETAILS_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "game_id": {
+            "type": "string",
+            "description": "Game ID to query (from get_games_by_sport result)."
+        }
+    },
+    "required": ["game_id"],
     "additionalProperties": False,
 }
