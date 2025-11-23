@@ -59,6 +59,13 @@ class Config(BaseSettings):
         description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
     )
 
+    # Component server (for fetching widget manifest)
+    component_base_url: str = Field(
+        default="http://localhost:4444",
+        alias="COMPONENT_BASE_URL",
+        description="Component server base URL for fetching widget hashes (e.g., http://localhost:4444 or CDN URL)"
+    )
+
     # CORS
     cors_allow_origins: Tuple[str, ...] = Field(
         default=("*",),

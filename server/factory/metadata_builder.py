@@ -46,6 +46,8 @@ def text_tool_meta(tool: ToolDefinition) -> Dict[str, Any]:
 def embedded_widget_resource(cfg: Config, widget: Widget) -> types.EmbeddedResource:
     """Create an embedded widget resource containing the HTML.
 
+    HTML is loaded fresh from disk each time to support hot reload without server restart.
+
     Args:
         cfg: Server configuration
         widget: Widget instance
@@ -53,12 +55,17 @@ def embedded_widget_resource(cfg: Config, widget: Widget) -> types.EmbeddedResou
     Returns:
         EmbeddedResource with widget HTML
     """
+    from server.services.asset_loader import load_widget_html
+
+    # Load HTML fresh from disk (supports hot reload)
+    html = load_widget_html(widget.identifier, str(cfg.assets_dir))
+
     return types.EmbeddedResource(
         type="resource",
         resource=types.TextResourceContents(
             uri=widget.template_uri,
             mimeType=cfg.mime_type,
-            text=widget.html,
+            text=html,
             title=widget.title,
         ),
     )

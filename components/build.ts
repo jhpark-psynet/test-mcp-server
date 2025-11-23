@@ -9,6 +9,9 @@ import crypto from "crypto";
 const entries = fg.sync("src/**/index.tsx");
 const outDir = "assets";
 
+// Check if hashing should be used (default: false for simplicity)
+const USE_HASH = process.env.USE_HASH === "true";
+
 // Clean output directory
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
@@ -76,7 +79,6 @@ async function buildWidget(file: string): Promise<BuildArtifact> {
 
   await build(createConfig());
 
-  // Generate content-based hashes
   const jsPath = path.join(outDir, `${name}.js`);
   const cssPath = path.join(outDir, `${name}.css`);
 
@@ -84,21 +86,38 @@ async function buildWidget(file: string): Promise<BuildArtifact> {
     throw new Error(`Build failed: ${jsPath} not found`);
   }
 
-  const jsHash = generateFileHash(jsPath);
-  const cssHash = fs.existsSync(cssPath) ? generateFileHash(cssPath) : "";
+  let jsHash = "";
+  let cssHash = "";
+  let finalJsPath = jsPath;
+  let finalCssPath = fs.existsSync(cssPath) ? cssPath : "";
 
-  // Rename files with content hashes
-  const hashedJsPath = path.join(outDir, `${name}-${jsHash}.js`);
-  const hashedCssPath = cssHash
-    ? path.join(outDir, `${name}-${cssHash}.css`)
-    : "";
+  if (USE_HASH) {
+    // Generate content-based hashes
+    jsHash = generateFileHash(jsPath);
+    cssHash = fs.existsSync(cssPath) ? generateFileHash(cssPath) : "";
 
-  fs.renameSync(jsPath, hashedJsPath);
-  console.log(`  JS:  ${path.basename(jsPath)} -> ${path.basename(hashedJsPath)}`);
+    // Rename files with content hashes
+    const hashedJsPath = path.join(outDir, `${name}-${jsHash}.js`);
+    const hashedCssPath = cssHash
+      ? path.join(outDir, `${name}-${cssHash}.css`)
+      : "";
 
-  if (hashedCssPath && fs.existsSync(cssPath)) {
-    fs.renameSync(cssPath, hashedCssPath);
-    console.log(`  CSS: ${path.basename(cssPath)} -> ${path.basename(hashedCssPath)}`);
+    fs.renameSync(jsPath, hashedJsPath);
+    console.log(`  JS:  ${path.basename(jsPath)} -> ${path.basename(hashedJsPath)}`);
+
+    if (hashedCssPath && fs.existsSync(cssPath)) {
+      fs.renameSync(cssPath, hashedCssPath);
+      console.log(`  CSS: ${path.basename(cssPath)} -> ${path.basename(hashedCssPath)}`);
+    }
+
+    finalJsPath = hashedJsPath;
+    finalCssPath = hashedCssPath;
+  } else {
+    // No hashing - use simple names
+    console.log(`  JS:  ${path.basename(jsPath)}`);
+    if (fs.existsSync(cssPath)) {
+      console.log(`  CSS: ${path.basename(cssPath)}`);
+    }
   }
 
   console.log(`✓ Built ${name}`);
@@ -107,8 +126,8 @@ async function buildWidget(file: string): Promise<BuildArtifact> {
     name,
     jsHash,
     cssHash,
-    jsPath: hashedJsPath,
-    cssPath: hashedCssPath,
+    jsPath: finalJsPath,
+    cssPath: finalCssPath,
   };
 }
 
@@ -118,12 +137,15 @@ async function buildWidget(file: string): Promise<BuildArtifact> {
 function generateHtml(artifact: BuildArtifact, baseUrl: string): string {
   const { name, jsHash, cssHash } = artifact;
 
-  const scriptUrl = `${baseUrl}/${name}-${jsHash}.js`;
-  const cssUrl = cssHash ? `${baseUrl}/${name}-${cssHash}.css` : "";
+  const scriptUrl = USE_HASH && jsHash
+    ? `${baseUrl}/${name}-${jsHash}.js`
+    : `${baseUrl}/${name}.js`;
 
-  const cssLink = cssUrl
-    ? `  <link rel="stylesheet" href="${cssUrl}">\n`
-    : "";
+  const cssUrl = USE_HASH && cssHash
+    ? `${baseUrl}/${name}-${cssHash}.css`
+    : `${baseUrl}/${name}.css`;
+
+  const cssLink = `  <link rel="stylesheet" href="${cssUrl}">\n`;
 
   return `<!doctype html>
 <html>
@@ -164,15 +186,30 @@ async function main() {
   for (const artifact of artifacts) {
     const html = generateHtml(artifact, normalizedBaseUrl);
 
-    // Write both hashed and live HTML
-    const hashedHtmlPath = path.join(outDir, `${artifact.name}-${artifact.jsHash}.html`);
+    // Write HTML files
     const liveHtmlPath = path.join(outDir, `${artifact.name}.html`);
-
-    fs.writeFileSync(hashedHtmlPath, html, { encoding: "utf8" });
     fs.writeFileSync(liveHtmlPath, html, { encoding: "utf8" });
+
+    if (USE_HASH && artifact.jsHash) {
+      // Also write hashed HTML for CDN deployment
+      const hashedHtmlPath = path.join(outDir, `${artifact.name}-${artifact.jsHash}.html`);
+      fs.writeFileSync(hashedHtmlPath, html, { encoding: "utf8" });
+    }
 
     console.log(`  ✓ ${artifact.name}.html`);
   }
+
+  // Generate manifest.json
+  const manifest: Record<string, string> = {};
+  for (const artifact of artifacts) {
+    manifest[artifact.name] = USE_HASH && artifact.jsHash ? artifact.jsHash : artifact.name;
+  }
+
+  const manifestPath = path.join(outDir, "manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), { encoding: "utf8" });
+  console.log(`  ✓ manifest.json`);
+
+  console.log(`\nHash mode: ${USE_HASH ? "enabled" : "disabled"}`);
 
   // Print summary
   console.log("\n" + "=".repeat(60));

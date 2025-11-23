@@ -37,8 +37,8 @@ mkdir -p components/src/weather
 
 ```tsx
 // components/src/weather/index.tsx
-import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
 
 // Props 스키마 정의
@@ -113,19 +113,63 @@ function ErrorFallback({ error }: { error: Error }) {
   );
 }
 
+// Wrapper component with loading state
+function WeatherApp() {
+  const [weatherData, setWeatherData] = useState<WeatherProps | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updateData = () => {
+      try {
+        const rawData = (window as any).openai?.toolOutput;
+
+        // 데이터가 아직 없으면 로딩 상태 유지
+        // ⚠️ 중요: MOCK 데이터를 사용하지 마세요!
+        if (!rawData || (typeof rawData === 'object' && Object.keys(rawData).length === 0)) {
+          return;
+        }
+
+        const validatedData = WeatherPropsSchema.parse(rawData);
+        setWeatherData(validatedData);
+        setError(null);
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          setError(err.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('\n'));
+        } else {
+          setError(String(err));
+        }
+      }
+    };
+
+    // 초기 데이터 로드
+    updateData();
+
+    // window.openai.toolOutput 변경 감지 (100ms 폴링)
+    const intervalId = setInterval(updateData, 100);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  if (error) {
+    return <ErrorFallback error={new Error(error)} />;
+  }
+
+  if (!weatherData) {
+    return (
+      <div className="min-h-[200px] p-6 bg-gray-50 rounded-lg flex items-center justify-center">
+        <p className="text-gray-600">Loading weather data...</p>
+      </div>
+    );
+  }
+
+  return <WeatherWidget {...weatherData} />;
+}
+
 // DOM 마운트
 const rootElement = document.getElementById('weather-root');
 if (rootElement) {
-  try {
-    const propsJson = rootElement.getAttribute('data-props');
-    const props = propsJson ? JSON.parse(propsJson) : {};
-
-    const root = createRoot(rootElement);
-    root.render(<WeatherWidget {...props} />);
-  } catch (error) {
-    const root = createRoot(rootElement);
-    root.render(<ErrorFallback error={error as Error} />);
-  }
+  const root = createRoot(rootElement);
+  root.render(<WeatherApp />);
 }
 
 export default WeatherWidget;
@@ -135,13 +179,55 @@ export default WeatherWidget;
 
 `components/build.ts`는 자동으로 `src/` 폴더의 모든 위젯을 빌드합니다.
 
+**기본 빌드 (content hashing 비활성화)**:
 ```bash
 npm run build
 ```
 
-**예상 출력**:
+**프로덕션 빌드 (content hashing 활성화)**:
+```bash
+USE_HASH=true npm run build
+```
+
+**빌드 모드 선택 가이드**:
+- **기본값 (권장)**: `npm run build`
+  - 단순 파일명 (`weather.js`)
+  - 디버깅 용이
+  - 빠른 반복 개발
+  - 대부분의 배포 환경에 적합
+
+- **프로덕션 (해시 필요 시)**: `USE_HASH=true npm run build`
+  - 파일명에 SHA-256 해시 포함 (`weather-a1b2c3d4.js`)
+  - 브라우저 캐시 무효화 자동 처리
+  - CDN 배포 시 권장
+
+**예상 출력 (기본 모드)**:
 ```
 Building weather...
+  JS:  weather.js
+  CSS: weather.css
+✓ Built weather
+
+Build Summary
+============================================================
+Widgets built: 3
+Output directory: assets/
+
+Artifacts:
+  weather:
+    JS:  weather.js
+    CSS: weather.css
+    HTML: weather.html
+============================================================
+
+Hash mode: disabled
+```
+
+**예상 출력 (해시 모드)**:
+```
+Building weather...
+  JS:  weather.js -> weather-a1b2c3d4.js
+  CSS: weather.css -> weather-e5f6g7h8.css
 ✓ Built weather
 
 Build Summary
@@ -155,6 +241,8 @@ Artifacts:
     CSS: weather-e5f6g7h8.css
     HTML: weather.html
 ============================================================
+
+Hash mode: enabled
 ```
 
 #### Step 1.3: 서버에 위젯 등록
@@ -1126,6 +1214,389 @@ except Exception as e:
 
 ---
 
+## 8. 프로덕션 배포
+
+### 8.1 개발 환경 vs 프로덕션 환경
+
+#### 개발 환경 (현재 설정)
+
+```bash
+# MCP 서버
+Host: 0.0.0.0:8000 (모든 네트워크 인터페이스)
+
+# 컴포넌트 서버
+Host: 127.0.0.1:4444 (로컬만)
+BASE_URL: http://localhost:4444
+```
+
+**장점**:
+- 간단한 설정
+- 로컬 개발에 최적화
+- 빠른 반복 개발
+
+**제한사항**:
+- ChatGPT/Claude 웹에서 사용 불가 (HTTPS → HTTP 차단)
+- 외부 접근 불가
+
+#### 프로덕션 환경
+
+프로덕션에서는 **HTTPS**와 **공개 접근**이 필요합니다.
+
+### 8.2 배포 옵션
+
+#### 옵션 1: ngrok/Cloudflare Tunnel (빠른 테스트)
+
+**장점**: 빠른 설정, 무료 티어 사용 가능
+**단점**: 임시 URL, 성능 제한
+
+**ngrok 사용:**
+
+```bash
+# 1. MCP 서버와 컴포넌트 서버를 ngrok으로 노출
+cat > ~/ngrok.yml << 'EOF'
+version: 2
+authtoken: YOUR_NGROK_TOKEN
+tunnels:
+  mcp:
+    proto: http
+    addr: 8000
+  components:
+    proto: http
+    addr: 4444
+EOF
+
+# 2. ngrok 실행
+ngrok start --all --config ~/ngrok.yml
+
+# 3. 출력된 URL 확인
+# Forwarding  https://abc123.ngrok-free.dev -> http://localhost:8000
+# Forwarding  https://def456.ngrok-free.dev -> http://localhost:4444
+
+# 4. 컴포넌트를 ngrok URL로 재빌드
+BASE_URL=https://def456.ngrok-free.dev npm run build
+
+# 5. MCP 서버 재시작 (새 HTML 로드)
+# 서버가 auto-reload이므로 자동으로 재시작됨
+```
+
+**Cloudflare Tunnel 사용:**
+
+```bash
+# 1. cloudflared 설치
+# https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
+
+# 2. 터널 생성
+cloudflared tunnel create mcp-server
+
+# 3. config.yml 작성
+cat > ~/.cloudflared/config.yml << 'EOF'
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /home/june/.cloudflared/YOUR_TUNNEL_ID.json
+
+ingress:
+  - hostname: mcp.yourdomain.com
+    service: http://localhost:8000
+  - hostname: components.yourdomain.com
+    service: http://localhost:4444
+  - service: http_status:404
+EOF
+
+# 4. 터널 실행
+cloudflared tunnel run
+```
+
+#### 옵션 2: VPS 배포 (안정적인 프로덕션)
+
+**필요한 것**:
+- VPS (AWS EC2, DigitalOcean, Linode 등)
+- 도메인 이름
+- SSL 인증서 (Let's Encrypt)
+
+**배포 단계:**
+
+```bash
+# 1. VPS에 프로젝트 클론
+git clone your-repo.git
+cd test-mcp-server
+
+# 2. 의존성 설치
+npm run install:all
+
+# 3. 환경 변수 설정
+cp .env.example .env
+# .env 파일 편집
+
+# 4. 컴포넌트 빌드 (프로덕션 URL 사용)
+BASE_URL=https://components.yourdomain.com npm run build
+
+# 5. Nginx 리버스 프록시 설정
+```
+
+**Nginx 설정 예시:**
+
+```nginx
+# /etc/nginx/sites-available/mcp-server
+
+# MCP 서버
+server {
+    listen 443 ssl http2;
+    server_name mcp.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/mcp.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mcp.yourdomain.com/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+
+        # SSE를 위한 설정
+        proxy_buffering off;
+        proxy_read_timeout 86400s;
+    }
+}
+
+# 컴포넌트 서버
+server {
+    listen 443 ssl http2;
+    server_name components.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/components.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/components.yourdomain.com/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:4444;
+        proxy_set_header Host $host;
+
+        # CORS 설정
+        add_header Access-Control-Allow-Origin *;
+    }
+}
+```
+
+**systemd 서비스 설정:**
+
+```ini
+# /etc/systemd/system/mcp-server.service
+[Unit]
+Description=MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=june
+WorkingDirectory=/home/june/test-mcp-server
+Environment="PATH=/home/june/test-mcp-server/.venv/bin"
+ExecStart=/home/june/test-mcp-server/.venv/bin/uvicorn server.main:app --host 0.0.0.0 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```ini
+# /etc/systemd/system/components-server.service
+[Unit]
+Description=Components Server
+After=network.target
+
+[Service]
+Type=simple
+User=june
+WorkingDirectory=/home/june/test-mcp-server/components
+ExecStart=/usr/bin/npx serve -s ./assets -p 4444 --cors
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**서비스 시작:**
+
+```bash
+# 서비스 활성화
+sudo systemctl enable mcp-server
+sudo systemctl enable components-server
+
+# 서비스 시작
+sudo systemctl start mcp-server
+sudo systemctl start components-server
+
+# 상태 확인
+sudo systemctl status mcp-server
+sudo systemctl status components-server
+```
+
+#### 옵션 3: Docker 배포
+
+**Dockerfile:**
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install Node.js
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy project files
+COPY . .
+
+# Install dependencies
+RUN pip install -r server/requirements.txt
+RUN cd components && npm install && npm run build
+
+# Expose ports
+EXPOSE 8000
+
+# Run server
+CMD ["uvicorn", "server.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+**docker-compose.yml:**
+
+```yaml
+version: '3.8'
+
+services:
+  mcp-server:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  components-server:
+    image: node:20-slim
+    working_dir: /app/components
+    volumes:
+      - ./components:/app/components
+    command: npx serve -s ./assets -p 4444 --cors
+    ports:
+      - "4444:4444"
+    restart: unless-stopped
+```
+
+### 8.3 보안 고려사항
+
+#### HTTPS 필수
+
+**이유**:
+- ChatGPT/Claude는 HTTPS만 지원
+- Mixed Content 정책 (HTTPS → HTTP 차단)
+- 데이터 암호화
+
+#### CORS 설정
+
+현재 설정 (`server/config.py`):
+```python
+cors_allow_origins: Tuple[str, ...] = Field(default=("*",))
+```
+
+**프로덕션에서는 특정 도메인만 허용:**
+```python
+cors_allow_origins: Tuple[str, ...] = Field(
+    default=("https://chatgpt.com", "https://claude.ai")
+)
+```
+
+#### API 키 보호
+
+```bash
+# .env 파일 사용
+EXTERNAL_API_KEY=your-secret-key
+
+# 환경 변수로 전달 (Docker)
+docker run -e EXTERNAL_API_KEY=your-secret-key ...
+```
+
+### 8.4 모니터링 및 로깅
+
+#### 로그 레벨 설정
+
+```bash
+# 프로덕션: INFO 또는 WARNING
+LOG_LEVEL=WARNING
+
+# 디버깅: DEBUG
+LOG_LEVEL=DEBUG
+```
+
+#### 로그 수집
+
+```python
+# server/logging_config.py 확장
+import logging.handlers
+
+# 파일 로테이션
+handler = logging.handlers.RotatingFileHandler(
+    'logs/mcp-server.log',
+    maxBytes=10485760,  # 10MB
+    backupCount=5
+)
+```
+
+### 8.5 성능 최적화
+
+#### 캐싱
+
+```python
+# Redis 캐싱 예시
+import redis
+from functools import wraps
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+
+def cache_result(ttl=300):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            key = f"{func.__name__}:{args}:{kwargs}"
+            cached = redis_client.get(key)
+            if cached:
+                return json.loads(cached)
+            result = await func(*args, **kwargs)
+            redis_client.setex(key, ttl, json.dumps(result))
+            return result
+        return wrapper
+    return decorator
+```
+
+#### CDN 사용
+
+컴포넌트 파일을 CDN에 호스팅:
+
+```bash
+# S3 + CloudFront
+aws s3 sync components/assets s3://your-bucket/assets/
+BASE_URL=https://cdn.yourdomain.com npm run build
+```
+
+### 8.6 체크리스트
+
+프로덕션 배포 전 확인사항:
+
+- [ ] HTTPS 설정 완료
+- [ ] 환경 변수 설정 (`.env`)
+- [ ] CORS 특정 도메인으로 제한
+- [ ] API 키 보안 확인
+- [ ] 로그 레벨 적절히 설정
+- [ ] 컴포넌트를 프로덕션 URL로 빌드
+- [ ] 서버 자동 재시작 설정 (systemd/Docker)
+- [ ] 모니터링 설정
+- [ ] 백업 전략 수립
+- [ ] 방화벽 설정
+- [ ] SSL 인증서 자동 갱신 (Let's Encrypt)
+
+---
+
 ## 참조
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - 설계 패턴 및 아키텍처
@@ -1135,5 +1606,14 @@ except Exception as e:
 
 ---
 
-**마지막 업데이트**: 2025-11-04
+**마지막 업데이트**: 2025-11-23
 **작성자**: Claude Code (with junho)
+
+## 최근 업데이트 내역
+
+### 2025-11-23
+- ✅ Optional hashing 시스템 추가 (USE_HASH 환경 변수)
+- ✅ 기본값 변경: 해시 사용 안 함 (더 간단한 배포)
+- ✅ 위젯 로딩 상태 처리 베스트 프랙티스 추가
+- ✅ 빌드 모드 가이드 (기본 vs 해시)
+- ✅ window.openai.toolOutput 폴링 패턴 문서화

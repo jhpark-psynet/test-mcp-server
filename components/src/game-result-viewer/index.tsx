@@ -1,10 +1,11 @@
 import { createRoot } from 'react-dom/client';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { GameResultViewer } from './GameResultViewer';
 import { GameDataSchema, type GameData } from './types';
 import '../index.css';
 
-// Mock data for development (will be replaced by structuredContent from MCP server)
+// Mock data for development (will be replaced by toolOutput from OpenAI Apps SDK)
 const MOCK_GAME_DATA: GameData = {
   league: 'NBA',
   date: '11.18',
@@ -231,36 +232,78 @@ function ErrorFallback({ error }: { error: string }) {
   );
 }
 
-// Declare global window type for structuredContent
+// Declare global window type for OpenAI Apps SDK
 declare global {
   interface Window {
-    __STRUCTURED_CONTENT__?: any;
+    openai?: {
+      toolInput?: any;
+      toolOutput?: any;
+      toolResponseMetadata?: any;
+    };
   }
+}
+
+// Wrapper component that reactively listens to window.openai.toolOutput
+function GameResultViewerApp() {
+  const [gameData, setGameData] = useState<GameData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Function to read and validate data from window.openai.toolOutput
+    const updateGameData = () => {
+      try {
+        const rawData = window.openai?.toolOutput;
+
+        // If no data available yet, keep loading state
+        if (!rawData || (typeof rawData === 'object' && Object.keys(rawData).length === 0)) {
+          return;
+        }
+
+        const validatedData = GameDataSchema.parse(rawData);
+        setGameData(validatedData);
+        setError(null);
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          const errorMessage = err.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join('\n');
+          setError(errorMessage);
+        } else {
+          setError(String(err));
+        }
+      }
+    };
+
+    // Initial data load
+    updateGameData();
+
+    // Poll for changes in window.openai.toolOutput
+    // This ensures we catch data updates even if they arrive after initial render
+    const intervalId = setInterval(updateGameData, 100);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  if (error) {
+    return <ErrorFallback error={error} />;
+  }
+
+  if (!gameData) {
+    return (
+      <div className="max-w-2xl mx-auto my-8 p-8 bg-gray-50 rounded-lg shadow-lg">
+        <p className="text-gray-600">Loading game data...</p>
+      </div>
+    );
+  }
+
+  return <GameResultViewer data={gameData} />;
 }
 
 // Initialize the app
 const rootElement = document.getElementById('game-result-viewer-root');
 if (rootElement) {
   const root = createRoot(rootElement);
-
-  // Get game data from MCP server via structuredContent (global variable)
-  // Fall back to mock data for development
-  const gameData = window.__STRUCTURED_CONTENT__ || MOCK_GAME_DATA;
-
-  // Validate game data
-  try {
-    const validatedGameData = GameDataSchema.parse(gameData);
-    root.render(<GameResultViewer data={validatedGameData} />);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errorMessage = error.errors
-        .map((err) => `${err.path.join('.')}: ${err.message}`)
-        .join('\n');
-      root.render(<ErrorFallback error={errorMessage} />);
-    } else {
-      root.render(<ErrorFallback error={String(error)} />);
-    }
-  }
+  root.render(<GameResultViewerApp />);
 }
 
 export default GameResultViewer;

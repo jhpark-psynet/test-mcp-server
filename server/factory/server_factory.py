@@ -146,11 +146,15 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                 tool_meta = widget_tool_meta(tool)
                 break
 
+        # Load HTML fresh from disk (supports hot reload)
+        from server.services.asset_loader import load_widget_html
+        html = load_widget_html(widget.identifier, str(cfg.assets_dir))
+
         contents = [
             types.TextResourceContents(
                 uri=widget.template_uri,
                 mimeType=cfg.mime_type,
-                text=widget.html,
+                text=html,
                 _meta=tool_meta,
             )
         ]
@@ -228,6 +232,8 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                 widget_resource = embedded_widget_resource(cfg, tool.widget)
 
                 # Widget metadata
+                logger.info(f"[get_game_details] Sending metadata with template_uri: {tool.widget.template_uri}")
+                logger.info(f"[get_game_details] Widget identifier: {tool.widget.identifier}")
                 widget_meta: Dict[str, Any] = {
                     "openai.com/widget": widget_resource.model_dump(mode="json"),
                     "openai/outputTemplate": tool.widget.template_uri,

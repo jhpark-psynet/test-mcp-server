@@ -49,51 +49,50 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
 - **Props**: `message` (string)
 - **위치**: `components/src/example/`
 - **사용법**: React 위젯과 props 전달 방식 학습용
+- **상태**: 테스트용으로 코드만 유지 (툴 목록에서 제외)
 
-### 2. API Result Widget (`api-result`)
-- **목적**: 외부 API 응답 시각화
-- **Props**: `success`, `endpoint`, `data`, `error`, `timestamp`
-- **위치**: `components/src/api-result/`
+### 2. Game Result Viewer (`game-result-viewer`)
+- **목적**: 스포츠 경기 상세 통계 시각화
+- **Props**: `GameData` (league, date, status, homeTeam, awayTeam, gameRecords)
+- **위치**: `components/src/game-result-viewer/`
 - **기능**:
-  - 성공 뷰: 데이터 요약 및 확장 가능한 JSON 뷰
-  - 에러 뷰: 상세한 에러 정보 표시
-  - 필드 뱃지 및 타입 인디케이터
-  - Tailwind CSS 반응형 디자인
+  - 경기 정보 헤더 (리그, 날짜, 상태)
+  - 팀별 스코어 및 기록
+  - 선수별 상세 통계 (득점, 리바운드, 어시스트 등)
+  - 팀 통계 비교 (필드골, 3점슛, 자유투 등)
+  - Zod 스키마 검증
+  - 로딩 상태 처리 (window.openai.toolOutput 감지)
 
 ## 4. Available Tools
 
-서버가 제공하는 MCP 도구 3개:
+서버가 제공하는 MCP 도구 2개:
 
-### 1. Calculator (텍스트 도구) ⭐ AST 기반 안전
-- **이름**: `calculator`
+### 1. Get Games by Sport (텍스트 도구)
+- **이름**: `get_games_by_sport`
 - **타입**: Text-based tool
-- **입력**: `expression` (string) - 계산할 수식
-- **출력**: 계산 결과 또는 에러 메시지
-- **보안**: AST 파싱 기반 (eval() 사용 안 함)
-- **허용**: `+`, `-`, `*`, `/`, `//`, `%`, `**`, `abs()`, `round()`, `min()`, `max()`
-- **차단**: 변수명, import문, 임의 코드 실행
-- **예시**:
-  - `{"expression": "2 + 2"}` → `"Result: 4"`
-  - `{"expression": "malicious"}` → `"Error: Unsupported expression"`
-
-### 2. Example Widget (위젯 도구)
-- **이름**: `example-widget`
-- **타입**: Widget-based tool
-- **입력**: `message` (string, optional)
-- **출력**: 커스텀 메시지와 함께 예제 위젯 렌더링
-- **위젯**: Example Widget 컴포넌트 사용
-
-### 3. External Fetch (이중 모드 도구)
-- **이름**: `external-fetch`
-- **타입**: Widget 또는 Text 도구 (설정 가능)
 - **입력**:
-  - `query` (string) - API 엔드포인트 경로
-  - `response_mode` (string) - "text" 또는 "widget" (기본값: "text")
-  - `params` (object, optional) - 쿼리 파라미터
-- **출력**:
-  - Text 모드: 요약 및 JSON이 포함된 포맷팅된 텍스트
-  - Widget 모드: 인터랙티브 API Result 위젯
-- **요구사항**: `EXTERNAL_API_BASE_URL` 및 `EXTERNAL_API_KEY` 환경 변수 설정 필요
+  - `date` (string) - 경기 날짜 (YYYYMMDD 형식)
+  - `sport` (string) - 스포츠 종류 (basketball, baseball, football)
+- **출력**: 경기 일정 및 결과 (팀명, 스코어, 시간, 경기장, 경기 상태)
+- **기능**:
+  - 특정 날짜의 경기 목록 조회
+  - 팀명 필터링 가능 (home_team_name, away_team_name 검색)
+  - 일반적인 팀 별칭 지원 (Warriors, Cavs, Thunder 등)
+- **예시**:
+  - `{"date": "20251118", "sport": "basketball"}` → NBA/KBL/WKBL 경기 목록
+
+### 2. Get Game Details (위젯 도구)
+- **이름**: `get_game_details`
+- **타입**: Widget-based tool
+- **입력**: `game_id` (string) - 경기 고유 ID
+- **출력**: 인터랙티브 경기 상세 통계 위젯
+- **위젯**: Game Result Viewer 컴포넌트 사용
+- **기능**:
+  - 팀 통계 (필드골, 3점슛, 자유투, 리바운드 등)
+  - 선수별 상세 통계 (득점, 리바운드, 어시스트, 슈팅 성공률 등)
+  - 인터랙티브 UI로 데이터 시각화
+- **제한사항**: 종료된 경기만 지원 (state='f')
+- **사용법**: `get_games_by_sport`로 먼저 game_id 확인 후 사용
 
 ## 5. Folder Structure ⭐ Refactored (Phase 1 Complete)
 
@@ -137,18 +136,21 @@ test-mcp-server/
 ├── components/                     # React 컴포넌트
 │   ├── src/                       # React 소스 코드
 │   │   ├── index.css              # 글로벌 CSS (Tailwind)
-│   │   ├── example/               # 예제 위젯
+│   │   ├── example/               # 예제 위젯 (테스트용)
 │   │   │   └── index.tsx
-│   │   └── api-result/            # API 결과 위젯
-│   │       └── index.tsx          # 성공/에러 뷰, JSON 프리뷰
+│   │   └── game-result-viewer/    # 경기 결과 위젯
+│   │       ├── index.tsx          # 메인 컴포넌트
+│   │       ├── GameResultViewer.tsx  # 위젯 UI
+│   │       └── types.ts           # TypeScript 타입 정의
 │   │
 │   ├── assets/                    # 빌드 결과물 (생성됨)
 │   │   ├── example.html           # MCP 서버가 읽는 HTML
-│   │   ├── example-9252.js        # 해시된 JS 번들
-│   │   ├── example-9252.css       # 해시된 CSS
-│   │   ├── api-result.html
-│   │   ├── api-result-9252.js
-│   │   └── api-result-9252.css
+│   │   ├── example-9252.js        # 해시된 JS 번들 (USE_HASH=true일 때)
+│   │   ├── example-9252.css       # 해시된 CSS (USE_HASH=true일 때)
+│   │   ├── example.js             # 단순 JS (USE_HASH=false일 때)
+│   │   ├── game-result-viewer.html
+│   │   ├── game-result-viewer-192cf654.js
+│   │   └── game-result-viewer-192cf654.css
 │   │
 │   ├── package.json               # Node 의존성
 │   ├── tsconfig.json              # TypeScript 설정
@@ -184,6 +186,15 @@ test-mcp-server/
 - ✅ 타입 안전성 확보 (포트, 로그 레벨, API URL 검증)
 - ✅ 통합 테스트: 7/9 통과 (기능 유지)
 
+**Phase 4 & 5 성과** (2025-11-22):
+- ✅ Sports MCP 툴 2개 추가 (get_games_by_sport, get_game_details)
+- ✅ Game Result Viewer 위젯 (React 19, Tailwind CSS)
+- ✅ 외부 스포츠 API 통합 (팀 통계, 선수 통계)
+- ✅ Zod 스키마 검증 및 에러 핸들링
+- ✅ 로딩 상태 처리 (window.openai.toolOutput 폴링)
+- ✅ Content-based hashing 시스템 (SHA-256, 8자리)
+- ✅ Optional hashing 지원 (USE_HASH 환경 변수)
+
 ### 파일 역할 요약 (Refactored)
 
 | 파일 | 역할 |
@@ -205,9 +216,9 @@ test-mcp-server/
 | `server/factory/server_factory.py` | MCP 서버 생성 팩토리 |
 | `server/factory/metadata_builder.py` | OpenAI 메타데이터 생성 |
 | `components/src/*/index.tsx` | React 컴포넌트 (빌드 대상) |
-| `components/src/example/` | 예제 위젯 (Zod 스키마) |
-| `components/src/api-result/` | API 결과 위젯 (JSON 프리뷰) |
-| `components/build.ts` | Vite 빌드 (해시, HTML 생성) |
+| `components/src/example/` | 예제 위젯 (테스트용) |
+| `components/src/game-result-viewer/` | 경기 결과 위젯 (스포츠 통계) |
+| `components/build.ts` | Vite 빌드 (Optional 해시, HTML 생성) |
 | `components/assets/*.html` | MCP 리소스로 전달 |
 | `test_mcp.py` | MCP 통합 테스트 (7/9 통과) |
 | `.env.example` | 환경 변수 예시 |
@@ -301,9 +312,19 @@ npm run install:server       # Python 의존성만 설치
 
 ### 빌드
 ```bash
+# 기본 빌드 (content hashing 비활성화 - 더 간단)
 npm run build                # React 컴포넌트 빌드 (components/assets/ 생성)
+
+# 프로덕션 빌드 (content hashing 활성화 - 캐시 무효화용)
+USE_HASH=true npm run build  # 해시된 파일명 (game-result-viewer-192cf654.js)
+
+# Watch 모드
 npm run build:watch          # Watch 모드로 빌드 (자동 재빌드)
 ```
+
+**빌드 모드 차이**:
+- **기본값 (USE_HASH 미지정)**: `game-result-viewer.js` (간단한 파일명, 대부분의 경우 권장)
+- **USE_HASH=true**: `game-result-viewer-192cf654.js` (CDN 배포 시 캐시 무효화)
 
 ### 서버 실행
 ```bash
@@ -585,5 +606,5 @@ python test_mcp.py
 
 ---
 
-**마지막 업데이트**: 2025-11-03
-**프로젝트 버전**: 2.0.0 (External API 통합, 이중 응답 모드, API Result Widget)
+**마지막 업데이트**: 2025-11-23
+**프로젝트 버전**: 3.0.0 (Sports MCP Tools, Game Result Viewer, Optional Hashing System)

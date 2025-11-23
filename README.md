@@ -187,14 +187,18 @@ npm run install:server      # Install Python dependencies
 ### 2. Build React Components
 
 ```bash
+# Default build (without content hashing - simpler)
 npm run build
+
+# Production build with hashing (for cache busting)
+USE_HASH=true npm run build
 ```
 
 This will:
 - Build React components from `components/src/*/index.tsx`
 - Generate HTML/JS/CSS in `components/assets/`
-- Hash filenames with content-based SHA-256 (8 chars)
-- Create HTML files referencing hashed assets
+- Hash filenames with content-based SHA-256 (8 chars) when `USE_HASH` is enabled
+- Create HTML files referencing hashed or non-hashed assets
 
 ### 3. Run the Server
 
@@ -206,9 +210,54 @@ The MCP server will start on `http://0.0.0.0:8000`
 
 ## Build Process
 
-### Cache Busting
+### Optional Hashing System
 
-The build process uses **content-based hashing** for proper cache invalidation:
+The build system supports two modes for different needs:
+
+#### Default Mode (No Hashing)
+
+**Simple filenames** for easier development and deployment:
+
+```bash
+npm run build
+```
+
+1. **Build widgets**: Each widget is compiled to JS/CSS
+2. **Generate files**: Simple filenames like `example.js`, `example.css`
+3. **Generate HTML**: References non-hashed files
+
+**Benefits**:
+- ✅ Simple, predictable filenames (`example.js`, `example.css`)
+- ✅ Faster build (no hash calculation)
+- ✅ Easier debugging (no hash in URLs)
+- ✅ Simpler deployment process
+
+**Generated files**:
+```
+components/assets/
+├── example.js           # Simple filename
+├── example.css          # Simple filename
+├── example.html         # References non-hashed files
+└── manifest.json        # Widget registry
+```
+
+**Limitations**:
+- ⚠️ Browser may cache old versions (need manual cache clear after updates)
+- ⚠️ Not ideal for CDN deployment with aggressive caching
+
+**When to use**:
+- ✅ Local development
+- ✅ Testing with MCP Inspector
+- ✅ Simple deployments without CDN
+- ✅ Most use cases
+
+#### Production Mode (With Hashing)
+
+**Content-based hashing** for automatic cache invalidation:
+
+```bash
+USE_HASH=true npm run build
+```
 
 1. **Build widgets**: Each widget is compiled to JS/CSS
 2. **Generate hashes**: SHA-256 hash of file contents (8 characters)
@@ -234,7 +283,7 @@ components/assets/
 
 When you update `src/example/index.tsx`:
 ```bash
-npm run build
+USE_HASH=true npm run build
 
 # Before: example-40f54552.js
 # After:  example-a1b2c3d4.js  ← New hash!
@@ -244,23 +293,15 @@ npm run build
 - Browsers fetch new version (cache miss)
 - Old versions remain cached until code changes
 
-**Testing cache busting**:
-```bash
-# 1. Initial build
-npm run build
-ls components/assets/example-*.js  # example-40f54552.js
+**When to use**:
+- ✅ CDN deployment
+- ✅ Production with aggressive browser caching
+- ✅ Need guaranteed cache invalidation
+- ✅ Frequent updates that must be immediately visible
 
-# 2. Rebuild without changes (hash stays same)
-npm run build
-ls components/assets/example-*.js  # example-40f54552.js ← Same!
-
-# 3. Modify code
-echo "console.log('test');" >> components/src/example/index.tsx
-
-# 4. Rebuild (hash changes)
-npm run build
-ls components/assets/example-*.js  # example-a1b2c3d4.js ← New!
-```
+**When not to use**:
+- ❌ Simple deployments (default mode is simpler)
+- ❌ Local development (slows down iteration)
 
 ## Build Verification
 
@@ -437,6 +478,20 @@ BASE_URL=http://your-domain.com:4444 npm run build
 ```
 
 Default: `http://localhost:4444`
+
+### USE_HASH
+
+Control whether to use content-based hashing for cache busting:
+
+```bash
+# Production mode (with hashing) - Default
+npm run build
+
+# Development mode (without hashing)
+USE_HASH=false npm run build
+```
+
+Default: `true` (hashing enabled)
 
 ### External API Configuration
 

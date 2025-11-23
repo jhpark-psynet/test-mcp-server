@@ -17,4 +17,4 @@ class Widget:
     identifier: str
     title: str
     template_uri: str
-    html: str
+    # html 필드 제거: 매번 파일에서 읽도록 변경 (hot reload 지원)

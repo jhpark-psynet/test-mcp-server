@@ -1,13 +1,21 @@
 """위젯 레지스트리."""
+import logging
 from typing import List
 
 from server.config import Config
 from server.models import Widget
-from server.services.asset_loader import load_widget_html
+from server.services.asset_loader import detect_widget_hash
+
+logger = logging.getLogger(__name__)
 
 
 def build_widgets(cfg: Config) -> List[Widget]:
     """Build list of available widgets.
+
+    Note: HTML is not loaded here anymore. It's loaded fresh from disk
+    each time via embedded_widget_resource() to support hot reload.
+
+    Using simple widget names without hashing for easier development.
 
     Args:
         cfg: Server configuration
@@ -15,27 +23,27 @@ def build_widgets(cfg: Config) -> List[Widget]:
     Returns:
         List of Widget instances
     """
-    example_html = load_widget_html("example", str(cfg.assets_dir))
-    game_stats_html = load_widget_html("game-stats", str(cfg.assets_dir))
-    game_result_viewer_html = load_widget_html("game-result-viewer", str(cfg.assets_dir))
+    widgets = []
 
-    return [
-        Widget(
-            identifier="example-widget",
-            title="Example Widget",
-            template_uri="ui://widget/example.html",
-            html=example_html,
-        ),
-        Widget(
-            identifier="game-stats-widget",
-            title="Game Stats Widget",
-            template_uri="ui://widget/game-stats.html",
-            html=game_stats_html,
-        ),
-        Widget(
-            identifier="game-result-viewer",
-            title="Game Result Viewer",
-            template_uri="ui://widget/game-result-viewer.html",
-            html=game_result_viewer_html,
-        )
+    # Define base widgets with their names
+    widget_definitions = [
+        ("example", "Example Widget"),
+        ("game-stats", "Game Stats Widget"),
+        ("game-result-viewer", "Game Result Viewer"),
     ]
+
+    for base_name, title in widget_definitions:
+        # Use simple names without hashing
+        identifier = base_name
+        template_uri = f"ui://widget/{base_name}.html"
+        logger.info(f"Widget '{base_name}' registered")
+
+        widgets.append(
+            Widget(
+                identifier=identifier,
+                title=title,
+                template_uri=template_uri,
+            )
+        )
+
+    return widgets

@@ -36,16 +36,19 @@ def build_tools(
     tools = []
 
     # Find game-result-viewer widget for get_game_details
+    # Support both hashed and non-hashed identifiers
     game_result_viewer_widget = None
     for widget in widgets:
-        if widget.identifier == "game-result-viewer":
+        if widget.identifier == "game-result-viewer" or widget.identifier.startswith("game-result-viewer-"):
             game_result_viewer_widget = widget
             break
 
     # Widget-based tools (standard widgets with message input)
     for widget in widgets:
         # Skip widgets that are used internally or for testing only
-        if widget.identifier in ["game-stats-widget", "game-result-viewer", "example-widget"]:
+        # Check by base name prefix since identifiers now include hashes
+        base_name = widget.identifier.rsplit('-', 1)[0] if '-' in widget.identifier else widget.identifier
+        if base_name in ["game-stats", "game-result-viewer", "example"]:
             continue
 
         tools.append(
