@@ -43,27 +43,6 @@ def build_tools(
             game_result_viewer_widget = widget
             break
 
-    # Widget-based tools (standard widgets with message input)
-    for widget in widgets:
-        # Skip widgets that are used internally or for testing only
-        # Check by base name prefix since identifiers now include hashes
-        base_name = widget.identifier.rsplit('-', 1)[0] if '-' in widget.identifier else widget.identifier
-        if base_name in ["game-stats", "game-result-viewer", "example"]:
-            continue
-
-        tools.append(
-            ToolDefinition(
-                name=widget.identifier,
-                title=widget.title,
-                description=f"Display {widget.title} interactive component",
-                input_schema=WIDGET_TOOL_INPUT_SCHEMA,
-                tool_type=ToolType.WIDGET,
-                widget=widget,
-                invoking=f"Loading {widget.title}...",
-                invoked=f"{widget.title} loaded",
-            )
-        )
-
     # External API tool (only if configured)
     if cfg.has_external_api:
         tools.append(
