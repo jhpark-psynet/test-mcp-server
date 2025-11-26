@@ -1,1501 +1,88 @@
-"""스포츠 데이터 API 클라이언트 (Mock 데이터)."""
+"""스포츠 데이터 API 클라이언트 (Mock + Real API)."""
 from typing import Dict, List, Any, Optional
 import logging
+import httpx
+
+from server.config import CONFIG
+from server.services.api_response_mapper import ApiResponseMapper
+from server.services.mock_sports_data import (
+    MOCK_GAMES_DB,
+    MOCK_TEAM_STATS_DB,
+    MOCK_PLAYER_STATS_DB
+)
 
 logger = logging.getLogger(__name__)
 
 
-# Mock 데이터 저장소
-MOCK_GAMES_DB: Dict[str, List[Dict[str, Any]]] = {
-    "20251118_basketball": [
-        {
-            "game_id": "OT2025313104229",
-            "compe": "basketball",
-            "league_id": "OT313",
-            "league_name": "NBA",
-            "match_date": "20251118",
-            "match_time": "09:00",
-            "home_team_id": "OT31242",
-            "away_team_id": "OT31238",
-            "home_team_name": "클리블랜드",
-            "away_team_name": "밀워키",
-            "arena_name": "로킷 모기지 필드하우스",
-            "home_score": 118,
-            "away_score": 106,
-            "state": "f"
-        },
-        {
-            "game_id": "KBL2025118001",
-            "compe": "basketball",
-            "league_id": "KBL",
-            "league_name": "KBL",
-            "match_date": "20251118",
-            "match_time": "19:00",
-            "home_team_id": "KBL_DG",
-            "away_team_id": "KBL_BS",
-            "home_team_name": "대구가스공사",
-            "away_team_name": "부산KCC",
-            "arena_name": "대구실내체육관",
-            "home_score": 93,
-            "away_score": 94,
-            "state": "b"
-        },
-        {
-            "game_id": "WKBL2025118001",
-            "compe": "basketball",
-            "league_id": "WKBL",
-            "league_name": "WKBL",
-            "match_date": "20251118",
-            "match_time": "17:00",
-            "home_team_id": "WKBL_YI",
-            "away_team_id": "WKBL_BC",
-            "home_team_name": "용인 삼성생명 블루밍스",
-            "away_team_name": "부천 하나원큐",
-            "arena_name": "용인실내체육관",
-            "home_score": 78,
-            "away_score": 72,
-            "state": "f"
-        },
-        {
-            "game_id": "OT2025313104237",
-            "compe": "basketball",
-            "league_id": "OT313",
-            "league_name": "NBA",
-            "match_date": "20251118",
-            "match_time": "10:30",
-            "home_team_id": "OT31262",
-            "away_team_id": "OT31259",
-            "home_team_name": "올랜도",
-            "away_team_name": "샌안토니오",
-            "arena_name": "아멕스 센터",
-            "home_score": 105,
-            "away_score": 87,
-            "state": "f"
-        }
-    ]
-}
-
-MOCK_TEAM_STATS_DB: Dict[str, List[Dict[str, Any]]] = {
-    "OT2025313104229": [
-        {
-            "home_team_id": "OT31242",
-            "home_team_name": "클리블랜드",
-            "home_team_fgm_cn": "45",
-            "home_team_fga_cn": "88",
-            "home_team_pgm3_cn": "12",
-            "home_team_pga3_cn": "30",
-            "home_team_ftm_cn": "16",
-            "home_team_fta_cn": "20",
-            "home_team_oreb_cn": "10",
-            "home_team_dreb_cn": "35",
-            "home_team_assist_cn": "28",
-            "home_team_turnover_cn": "12",
-            "home_team_steal_cn": "8",
-            "home_team_block_cn": "5",
-            "home_team_pfoul_cn": "18",
-            "home_team_pfoulsdis": "0"
-        },
-        {
-            "away_team_id": "OT31238",
-            "away_team_name": "밀워키",
-            "away_team_fgm_cn": "40",
-            "away_team_fga_cn": "92",
-            "away_team_pgm3_cn": "10",
-            "away_team_pga3_cn": "35",
-            "away_team_ftm_cn": "16",
-            "away_team_fta_cn": "22",
-            "away_team_oreb_cn": "8",
-            "away_team_dreb_cn": "32",
-            "away_team_assist_cn": "22",
-            "away_team_turnover_cn": "15",
-            "away_team_steal_cn": "6",
-            "away_team_block_cn": "3",
-            "away_team_pfoul_cn": "20",
-            "away_team_pfoulsdis": "0"
-        }
-    ],
-    "OT2025313104237": [
-        {
-            "home_team_id": "OT31262",
-            "home_team_name": "올랜도",
-            "home_team_fgm_cn": "35",
-            "home_team_fga_cn": "53",
-            "home_team_pgm3_cn": "8",
-            "home_team_pga3_cn": "32",
-            "home_team_ftm_cn": "27",
-            "home_team_fta_cn": "29",
-            "home_team_oreb_cn": "10",
-            "home_team_dreb_cn": "33",
-            "home_team_assist_cn": "28",
-            "home_team_turnover_cn": "14",
-            "home_team_steal_cn": "14",
-            "home_team_block_cn": "3",
-            "home_team_pfoul_cn": "20",
-            "home_team_pfoulsdis": "0"
-        },
-        {
-            "away_team_id": "OT31259",
-            "away_team_name": "샌안토니오",
-            "away_team_fgm_cn": "26",
-            "away_team_fga_cn": "42",
-            "away_team_pgm3_cn": "13",
-            "away_team_pga3_cn": "36",
-            "away_team_ftm_cn": "22",
-            "away_team_fta_cn": "28",
-            "away_team_oreb_cn": "6",
-            "away_team_dreb_cn": "30",
-            "away_team_assist_cn": "26",
-            "away_team_turnover_cn": "18",
-            "away_team_steal_cn": "11",
-            "away_team_block_cn": "3",
-            "away_team_pfoul_cn": "18",
-            "away_team_pfoulsdis": "0"
-        }
-    ],
-    "WKBL2025118001": [
-        {
-            "home_team_id": "WKBL_YI",
-            "home_team_name": "용인 삼성생명 블루밍스",
-            "home_team_fgm_cn": "28",
-            "home_team_fga_cn": "65",
-            "home_team_pgm3_cn": "8",
-            "home_team_pga3_cn": "22",
-            "home_team_ftm_cn": "14",
-            "home_team_fta_cn": "18",
-            "home_team_oreb_cn": "12",
-            "home_team_dreb_cn": "28",
-            "home_team_assist_cn": "18",
-            "home_team_turnover_cn": "14",
-            "home_team_steal_cn": "9",
-            "home_team_block_cn": "4",
-            "home_team_pfoul_cn": "16",
-            "home_team_pfoulsdis": "0"
-        },
-        {
-            "away_team_id": "WKBL_BC",
-            "away_team_name": "부천 하나원큐",
-            "away_team_fgm_cn": "26",
-            "away_team_fga_cn": "62",
-            "away_team_pgm3_cn": "6",
-            "away_team_pga3_cn": "20",
-            "away_team_ftm_cn": "14",
-            "away_team_fta_cn": "19",
-            "away_team_oreb_cn": "10",
-            "away_team_dreb_cn": "25",
-            "away_team_assist_cn": "15",
-            "away_team_turnover_cn": "16",
-            "away_team_steal_cn": "7",
-            "away_team_block_cn": "2",
-            "away_team_pfoul_cn": "18",
-            "away_team_pfoulsdis": "0"
-        }
-    ]
-}
-
-MOCK_PLAYER_STATS_DB: Dict[str, List[Dict[str, Any]]] = {
-    "OT2025313104229": [
-        # Cleveland (Home) players
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31242",
-            "player_id": "CLE001",
-            "player_name": "미첼",
-            "pos_sc": "G",
-            "player_time": "38:00",
-            "ftm_cn": "8",
-            "fgm_cn": 12,
-            "pgm3_cn": 4,
-            "tot_score": 28,
-            "treb_cn": "5",
-            "steal_cn": "2",
-            "pfoul_cn": "3",
-            "assist_cn": "6",
-            "back_no": "45",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".521",
-            "ppct3": ".400",
-            "blocks": "0",
-            "turnover": "2",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31242",
-            "player_id": "CLE002",
-            "player_name": "가랜드",
-            "pos_sc": "G",
-            "player_time": "36:00",
-            "ftm_cn": "4",
-            "fgm_cn": 9,
-            "pgm3_cn": 3,
-            "tot_score": 22,
-            "treb_cn": "3",
-            "steal_cn": "1",
-            "pfoul_cn": "2",
-            "assist_cn": "8",
-            "back_no": "10",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".450",
-            "ppct3": ".375",
-            "blocks": "0",
-            "turnover": "3",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31242",
-            "player_id": "CLE003",
-            "player_name": "알렌",
-            "pos_sc": "C",
-            "player_time": "32:00",
-            "ftm_cn": "2",
-            "fgm_cn": 6,
-            "pgm3_cn": 0,
-            "tot_score": 14,
-            "treb_cn": "12",
-            "steal_cn": "1",
-            "pfoul_cn": "4",
-            "assist_cn": "2",
-            "back_no": "31",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".600",
-            "ppct3": ".000",
-            "blocks": "3",
-            "turnover": "1",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31242",
-            "player_id": "CLE004",
-            "player_name": "모블리",
-            "pos_sc": "F",
-            "player_time": "34:00",
-            "ftm_cn": "2",
-            "fgm_cn": 8,
-            "pgm3_cn": 2,
-            "tot_score": 18,
-            "treb_cn": "9",
-            "steal_cn": "2",
-            "pfoul_cn": "3",
-            "assist_cn": "3",
-            "back_no": "4",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".533",
-            "ppct3": ".333",
-            "blocks": "2",
-            "turnover": "2",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31242",
-            "player_id": "CLE005",
-            "player_name": "스트러스",
-            "pos_sc": "F",
-            "player_time": "28:00",
-            "ftm_cn": "0",
-            "fgm_cn": 5,
-            "pgm3_cn": 3,
-            "tot_score": 13,
-            "treb_cn": "4",
-            "steal_cn": "1",
-            "pfoul_cn": "2",
-            "assist_cn": "4",
-            "back_no": "1",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".417",
-            "ppct3": ".429",
-            "blocks": "0",
-            "turnover": "1",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31242",
-            "player_id": "CLE006",
-            "player_name": "제롬",
-            "pos_sc": "Sub",
-            "player_time": "22:00",
-            "ftm_cn": "0",
-            "fgm_cn": 3,
-            "pgm3_cn": 0,
-            "tot_score": 6,
-            "treb_cn": "6",
-            "steal_cn": "1",
-            "pfoul_cn": "3",
-            "assist_cn": "2",
-            "back_no": "24",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".375",
-            "ppct3": ".000",
-            "blocks": "0",
-            "turnover": "1",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31242",
-            "player_id": "CLE007",
-            "player_name": "르버트",
-            "pos_sc": "Sub",
-            "player_time": "10:00",
-            "ftm_cn": "0",
-            "fgm_cn": 2,
-            "pgm3_cn": 0,
-            "tot_score": 4,
-            "treb_cn": "2",
-            "steal_cn": "0",
-            "pfoul_cn": "1",
-            "assist_cn": "1",
-            "back_no": "8",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".500",
-            "ppct3": ".000",
-            "blocks": "0",
-            "turnover": "1",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        # Milwaukee (Away) players
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31238",
-            "player_id": "MIL001",
-            "player_name": "릴라드",
-            "pos_sc": "G",
-            "player_time": "37:00",
-            "ftm_cn": "6",
-            "fgm_cn": 10,
-            "pgm3_cn": 4,
-            "tot_score": 26,
-            "treb_cn": "4",
-            "steal_cn": "1",
-            "pfoul_cn": "3",
-            "assist_cn": "7",
-            "back_no": "0",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".476",
-            "ppct3": ".364",
-            "blocks": "0",
-            "turnover": "4",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31238",
-            "player_id": "MIL002",
-            "player_name": "아데토쿤보",
-            "pos_sc": "F",
-            "player_time": "35:00",
-            "ftm_cn": "8",
-            "fgm_cn": 14,
-            "pgm3_cn": 0,
-            "tot_score": 32,
-            "treb_cn": "11",
-            "steal_cn": "2",
-            "pfoul_cn": "4",
-            "assist_cn": "5",
-            "back_no": "34",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".583",
-            "ppct3": ".000",
-            "blocks": "2",
-            "turnover": "3",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31238",
-            "player_id": "MIL003",
-            "player_name": "미들턴",
-            "pos_sc": "F",
-            "player_time": "33:00",
-            "ftm_cn": "2",
-            "fgm_cn": 7,
-            "pgm3_cn": 3,
-            "tot_score": 18,
-            "treb_cn": "5",
-            "steal_cn": "1",
-            "pfoul_cn": "2",
-            "assist_cn": "4",
-            "back_no": "22",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".467",
-            "ppct3": ".429",
-            "blocks": "0",
-            "turnover": "2",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31238",
-            "player_id": "MIL004",
-            "player_name": "로페즈",
-            "pos_sc": "C",
-            "player_time": "28:00",
-            "ftm_cn": "0",
-            "fgm_cn": 4,
-            "pgm3_cn": 1,
-            "tot_score": 9,
-            "treb_cn": "7",
-            "steal_cn": "0",
-            "pfoul_cn": "4",
-            "assist_cn": "1",
-            "back_no": "11",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".444",
-            "ppct3": ".333",
-            "blocks": "1",
-            "turnover": "1",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31238",
-            "player_id": "MIL005",
-            "player_name": "크라우더",
-            "pos_sc": "F",
-            "player_time": "25:00",
-            "ftm_cn": "0",
-            "fgm_cn": 3,
-            "pgm3_cn": 2,
-            "tot_score": 8,
-            "treb_cn": "4",
-            "steal_cn": "1",
-            "pfoul_cn": "3",
-            "assist_cn": "2",
-            "back_no": "99",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".375",
-            "ppct3": ".400",
-            "blocks": "0",
-            "turnover": "2",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31238",
-            "player_id": "MIL006",
-            "player_name": "포티스",
-            "pos_sc": "Sub",
-            "player_time": "22:00",
-            "ftm_cn": "0",
-            "fgm_cn": 2,
-            "pgm3_cn": 0,
-            "tot_score": 4,
-            "treb_cn": "5",
-            "steal_cn": "1",
-            "pfoul_cn": "2",
-            "assist_cn": "2",
-            "back_no": "12",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".333",
-            "ppct3": ".000",
-            "blocks": "0",
-            "turnover": "1",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        },
-        {
-            "game_id": "OT2025313104229",
-            "team_id": "OT31238",
-            "player_id": "MIL007",
-            "player_name": "페인",
-            "pos_sc": "Sub",
-            "player_time": "20:00",
-            "ftm_cn": "0",
-            "fgm_cn": 0,
-            "pgm3_cn": 0,
-            "tot_score": 0,
-            "treb_cn": "1",
-            "steal_cn": "0",
-            "pfoul_cn": "2",
-            "assist_cn": "1",
-            "back_no": "5",
-            "kor_player_flag": " ",
-            "player_img_yn": "Y",
-            "fgpct": ".000",
-            "ppct3": ".000",
-            "blocks": "0",
-            "turnover": "2",
-            "s_games": "0",
-            "s_player_time": "00:00",
-            "s_pts_avg": "0",
-            "s_fgpct": "0",
-            "s_ppct3": "0",
-            "s_ass_avg": "0",
-            "s_tr_avg": "0",
-            "s_ste_avg": "0",
-            "s_blk_avg": "0",
-            "s_to_avg": "0"
-        }
-    ],
-    "OT2025313104237": [
-         {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT312144",
-        "player_name": "베인",
-        "pos_sc": "G",
-        "player_time": "39:10",
-        "ftm_cn": "7",
-        "fgm_cn": 10,
-        "pgm3_cn": 6,
-        "tot_score": 23,
-        "treb_cn": "6",
-        "steal_cn": "5",
-        "pfoul_cn": "4",
-        "assist_cn": "5",
-        "back_no": "22",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".438",
-        "ppct3": ".333",
-        "blocks": "0",
-        "turnover": "3",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT312733",
-        "player_name": "바그너",
-        "pos_sc": "F",
-        "player_time": "36:23",
-        "ftm_cn": "4",
-        "fgm_cn": 14,
-        "pgm3_cn": 0,
-        "tot_score": 18,
-        "treb_cn": "8",
-        "steal_cn": "1",
-        "pfoul_cn": "4",
-        "assist_cn": "3",
-        "back_no": "22",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".412",
-        "ppct3": ".000",
-        "blocks": "1",
-        "turnover": "1",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT312516",
-        "player_name": "카터 주니어",
-        "pos_sc": "C",
-        "player_time": "35:07",
-        "ftm_cn": "6",
-        "fgm_cn": 8,
-        "pgm3_cn": 3,
-        "tot_score": 17,
-        "treb_cn": "12",
-        "steal_cn": "1",
-        "pfoul_cn": "3",
-        "assist_cn": "2",
-        "back_no": "34",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".714",
-        "ppct3": ".333",
-        "blocks": "0",
-        "turnover": "1",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT313299",
-        "player_name": "석스",
-        "pos_sc": "G",
-        "player_time": "31:56",
-        "ftm_cn": "5",
-        "fgm_cn": 8,
-        "pgm3_cn": 0,
-        "tot_score": 13,
-        "treb_cn": "5",
-        "steal_cn": "2",
-        "pfoul_cn": "4",
-        "assist_cn": "8",
-        "back_no": "4",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".364",
-        "ppct3": ".000",
-        "blocks": "1",
-        "turnover": "3",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT313298",
-        "player_name": "다 실바",
-        "pos_sc": "F",
-        "player_time": "28:52",
-        "ftm_cn": "0",
-        "fgm_cn": 6,
-        "pgm3_cn": 9,
-        "tot_score": 15,
-        "treb_cn": "4",
-        "steal_cn": "1",
-        "pfoul_cn": "0",
-        "assist_cn": "2",
-        "back_no": "23",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".462",
-        "ppct3": ".429",
-        "blocks": "0",
-        "turnover": "2",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT313302",
-        "player_name": "블랙",
-        "pos_sc": "Sub",
-        "player_time": "32:45",
-        "ftm_cn": "5",
-        "fgm_cn": 16,
-        "pgm3_cn": 0,
-        "tot_score": 21,
-        "treb_cn": "4",
-        "steal_cn": "2",
-        "pfoul_cn": "3",
-        "assist_cn": "2",
-        "back_no": "0",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".615",
-        "ppct3": ".000",
-        "blocks": "0",
-        "turnover": "1",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT312179",
-        "player_name": "존스",
-        "pos_sc": "Sub",
-        "player_time": "14:55",
-        "ftm_cn": "0",
-        "fgm_cn": 2,
-        "pgm3_cn": 6,
-        "tot_score": 8,
-        "treb_cn": "0",
-        "steal_cn": "1",
-        "pfoul_cn": "0",
-        "assist_cn": "3",
-        "back_no": "2",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": "1.000",
-        "ppct3": "1.000",
-        "blocks": "0",
-        "turnover": "1",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT311146",
-        "player_name": "비타제",
-        "pos_sc": "Sub",
-        "player_time": "13:54",
-        "ftm_cn": "0",
-        "fgm_cn": 6,
-        "pgm3_cn": 0,
-        "tot_score": 6,
-        "treb_cn": "2",
-        "steal_cn": "1",
-        "pfoul_cn": "1",
-        "assist_cn": "3",
-        "back_no": "88",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": "1.000",
-        "ppct3": "",
-        "blocks": "1",
-        "turnover": "1",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT313294",
-        "player_name": "아이작",
-        "pos_sc": "Sub",
-        "player_time": "06:49",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "2",
-        "steal_cn": "0",
-        "pfoul_cn": "1",
-        "assist_cn": "0",
-        "back_no": "1",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".000",
-        "ppct3": ".000",
-        "blocks": "0",
-        "turnover": "1",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT312304",
-        "player_name": "케인",
-        "pos_sc": "Sub",
-        "player_time": "00:09",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "0",
-        "assist_cn": "0",
-        "back_no": "8",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": "",
-        "ppct3": "",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT312499",
-        "player_name": "로빈슨",
-        "pos_sc": "Sub",
-        "player_time": "00:00",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "0",
-        "assist_cn": "0",
-        "back_no": "7",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": "",
-        "ppct3": "",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT312732",
-        "player_name": "바그너",
-        "pos_sc": "Sub",
-        "player_time": "00:00",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "0",
-        "assist_cn": "0",
-        "back_no": "21",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": "",
-        "ppct3": "",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT313300",
-        "player_name": "밴케로",
-        "pos_sc": "Sub",
-        "player_time": "00:00",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "0",
-        "assist_cn": "0",
-        "back_no": "5",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": "",
-        "ppct3": "",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT313303",
-        "player_name": "하워드",
-        "pos_sc": "Sub",
-        "player_time": "00:00",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "0",
-        "assist_cn": "0",
-        "back_no": "13",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": "",
-        "ppct3": "",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT313641",
-        "player_name": "카스틀톤",
-        "pos_sc": "Sub",
-        "player_time": "00:00",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "0",
-        "assist_cn": "0",
-        "back_no": "11",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": "",
-        "ppct3": "",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT315247",
-        "player_name": "리차드슨",
-        "pos_sc": "Sub",
-        "player_time": "00:00",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "0",
-        "assist_cn": "0",
-        "back_no": "11",
-        "kor_player_flag": " ",
-        "player_img_yn": "N",
-        "fgpct": "",
-        "ppct3": "",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31262",
-        "player_id": "OT315248",
-        "player_name": "펜다",
-        "pos_sc": "Sub",
-        "player_time": "00:00",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "0",
-        "assist_cn": "0",
-        "back_no": "93",
-        "kor_player_flag": " ",
-        "player_img_yn": "N",
-        "fgpct": "",
-        "ppct3": "",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      # San Antonio (Away) players
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31259",
-        "player_id": "SAS001",
-        "player_name": "웸바냐마",
-        "pos_sc": "C",
-        "player_time": "35:00",
-        "ftm_cn": "10",
-        "fgm_cn": 11,
-        "pgm3_cn": 5,
-        "tot_score": 27,
-        "treb_cn": "9",
-        "steal_cn": "4",
-        "pfoul_cn": "3",
-        "assist_cn": "3",
-        "back_no": "1",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".524",
-        "ppct3": ".417",
-        "blocks": "1",
-        "turnover": "4",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31259",
-        "player_id": "SAS002",
-        "player_name": "바셀",
-        "pos_sc": "G",
-        "player_time": "33:00",
-        "ftm_cn": "4",
-        "fgm_cn": 7,
-        "pgm3_cn": 3,
-        "tot_score": 18,
-        "treb_cn": "4",
-        "steal_cn": "2",
-        "pfoul_cn": "2",
-        "assist_cn": "7",
-        "back_no": "4",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".467",
-        "ppct3": ".429",
-        "blocks": "0",
-        "turnover": "3",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31259",
-        "player_id": "SAS003",
-        "player_name": "존슨",
-        "pos_sc": "F",
-        "player_time": "30:00",
-        "ftm_cn": "2",
-        "fgm_cn": 5,
-        "pgm3_cn": 2,
-        "tot_score": 12,
-        "treb_cn": "6",
-        "steal_cn": "1",
-        "pfoul_cn": "4",
-        "assist_cn": "4",
-        "back_no": "5",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".417",
-        "ppct3": ".333",
-        "blocks": "1",
-        "turnover": "2",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31259",
-        "player_id": "SAS004",
-        "player_name": "소한",
-        "pos_sc": "F",
-        "player_time": "28:00",
-        "ftm_cn": "3",
-        "fgm_cn": 4,
-        "pgm3_cn": 1,
-        "tot_score": 11,
-        "treb_cn": "5",
-        "steal_cn": "1",
-        "pfoul_cn": "3",
-        "assist_cn": "5",
-        "back_no": "10",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".444",
-        "ppct3": ".250",
-        "blocks": "0",
-        "turnover": "3",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31259",
-        "player_id": "SAS005",
-        "player_name": "챔피온",
-        "pos_sc": "G",
-        "player_time": "26:00",
-        "ftm_cn": "1",
-        "fgm_cn": 3,
-        "pgm3_cn": 2,
-        "tot_score": 8,
-        "treb_cn": "3",
-        "steal_cn": "2",
-        "pfoul_cn": "2",
-        "assist_cn": "3",
-        "back_no": "7",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".375",
-        "ppct3": ".400",
-        "blocks": "0",
-        "turnover": "2",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31259",
-        "player_id": "SAS006",
-        "player_name": "브랜햄",
-        "pos_sc": "Sub",
-        "player_time": "24:00",
-        "ftm_cn": "2",
-        "fgm_cn": 3,
-        "pgm3_cn": 0,
-        "tot_score": 8,
-        "treb_cn": "2",
-        "steal_cn": "1",
-        "pfoul_cn": "3",
-        "assist_cn": "2",
-        "back_no": "22",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".429",
-        "ppct3": ".000",
-        "blocks": "1",
-        "turnover": "2",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31259",
-        "player_id": "SAS007",
-        "player_name": "콜린스",
-        "pos_sc": "Sub",
-        "player_time": "18:00",
-        "ftm_cn": "0",
-        "fgm_cn": 0,
-        "pgm3_cn": 0,
-        "tot_score": 0,
-        "treb_cn": "1",
-        "steal_cn": "0",
-        "pfoul_cn": "2",
-        "assist_cn": "2",
-        "back_no": "35",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".000",
-        "ppct3": ".000",
-        "blocks": "0",
-        "turnover": "2",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      },
-      {
-        "game_id": "OT2025313104237",
-        "team_id": "OT31259",
-        "player_id": "SAS008",
-        "player_name": "페인",
-        "pos_sc": "Sub",
-        "player_time": "6:00",
-        "ftm_cn": "0",
-        "fgm_cn": 1,
-        "pgm3_cn": 0,
-        "tot_score": 2,
-        "treb_cn": "0",
-        "steal_cn": "0",
-        "pfoul_cn": "1",
-        "assist_cn": "0",
-        "back_no": "3",
-        "kor_player_flag": " ",
-        "player_img_yn": "Y",
-        "fgpct": ".500",
-        "ppct3": ".000",
-        "blocks": "0",
-        "turnover": "0",
-        "s_games": "0",
-        "s_player_time": "00:00",
-        "s_pts_avg": "0",
-        "s_fgpct": "0",
-        "s_ppct3": "0",
-        "s_ass_avg": "0",
-        "s_tr_avg": "0",
-        "s_ste_avg": "0",
-        "s_blk_avg": "0",
-        "s_to_avg": "0"
-      }
-    ]
-}
-
-
 class SportsApiClient:
-    """스포츠 데이터 API 클라이언트 (Mock)."""
+    """스포츠 데이터 API 클라이언트 (Mock + Real API).
+
+    USE_MOCK_SPORTS_DATA 설정에 따라 Mock 데이터 또는 실제 API를 사용합니다.
+    """
 
     def __init__(self):
         """Initialize sports API client."""
-        logger.info("SportsApiClient initialized with mock data")
+        self.use_mock = CONFIG.use_mock_sports_data
+        self.base_url = CONFIG.sports_api_base_url
+        self.api_key = CONFIG.sports_api_key
+        self.timeout = CONFIG.sports_api_timeout_s
+
+        if self.use_mock:
+            logger.info("SportsApiClient initialized with MOCK data")
+        elif CONFIG.has_sports_api:
+            logger.info(f"SportsApiClient initialized with REAL API: {self.base_url}")
+        else:
+            logger.warning("SportsApiClient: Real API requested but not configured. Falling back to mock data.")
+            self.use_mock = True
+
+    def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Any:
+        """실제 API에 HTTP 요청을 보냅니다.
+
+        Args:
+            endpoint: API 엔드포인트 경로 (예: "/games")
+            params: 요청 파라미터
+
+        Returns:
+            API 응답 (JSON)
+
+        Raises:
+            httpx.HTTPStatusError: HTTP 에러 발생 시
+            httpx.TimeoutException: 타임아웃 발생 시
+            Exception: 기타 에러
+        """
+        # API Key를 파라미터에 추가
+        params_with_key = {**params, "auth_key": self.api_key}
+
+        # 전체 URL 구성
+        # TODO: API_INTEGRATION.md 작성 후 실제 endpoint 경로로 업데이트
+        # 예: url = f"{self.base_url}{endpoint}"
+        # 현재는 base_url이 전체 경로인 경우를 가정
+        url = self.base_url if not endpoint else f"{self.base_url}{endpoint}"
+
+        logger.debug(f"Making request to {url} with params: {params}")
+
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                response = client.get(url, params=params_with_key)
+                response.raise_for_status()
+                return response.json()
+
+        except httpx.TimeoutException as e:
+            logger.error(f"Request timeout: {url}")
+            raise ValueError(f"API request timed out after {self.timeout}s") from e
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error {e.response.status_code}: {e.response.text}")
+            if e.response.status_code == 404:
+                raise ValueError(f"API endpoint not found: {url}") from e
+            elif e.response.status_code >= 500:
+                raise ValueError(f"API server error: {e.response.status_code}") from e
+            else:
+                raise ValueError(f"API request failed: {e.response.status_code}") from e
+
+        except Exception as e:
+            logger.error(f"Unexpected error during API request: {e}")
+            raise ValueError(f"API request failed: {str(e)}") from e
 
     def get_games_by_sport(self, date: str, sport: str) -> List[Dict[str, Any]]:
         """특정 날짜의 스포츠 경기 목록 조회.
@@ -1516,17 +103,34 @@ class SportsApiClient:
         if len(date) != 8 or not date.isdigit():
             raise ValueError(f"Invalid date format: {date}. Must be YYYYMMDD")
 
-        key = f"{date}_{sport}"
-        games = MOCK_GAMES_DB.get(key, [])
+        # Mock 데이터 사용
+        if self.use_mock:
+            key = f"{date}_{sport}"
+            games = MOCK_GAMES_DB.get(key, [])
+            logger.info(f"[MOCK] Retrieved {len(games)} games for {sport} on {date}")
+            return games
 
-        logger.info(f"Retrieved {len(games)} games for {sport} on {date}")
-        return games
+        # 실제 API 호출
+        params = {
+            "date": date,
+            "sport": sport,
+        }
 
-    def get_team_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+        try:
+            response = self._make_request("/data3V1/livescore/gameList", params)
+            games = ApiResponseMapper.map_games_list(response)
+            logger.info(f"[REAL API] Retrieved {len(games)} games for {sport} on {date}")
+            return games
+        except Exception as e:
+            logger.error(f"Failed to fetch games from API: {e}")
+            raise
+
+    def get_team_stats(self, game_id: str, sport: str) -> Optional[List[Dict[str, Any]]]:
         """경기의 팀별 기록 조회.
 
         Args:
             game_id: 경기 ID
+            sport: 스포츠 종목 (basketball, soccer, volleyball)
 
         Returns:
             팀 기록 배열 [home_team, away_team] 또는 None
@@ -1534,27 +138,57 @@ class SportsApiClient:
         Raises:
             ValueError: 경기를 찾을 수 없거나 아직 시작하지 않은 경기
         """
-        stats = MOCK_TEAM_STATS_DB.get(game_id)
+        # Mock 데이터 사용
+        if self.use_mock:
+            stats = MOCK_TEAM_STATS_DB.get(game_id)
 
-        if stats is None:
-            # Check if game exists but hasn't started
-            for games in MOCK_GAMES_DB.values():
-                for game in games:
-                    if game["game_id"] == game_id:
-                        if game["state"] == "b":
-                            raise ValueError(f"Game {game_id} has not started yet. Team stats not available.")
-                        break
+            if stats is None:
+                # Check if game exists but hasn't started
+                for games in MOCK_GAMES_DB.values():
+                    for game in games:
+                        if game["game_id"] == game_id:
+                            if game["state"] == "b":
+                                raise ValueError(f"Game {game_id} has not started yet. Team stats not available.")
+                            break
 
-            raise ValueError(f"Game {game_id} not found")
+                raise ValueError(f"Game {game_id} not found")
 
-        logger.info(f"Retrieved team stats for game {game_id}")
-        return stats
+            logger.info(f"[MOCK] Retrieved team stats for game {game_id}")
+            return stats
 
-    def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+        # 실제 API 호출 - 스포츠별 endpoint 선택
+        if sport == "basketball":
+            endpoint = "/data3V1/livescore/basketballTeamStat"
+        elif sport == "soccer":
+            endpoint = "/data3V1/livescore/soccerTeamStat"
+        elif sport == "volleyball":
+            endpoint = "/data3V1/livescore/volleyballTeamStat"
+        else:
+            raise ValueError(f"Unsupported sport: {sport}")
+
+        params = {
+            "game_id": game_id,
+        }
+
+        try:
+            response = self._make_request(endpoint, params)
+            stats = ApiResponseMapper.map_team_stats_list(response, sport)
+
+            if not stats:
+                raise ValueError(f"No team stats found for game {game_id}")
+
+            logger.info(f"[REAL API] Retrieved {sport} team stats for game {game_id}")
+            return stats
+        except Exception as e:
+            logger.error(f"Failed to fetch team stats from API: {e}")
+            raise
+
+    def get_player_stats(self, game_id: str, sport: str) -> Optional[List[Dict[str, Any]]]:
         """경기의 선수별 기록 조회.
 
         Args:
             game_id: 경기 ID
+            sport: 스포츠 종목 (basketball, soccer, volleyball)
 
         Returns:
             선수 기록 배열 또는 None
@@ -1562,18 +196,47 @@ class SportsApiClient:
         Raises:
             ValueError: 경기를 찾을 수 없거나 아직 시작하지 않은 경기
         """
-        stats = MOCK_PLAYER_STATS_DB.get(game_id)
+        # Mock 데이터 사용
+        if self.use_mock:
+            stats = MOCK_PLAYER_STATS_DB.get(game_id)
 
-        if stats is None:
-            # Check if game exists but hasn't started
-            for games in MOCK_GAMES_DB.values():
-                for game in games:
-                    if game["game_id"] == game_id:
-                        if game["state"] == "b":
-                            raise ValueError(f"Game {game_id} has not started yet. Player stats not available.")
-                        break
+            if stats is None:
+                # Check if game exists but hasn't started
+                for games in MOCK_GAMES_DB.values():
+                    for game in games:
+                        if game["game_id"] == game_id:
+                            if game["state"] == "b":
+                                raise ValueError(f"Game {game_id} has not started yet. Player stats not available.")
+                            break
 
-            raise ValueError(f"Game {game_id} not found")
+                raise ValueError(f"Game {game_id} not found")
 
-        logger.info(f"Retrieved player stats for game {game_id}")
-        return stats
+            logger.info(f"[MOCK] Retrieved player stats for game {game_id}")
+            return stats
+
+        # 실제 API 호출 - 스포츠별 endpoint 선택
+        if sport == "basketball":
+            endpoint = "/data3V1/livescore/basketballPlayerStat"
+        elif sport == "soccer":
+            endpoint = "/data3V1/livescore/soccerPlayerStat"
+        elif sport == "volleyball":
+            endpoint = "/data3V1/livescore/volleyballPlayerStat"
+        else:
+            raise ValueError(f"Unsupported sport: {sport}")
+
+        params = {
+            "game_id": game_id,
+        }
+
+        try:
+            response = self._make_request(endpoint, params)
+            stats = ApiResponseMapper.map_player_stats_list(response, sport)
+
+            if not stats:
+                raise ValueError(f"No player stats found for game {game_id}")
+
+            logger.info(f"[REAL API] Retrieved {sport} player stats for game {game_id}")
+            return stats
+        except Exception as e:
+            logger.error(f"Failed to fetch player stats from API: {e}")
+            raise

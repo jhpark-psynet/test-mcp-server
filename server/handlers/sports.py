@@ -2,7 +2,8 @@
 import json
 from typing import Any, Dict, List
 
-from server.services.sports_api_client import SportsApiClient, MOCK_GAMES_DB
+from server.services.sports_api_client import SportsApiClient
+from server.services.mock_sports_data import MOCK_GAMES_DB
 
 
 # Global sports API client instance
@@ -76,7 +77,7 @@ def get_team_stats_handler(arguments: Dict[str, Any]) -> str:
     """경기의 팀별 기록을 조회하는 핸들러.
 
     Args:
-        arguments: Tool arguments with 'game_id' field
+        arguments: Tool arguments with 'game_id' and 'sport' fields
 
     Returns:
         Formatted team stats
@@ -86,9 +87,10 @@ def get_team_stats_handler(arguments: Dict[str, Any]) -> str:
         Exception: Other errors during processing
     """
     game_id = arguments.get("game_id", "")
+    sport = arguments.get("sport", "basketball")
 
     # Let exceptions bubble up so server_factory can set isError=True
-    stats = _sports_client.get_team_stats(game_id)
+    stats = _sports_client.get_team_stats(game_id, sport)
 
     if not stats or len(stats) < 2:
         raise ValueError(f"No team stats found for game {game_id}")
@@ -169,7 +171,7 @@ def get_player_stats_handler(arguments: Dict[str, Any]) -> str:
     """경기의 선수별 기록을 조회하는 핸들러.
 
     Args:
-        arguments: Tool arguments with 'game_id' field
+        arguments: Tool arguments with 'game_id' and 'sport' fields
 
     Returns:
         Formatted player stats
@@ -179,9 +181,10 @@ def get_player_stats_handler(arguments: Dict[str, Any]) -> str:
         Exception: Other errors during processing
     """
     game_id = arguments.get("game_id", "")
+    sport = arguments.get("sport", "basketball")
 
     # Let exceptions bubble up so server_factory can set isError=True
-    stats = _sports_client.get_player_stats(game_id)
+    stats = _sports_client.get_player_stats(game_id, sport)
 
     if not stats:
         raise ValueError(f"No player stats found for game {game_id}")
@@ -201,7 +204,7 @@ def get_player_stats_handler(arguments: Dict[str, Any]) -> str:
 
     # Get team names from team stats
     try:
-        team_stats = _sports_client.get_team_stats(game_id)
+        team_stats = _sports_client.get_team_stats(game_id, sport)
         home_name = team_stats[0].get("home_team_name", f"Team {team_ids[0]}")
         away_name = team_stats[1].get("away_team_name", f"Team {team_ids[1]}")
         home_team_id = team_stats[0].get("home_team_id", team_ids[0])
@@ -284,7 +287,7 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
     """경기의 상세 정보 (팀 통계 + 선수 통계)를 조회하는 핸들러 (위젯용).
 
     Args:
-        arguments: Tool arguments with 'game_id' field
+        arguments: Tool arguments with 'game_id' and 'sport' fields
 
     Returns:
         GameData format for game-result-viewer widget
@@ -294,6 +297,7 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
         Exception: Other errors during processing
     """
     game_id = arguments.get("game_id", "")
+    sport = arguments.get("sport", "basketball")
 
     # Get game info
     game_info = None
@@ -312,12 +316,12 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError(f"Game {game_id} has not finished yet. Stats not available.")
 
     # Get team stats
-    team_stats = _sports_client.get_team_stats(game_id)
+    team_stats = _sports_client.get_team_stats(game_id, sport)
     if not team_stats or len(team_stats) < 2:
         raise ValueError(f"Team stats not found for game {game_id}")
 
     # Get player stats
-    player_stats = _sports_client.get_player_stats(game_id)
+    player_stats = _sports_client.get_player_stats(game_id, sport)
     if not player_stats:
         raise ValueError(f"Player stats not found for game {game_id}")
 
@@ -429,7 +433,7 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
     ]
 
     # Return GameData format
-    return {
+    result = {
         "league": league,
         "date": formatted_date,
         "status": status,
@@ -451,3 +455,9 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
         },
         "gameRecords": game_records
     }
+
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[get_game_details_handler] Returning data: {result}")
+
+    return result
