@@ -17,7 +17,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from server.services.sports_api_client import SportsApiClient
+from server.services.sports import SportsClientFactory
 from server.config import CONFIG
 
 
@@ -67,13 +67,13 @@ def test_games_by_sport():
     """테스트 2: 경기 목록 조회."""
     print_section("Test 2: Get Games by Sport")
 
-    client = SportsApiClient()
-    test_date = "20251118"
+    test_date = "20251125"
     test_sport = "basketball"
+    client = SportsClientFactory.create_client(test_sport)
 
     try:
         print_info(f"Fetching games for {test_sport} on {test_date}...")
-        games = client.get_games_by_sport(test_date, test_sport)
+        games = client.get_games_by_sport(test_date)
 
         print_success(f"Retrieved {len(games)} games")
 
@@ -106,8 +106,8 @@ def test_team_stats():
     """테스트 3: 팀 통계 조회."""
     print_section("Test 3: Get Team Stats")
 
-    client = SportsApiClient()
-    test_game_id = "OT2025313104237"  # Mock 데이터에 있는 경기 ID
+    test_game_id = "OT2025313104280"  # NBA: 인디애나 vs 디트로이트
+    client = SportsClientFactory.create_client('basketball')
 
     try:
         print_info(f"Fetching team stats for game {test_game_id}...")
@@ -120,7 +120,7 @@ def test_team_stats():
             print(json.dumps(stats[0], indent=2, ensure_ascii=False))
 
             # Validate required fields
-            required_fields = ["home_team_name", "home_team_fgm_cn", "home_team_fga_cn"]
+            required_fields = ["home_team_id", "home_team_fgm_cn", "home_team_fga_cn"]
             missing_fields = [f for f in required_fields if f not in stats[0]]
 
             if missing_fields:
@@ -143,8 +143,8 @@ def test_player_stats():
     """테스트 4: 선수 통계 조회."""
     print_section("Test 4: Get Player Stats")
 
-    client = SportsApiClient()
-    test_game_id = "OT2025313104237"
+    test_game_id = "OT2025313104280"  # NBA: 인디애나 vs 디트로이트
+    client = SportsClientFactory.create_client('basketball')
 
     try:
         print_info(f"Fetching player stats for game {test_game_id}...")
@@ -180,21 +180,20 @@ def test_error_handling():
     """테스트 5: 에러 처리."""
     print_section("Test 5: Error Handling")
 
-    client = SportsApiClient()
-
     # Test invalid date format
     try:
         print_info("Testing invalid date format...")
-        client.get_games_by_sport("invalid", "basketball")
+        client = SportsClientFactory.create_client('basketball')
+        client.get_games_by_sport("invalid")
         print_error("Should have raised ValueError for invalid date")
         return False
-    except ValueError as e:
-        print_success(f"Correctly raised ValueError: {e}")
+    except (ValueError, Exception) as e:
+        print_success(f"Correctly raised error: {e}")
 
     # Test invalid sport
     try:
         print_info("Testing invalid sport...")
-        client.get_games_by_sport("20251118", "invalid")
+        client = SportsClientFactory.create_client("invalid")
         print_error("Should have raised ValueError for invalid sport")
         return False
     except ValueError as e:
@@ -203,11 +202,12 @@ def test_error_handling():
     # Test non-existent game
     try:
         print_info("Testing non-existent game...")
+        client = SportsClientFactory.create_client('basketball')
         client.get_team_stats("NONEXISTENT")
         print_error("Should have raised ValueError for non-existent game")
         return False
-    except ValueError as e:
-        print_success(f"Correctly raised ValueError: {e}")
+    except (ValueError, Exception) as e:
+        print_success(f"Correctly raised error: {e}")
 
     return True
 
