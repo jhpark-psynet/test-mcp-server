@@ -2,12 +2,8 @@
 import json
 from typing import Any, Dict, List
 
-from server.services.sports_api_client import SportsApiClient
-from server.services.mock_sports_data import MOCK_GAMES_DB
-
-
-# Global sports API client instance
-_sports_client = SportsApiClient()
+from server.services.sports import SportsClientFactory
+from server.services.sports.basketball.mock_data import MOCK_BASKETBALL_GAMES as MOCK_GAMES_DB
 
 
 def get_games_by_sport_handler(arguments: Dict[str, Any]) -> str:
@@ -27,7 +23,8 @@ def get_games_by_sport_handler(arguments: Dict[str, Any]) -> str:
     sport = arguments.get("sport", "")
 
     # Let exceptions bubble up so server_factory can set isError=True
-    games = _sports_client.get_games_by_sport(date, sport)
+    client = SportsClientFactory.create_client(sport)
+    games = client.get_games_by_sport(date)
 
     if not games:
         return f"No {sport} games found on {date}"
@@ -90,7 +87,8 @@ def get_team_stats_handler(arguments: Dict[str, Any]) -> str:
     sport = arguments.get("sport", "basketball")
 
     # Let exceptions bubble up so server_factory can set isError=True
-    stats = _sports_client.get_team_stats(game_id, sport)
+    client = SportsClientFactory.create_client(sport)
+    stats = client.get_team_stats(game_id)
 
     if not stats or len(stats) < 2:
         raise ValueError(f"No team stats found for game {game_id}")
@@ -99,8 +97,31 @@ def get_team_stats_handler(arguments: Dict[str, Any]) -> str:
     home_team = stats[0]
     away_team = stats[1]
 
-    home_name = home_team.get("home_team_name", "Home Team")
-    away_name = away_team.get("away_team_name", "Away Team")
+    # Get team names from game info (team stats API doesn't include names)
+    # Search recent dates for the game
+    home_name = "Home Team"
+    away_name = "Away Team"
+
+    try:
+        from datetime import datetime, timedelta
+        today = datetime.now()
+
+        # Search last 7 days
+        for days_ago in range(7):
+            search_date = (today - timedelta(days=days_ago)).strftime("%Y%m%d")
+            try:
+                games = client.get_games_by_sport(search_date)
+                for game in games:
+                    if game.get("game_id") == game_id:
+                        home_name = game.get("home_team_name", "Home Team")
+                        away_name = game.get("away_team_name", "Away Team")
+                        break
+                if home_name != "Home Team":
+                    break
+            except:
+                continue
+    except:
+        pass
 
     # Convert string values to integers
     home_fgm = int(home_team.get("home_team_fgm_cn", 0))
@@ -184,7 +205,8 @@ def get_player_stats_handler(arguments: Dict[str, Any]) -> str:
     sport = arguments.get("sport", "basketball")
 
     # Let exceptions bubble up so server_factory can set isError=True
-    stats = _sports_client.get_player_stats(game_id, sport)
+    client = SportsClientFactory.create_client(sport)
+    stats = client.get_player_stats(game_id)
 
     if not stats:
         raise ValueError(f"No player stats found for game {game_id}")
@@ -202,19 +224,34 @@ def get_player_stats_handler(arguments: Dict[str, Any]) -> str:
     if len(team_ids) < 2:
         raise ValueError(f"Expected 2 teams but found {len(team_ids)}")
 
-    # Get team names from team stats
+    # Get team names from game info (search recent dates)
+    home_team_id = team_ids[0]
+    away_team_id = team_ids[1]
+    home_name = f"Team {home_team_id}"
+    away_name = f"Team {away_team_id}"
+
     try:
-        team_stats = _sports_client.get_team_stats(game_id, sport)
-        home_name = team_stats[0].get("home_team_name", f"Team {team_ids[0]}")
-        away_name = team_stats[1].get("away_team_name", f"Team {team_ids[1]}")
-        home_team_id = team_stats[0].get("home_team_id", team_ids[0])
-        away_team_id = team_stats[1].get("away_team_id", team_ids[1])
-    except Exception:
-        # Fallback if team stats not available
-        home_team_id = team_ids[0]
-        away_team_id = team_ids[1]
-        home_name = f"Team {home_team_id}"
-        away_name = f"Team {away_team_id}"
+        from datetime import datetime, timedelta
+        today = datetime.now()
+
+        # Search last 7 days for game info
+        for days_ago in range(7):
+            search_date = (today - timedelta(days=days_ago)).strftime("%Y%m%d")
+            try:
+                games = client.get_games_by_sport(search_date)
+                for game in games:
+                    if game.get("game_id") == game_id:
+                        home_name = game.get("home_team_name", home_name)
+                        away_name = game.get("away_team_name", away_name)
+                        home_team_id = game.get("home_team_id", home_team_id)
+                        away_team_id = game.get("away_team_id", away_team_id)
+                        break
+                if "Team " not in home_name:
+                    break
+            except:
+                continue
+    except:
+        pass
 
     home_players = teams.get(home_team_id, [])
     away_players = teams.get(away_team_id, [])
@@ -299,8 +336,13 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
     game_id = arguments.get("game_id", "")
     sport = arguments.get("sport", "basketball")
 
-    # Get game info
+    # Create sport-specific client
+    client = SportsClientFactory.create_client(sport)
+
+    # Get game info - try MOCK DB first, then search recent dates in real API
     game_info = None
+
+    # Try MOCK DB first
     for games in MOCK_GAMES_DB.values():
         for game in games:
             if game["game_id"] == game_id:
@@ -309,19 +351,40 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
         if game_info:
             break
 
+    # If not found in MOCK, search recent dates in real API
+    if not game_info:
+        from datetime import datetime, timedelta
+        today = datetime.now()
+
+        # Search last 7 days
+        for days_ago in range(7):
+            search_date = (today - timedelta(days=days_ago)).strftime("%Y%m%d")
+            try:
+                games = client.get_games_by_sport(search_date)
+                for game in games:
+                    if game.get("game_id") == game_id:
+                        game_info = game
+                        break
+                if game_info:
+                    break
+            except:
+                continue
+
     if not game_info:
         raise ValueError(f"Game {game_id} not found")
 
-    if game_info.get("state") != "f":
-        raise ValueError(f"Game {game_id} has not finished yet. Stats not available.")
+    # Check if game is finished (state: F for finished, B for before, etc.)
+    state = game_info.get("state", "").upper()
+    if state != "F":
+        raise ValueError(f"Game {game_id} has not finished yet (state: {state}). Stats not available.")
 
     # Get team stats
-    team_stats = _sports_client.get_team_stats(game_id, sport)
+    team_stats = client.get_team_stats(game_id)
     if not team_stats or len(team_stats) < 2:
         raise ValueError(f"Team stats not found for game {game_id}")
 
     # Get player stats
-    player_stats = _sports_client.get_player_stats(game_id, sport)
+    player_stats = client.get_player_stats(game_id)
     if not player_stats:
         raise ValueError(f"Player stats not found for game {game_id}")
 
@@ -329,20 +392,21 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
     match_date = game_info.get("match_date", "")
     formatted_date = f"{match_date[4:6]}.{match_date[6:8]}"
 
-    # Map state to status
-    state_map = {"f": "종료", "진행중": "진행중", "b": "예정"}
-    status = state_map.get(game_info.get("state", ""), "예정")
+    # Map state to status (handle both uppercase and lowercase)
+    state_raw = game_info.get("state", "").upper()
+    state_map = {"F": "종료", "진행중": "진행중", "B": "예정"}
+    status = state_map.get(state_raw, "예정")
 
     # League name
     league = game_info.get("league_name", "NBA")
 
     # Home team info
     home_team_name = game_info.get("home_team_name", "")
-    home_score = game_info.get("home_score", 0)
+    home_score = int(game_info.get("home_score", 0))
 
     # Away team info
     away_team_name = game_info.get("away_team_name", "")
-    away_score = game_info.get("away_score", 0)
+    away_score = int(game_info.get("away_score", 0))
 
     # Extract team IDs
     home_team_id = game_info.get("home_team_id", "")
