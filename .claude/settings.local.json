@@ -17,7 +17,8 @@
       "Bash(pkill:*)",
       "Bash(fuser:*)",
       "Bash(npm run dev:*)",
-      "Bash(npx http-server:*)"
+      "Bash(npx http-server:*)",
+      "Bash(/home/parkjunho/devs/test-mcp-server/server/services/mock_sports_data.py)"
     ],
     "deny": [],
     "ask": []

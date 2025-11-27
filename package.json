@@ -10,8 +10,11 @@
     "build:verify": "cd components && npm run verify",
     "build:watch": "cd components && npm run build:watch",
     "serve": "cd components && npm run serve",
-    "server": ".venv/bin/uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload",
-    "dev": "npm run build && npm run server"
+    "server": "ENV=development .venv/bin/uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload",
+    "server:dev": "ENV=development .venv/bin/uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload",
+    "server:prod": "ENV=production .venv/bin/uvicorn server.main:app --host 0.0.0.0 --port 8000",
+    "dev": "npm run build && npm run server:dev",
+    "start:prod": "npm run build && npm run server:prod"
   },
   "keywords": [
     "mcp",

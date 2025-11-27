@@ -42,9 +42,15 @@ function verifyWidget(widget: string): VerificationResult {
   const htmlPath = path.join(ASSETS_DIR, `${widget}.html`);
   const htmlExists = fs.existsSync(htmlPath);
 
-  // Find JS/CSS files (with hash)
-  const jsFiles = fg.sync(`${ASSETS_DIR}/${widget}-*.js`);
-  const cssFiles = fg.sync(`${ASSETS_DIR}/${widget}-*.css`);
+  // Find JS/CSS files (with or without hash)
+  const jsFiles = fg.sync([
+    `${ASSETS_DIR}/${widget}-*.js`,
+    `${ASSETS_DIR}/${widget}.js`,
+  ]);
+  const cssFiles = fg.sync([
+    `${ASSETS_DIR}/${widget}-*.css`,
+    `${ASSETS_DIR}/${widget}.css`,
+  ]);
 
   let htmlReferences = null;
 

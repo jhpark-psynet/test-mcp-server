@@ -19,9 +19,18 @@ test-mcp-server/
 │   │   ├── widget_registry.py # Widget registry
 │   │   ├── tool_registry.py   # Tool registry
 │   │   ├── response_formatter.py  # API formatters
-│   │   ├── sports_api_client.py   # Sports API client
-│   │   └── exceptions.py      # Custom exceptions
+│   │   ├── api_client.py      # ExternalApiClient (generic async)
+│   │   ├── exceptions.py      # Custom exceptions
+│   │   └── sports/            # ⭐ Modular Sports API (Phase 6)
+│   │       ├── __init__.py    # SportsClientFactory
+│   │       ├── base/          # Base classes
+│   │       │   ├── client.py  # BaseSportsClient
+│   │       │   └── mapper.py  # BaseResponseMapper
+│   │       ├── basketball/    # Basketball module
+│   │       ├── soccer/        # Soccer module
+│   │       └── volleyball/    # Volleyball module
 │   ├── handlers/               # Tool handlers
+│   │   ├── calculator.py      # Safe calculator (AST-based)
 │   │   └── sports.py          # Sports data handlers
 │   ├── factory/                # MCP server factory
 │   │   ├── safe_wrapper.py    # ⭐ SafeFastMCPWrapper (Phase 2)
@@ -80,6 +89,13 @@ test-mcp-server/
 - ✅ Game stats widget with team/player statistics
 - ✅ Multi-league support (NBA, KBL, WKBL, etc.)
 - ✅ Clean tool architecture (2 production tools)
+
+**Phase 6** (Sports API Modularization - Nov 27):
+- ✅ Refactored Sports API into modular structure
+- ✅ Factory pattern (SportsClientFactory)
+- ✅ Base classes (BaseSportsClient, BaseResponseMapper)
+- ✅ Sport-specific modules (basketball, soccer, volleyball)
+- ✅ Improved readability and extensibility
 
 ## How It Works
 
@@ -200,10 +216,62 @@ This will:
 - Hash filenames with content-based SHA-256 (8 chars) when `USE_HASH` is enabled
 - Create HTML files referencing hashed or non-hashed assets
 
-### 3. Run the Server
+### 3. Environment Configuration
+
+The server supports multiple environments (development, production) with separate configurations.
+
+#### Development Environment (Default)
 
 ```bash
+# The .env.development file is used automatically
+npm run server        # or npm run server:dev
+```
+
+Settings:
+- Uses **mock data** (no real API calls)
+- Debug logging enabled
+- Port 8000 (localhost)
+
+#### Production Environment
+
+```bash
+# Create/edit .env.production file
+vi .env.production
+
+# Set required values:
+# - SPORTS_API_KEY=your_actual_api_key
+# - USE_MOCK_SPORTS_DATA=false
+# - LOG_LEVEL=INFO
+
+# Run in production mode
+ENV=production npm run server:prod
+# or
+npm run start:prod
+```
+
+Settings:
+- Uses **real API** calls
+- Info logging
+- Production-ready configuration
+
+#### Environment Files
+
+- `.env.development` - Development settings (auto-loaded, gitignored)
+- `.env.production` - Production settings (create manually, gitignored)
+
+**Important**: Never commit `.env.development` or `.env.production` to git!
+
+### 4. Run the Server
+
+```bash
+# Development (default)
 npm run server
+
+# Development (explicit)
+npm run server:dev
+
+# Production
+npm run server:prod
 ```
 
 The MCP server will start on `http://0.0.0.0:8000`

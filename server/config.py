@@ -1,6 +1,7 @@
 """서버 구성 설정 (Pydantic Settings 기반)."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Tuple
 
@@ -8,16 +9,33 @@ from pydantic import Field, field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# 환경에 따라 .env 파일 선택
+# ENV 환경 변수가 없으면 development 사용
+_ENV = os.getenv('ENV', 'development')
+_ENV_FILE = f'.env.{_ENV}'
+
+
 class Config(BaseSettings):
     """서버 구성 설정 (환경 변수 자동 검증).
 
     환경 변수 또는 .env 파일에서 설정을 로드합니다.
+
+    ENV 환경 변수에 따라 다음 파일을 로드:
+    - ENV=development (기본): .env.development
+    - ENV=production: .env.production
+    - ENV=test: .env.test
     """
     model_config = SettingsConfigDict(
-        env_file='.env',
+        env_file=_ENV_FILE,
         env_file_encoding='utf-8',
         case_sensitive=False,
         extra='ignore',
+    )
+
+    # Environment name (computed from ENV variable)
+    environment: str = Field(
+        default=_ENV,
+        description="Current environment (development, production, test)"
     )
 
     # Application
@@ -57,6 +75,12 @@ class Config(BaseSettings):
         default="INFO",
         alias="LOG_LEVEL",
         description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+    )
+
+    log_file: str = Field(
+        default="logs/server.log",
+        alias="LOG_FILE",
+        description="Log file path (leave empty to disable file logging)"
     )
 
     # Component server (for fetching widget manifest)
@@ -120,6 +144,33 @@ class Config(BaseSettings):
         description="Authentication scheme (e.g., Bearer, Token, ApiKey)"
     )
 
+    # Sports API
+    sports_api_base_url: str = Field(
+        default="http://data.psynet.co.kr:10005/data3V1/livescore",
+        alias="SPORTS_API_BASE_URL",
+        description="Sports API base URL"
+    )
+
+    sports_api_key: str = Field(
+        default="",
+        alias="SPORTS_API_KEY",
+        description="Sports API authentication key"
+    )
+
+    sports_api_timeout_s: float = Field(
+        default=10.0,
+        alias="SPORTS_API_TIMEOUT_S",
+        gt=0,
+        le=300,
+        description="Sports API request timeout in seconds"
+    )
+
+    use_mock_sports_data: bool = Field(
+        default=True,
+        alias="USE_MOCK_SPORTS_DATA",
+        description="Use mock data instead of real API (for development/testing)"
+    )
+
     # Validators
     @field_validator('log_level')
     @classmethod
@@ -164,6 +215,18 @@ class Config(BaseSettings):
         """Check if external API is configured."""
         return bool(self.external_api_base_url and self.external_api_key)
 
+    @computed_field
+    @property
+    def has_sports_api(self) -> bool:
+        """Check if sports API is configured."""
+        return bool(self.sports_api_base_url and self.sports_api_key)
+
+    @computed_field
+    @property
+    def use_real_sports_api(self) -> bool:
+        """Check if real sports API should be used."""
+        return not self.use_mock_sports_data and self.has_sports_api
+
     # Compatibility properties (for backwards compatibility)
     @property
     def host(self) -> str:
@@ -182,5 +245,5 @@ try:
 except Exception as e:
     print(f"❌ Configuration error: {e}")
     print("\nPlease check your environment variables or .env file.")
-    print("See .env.example for reference.")
+    print("Make sure .env.development or .env.production exists.")
     raise

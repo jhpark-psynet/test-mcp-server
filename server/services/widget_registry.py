@@ -28,7 +28,6 @@ def build_widgets(cfg: Config) -> List[Widget]:
     # Define base widgets with their names
     widget_definitions = [
         ("example", "Example Widget"),
-        ("game-stats", "Game Stats Widget"),
         ("game-result-viewer", "Game Result Viewer"),
     ]
 

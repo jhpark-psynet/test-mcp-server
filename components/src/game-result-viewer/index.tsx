@@ -254,19 +254,30 @@ function GameResultViewerApp() {
       try {
         const rawData = window.openai?.toolOutput;
 
+        // DEBUG: Log what we receive
+        console.log('[game-result-viewer] window.openai:', window.openai);
+        console.log('[game-result-viewer] toolOutput:', rawData);
+        console.log('[game-result-viewer] toolOutput type:', typeof rawData);
+        console.log('[game-result-viewer] toolOutput keys:', rawData ? Object.keys(rawData) : 'none');
+
         // If no data available yet, keep loading state
         if (!rawData || (typeof rawData === 'object' && Object.keys(rawData).length === 0)) {
+          console.log('[game-result-viewer] No data yet, waiting...');
           return;
         }
 
+        console.log('[game-result-viewer] Attempting validation...');
         const validatedData = GameDataSchema.parse(rawData);
+        console.log('[game-result-viewer] Validation successful!', validatedData);
         setGameData(validatedData);
         setError(null);
       } catch (err) {
+        console.error('[game-result-viewer] Error:', err);
         if (err instanceof z.ZodError) {
           const errorMessage = err.errors
             .map((e) => `${e.path.join('.')}: ${e.message}`)
             .join('\n');
+          console.error('[game-result-viewer] Validation errors:', errorMessage);
           setError(errorMessage);
         } else {
           setError(String(err));

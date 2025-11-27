@@ -118,11 +118,30 @@ test-mcp-server/
 │   │   ├── tool_registry.py      # 툴 빌드 및 인덱싱
 │   │   ├── response_formatter.py # API 응답 포맷팅
 │   │   ├── api_client.py         # ExternalApiClient (httpx)
-│   │   └── exceptions.py         # 커스텀 예외
+│   │   ├── exceptions.py         # 커스텀 예외
+│   │   │
+│   │   └── sports/               # ⭐ 스포츠 API (모듈화, Phase 6)
+│   │       ├── __init__.py       # SportsClientFactory
+│   │       ├── base/             # 공통 기반 클래스
+│   │       │   ├── client.py    # BaseSportsClient (HTTP 로직)
+│   │       │   └── mapper.py    # BaseResponseMapper (필드 매핑)
+│   │       ├── basketball/       # 농구 전용 모듈
+│   │       │   ├── client.py    # BasketballClient
+│   │       │   ├── mapper.py    # BasketballMapper
+│   │       │   └── mock_data.py # 농구 Mock 데이터
+│   │       ├── soccer/           # 축구 전용 모듈
+│   │       │   ├── client.py    # SoccerClient
+│   │       │   ├── mapper.py    # SoccerMapper
+│   │       │   └── mock_data.py # 축구 Mock 데이터
+│   │       └── volleyball/       # 배구 전용 모듈
+│   │           ├── client.py    # VolleyballClient
+│   │           ├── mapper.py    # VolleyballMapper
+│   │           └── mock_data.py # 배구 Mock 데이터
 │   │
 │   ├── handlers/                  # 툴 핸들러
 │   │   ├── __init__.py
-│   │   └── calculator.py         # ⭐ AST 기반 안전한 계산기
+│   │   ├── calculator.py         # ⭐ AST 기반 안전한 계산기
+│   │   └── sports.py             # 스포츠 데이터 핸들러 (factory 패턴 사용)
 │   │
 │   ├── factory/                   # MCP 서버 팩토리
 │   │   ├── __init__.py
@@ -195,6 +214,14 @@ test-mcp-server/
 - ✅ Content-based hashing 시스템 (SHA-256, 8자리)
 - ✅ Optional hashing 지원 (USE_HASH 환경 변수)
 
+**Phase 6 성과** (2025-11-27):
+- ✅ Sports API 모듈화 리팩토링 (스포츠별 분리)
+- ✅ Factory 패턴 도입 (SportsClientFactory)
+- ✅ 기반 클래스 추상화 (BaseSportsClient, BaseResponseMapper)
+- ✅ 스포츠별 독립 모듈 (basketball, soccer, volleyball)
+- ✅ 폴더 기반 구조로 가독성 및 확장성 향상
+- ✅ 통합 테스트: 모든 클라이언트 생성 및 데이터 조회 성공
+
 ### 파일 역할 요약 (Refactored)
 
 | 파일 | 역할 |
@@ -211,7 +238,16 @@ test-mcp-server/
 | `server/services/response_formatter.py` | API 응답 포맷팅 |
 | `server/services/api_client.py` | ExternalApiClient (httpx async) |
 | `server/services/exceptions.py` | 커스텀 예외 클래스 |
+| `server/services/sports/__init__.py` | ⭐ SportsClientFactory (Phase 6) |
+| `server/services/sports/base/client.py` | BaseSportsClient (공통 HTTP 로직) |
+| `server/services/sports/base/mapper.py` | BaseResponseMapper (공통 필드 매핑) |
+| `server/services/sports/basketball/client.py` | BasketballClient (농구 API) |
+| `server/services/sports/basketball/mapper.py` | BasketballMapper (농구 필드 매핑) |
+| `server/services/sports/basketball/mock_data.py` | 농구 Mock 데이터 |
+| `server/services/sports/soccer/` | SoccerClient, Mapper, Mock 데이터 |
+| `server/services/sports/volleyball/` | VolleyballClient, Mapper, Mock 데이터 |
 | `server/handlers/calculator.py` | ⭐ AST 기반 안전한 계산기 |
+| `server/handlers/sports.py` | ⭐ 스포츠 데이터 핸들러 (Phase 6) |
 | `server/factory/safe_wrapper.py` | ⭐ SafeFastMCPWrapper (Phase 2) |
 | `server/factory/server_factory.py` | MCP 서버 생성 팩토리 |
 | `server/factory/metadata_builder.py` | OpenAI 메타데이터 생성 |
@@ -606,5 +642,5 @@ python test_mcp.py
 
 ---
 
-**마지막 업데이트**: 2025-11-23
-**프로젝트 버전**: 3.0.0 (Sports MCP Tools, Game Result Viewer, Optional Hashing System)
+**마지막 업데이트**: 2025-11-27
+**프로젝트 버전**: 3.1.0 (Sports API Modularization - Phase 6)
