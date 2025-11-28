@@ -2,8 +2,8 @@
 import sys
 from pathlib import Path
 
-# Add server directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from server.handlers import get_games_by_sport_handler, get_game_details_handler
 

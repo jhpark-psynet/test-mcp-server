@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 import sys
 
-# Add server directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from server.config import Config
 from server.factory.server_factory import create_mcp_server

@@ -8,14 +8,14 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Add server directory to path
-sys.path.insert(0, str(Path(__file__).parent / "server"))
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import mcp.types as types
 from server.config import CONFIG
 from server.services import build_widgets, build_tools
 from server.factory import create_mcp_server
-from server.handlers import calculator_handler
+from server.handlers import get_games_by_sport_handler, get_game_details_handler
 
 
 async def test_widget_loading():
@@ -33,8 +33,6 @@ async def test_widget_loading():
         print(f"  • {widget.identifier}")
         print(f"    Title: {widget.title}")
         print(f"    Template URI: {widget.template_uri}")
-        print(f"    HTML Size: {len(widget.html)} bytes")
-        print(f"    Has HTML: {'✓' if widget.html else '✗'}")
         print()
 
     return widgets
@@ -47,7 +45,11 @@ async def test_tool_loading():
     print("=" * 60)
 
     # Build tools using factory function
-    tools = build_tools(CONFIG, calculator_handler=calculator_handler)
+    tools = build_tools(
+        CONFIG,
+        get_games_by_sport_handler=get_games_by_sport_handler,
+        get_game_details_handler=get_game_details_handler,
+    )
 
     print(f"\n✓ Loaded {len(tools)} tool(s):\n")
 
@@ -57,16 +59,14 @@ async def test_tool_loading():
     for tool in tools:
         print(f"  • {tool.name}")
         print(f"    Title: {tool.title}")
-        print(f"    Type: {tool.tool_type.value}")
-        print(f"    Is Widget Tool: {'✓' if tool.is_widget_tool else '✗'}")
-        print(f"    Is Text Tool: {'✓' if tool.is_text_tool else '✗'}")
+        print(f"    Has Widget: {'✓' if tool.has_widget else '✗'}")
+        print(f"    Has Handler: {'✓' if tool.handler else '✗'}")
 
-        if tool.is_widget_tool:
+        if tool.has_widget:
             widget_count += 1
             print(f"    Widget: {tool.widget.identifier if tool.widget else 'None'}")
-        elif tool.is_text_tool:
+        else:
             text_count += 1
-            print(f"    Handler: {'✓' if tool.handler else '✗'}")
         print()
 
     print(f"Summary: {widget_count} widget tool(s), {text_count} text tool(s)\n")
@@ -146,16 +146,16 @@ async def test_list_resources(mcp_server):
 
 
 async def test_call_widget_tool(mcp_server):
-    """Test calling a widget tool."""
+    """Test calling a widget tool (get_game_details)."""
     print("=" * 60)
-    print("5. Testing Widget Tool Call (example-widget)")
+    print("5. Testing Widget Tool Call (get_game_details)")
     print("=" * 60)
 
-    # Create tool call request
+    # Create tool call request - uses mock data
     request = types.CallToolRequest(
         params=types.CallToolRequestParams(
-            name="example-widget",
-            arguments={"message": "Hello from Python Test!"}
+            name="get_game_details",
+            arguments={"game_id": "test-game-001"}
         )
     )
 
@@ -163,13 +163,18 @@ async def test_call_widget_tool(mcp_server):
     handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
     result = await handler(request)
 
-    print("\n✓ Widget tool executed successfully\n")
-
     # ServerResult contains the actual result
     if hasattr(result, 'root'):
         tool_result = result.root
     else:
         tool_result = result
+
+    # Check if it's an error (expected since we're using mock data)
+    is_error = getattr(tool_result, 'isError', False)
+    if is_error:
+        print("\n⚠️ Tool returned error (expected with test game_id)\n")
+    else:
+        print("\n✓ Widget tool executed successfully\n")
 
     print("Response Content:")
     if hasattr(tool_result, 'content'):
@@ -177,9 +182,11 @@ async def test_call_widget_tool(mcp_server):
             if hasattr(content, 'text'):
                 print(f"  {content.text}")
 
-    if hasattr(tool_result, 'structuredContent'):
+    if hasattr(tool_result, 'structuredContent') and tool_result.structuredContent:
         print(f"\nStructured Content (props for React):")
-        print(f"  {tool_result.structuredContent}")
+        import json
+        preview = json.dumps(tool_result.structuredContent, indent=2)[:300]
+        print(f"  {preview}...")
 
     if hasattr(tool_result, '_meta') and tool_result._meta:
         print(f"\nWidget Metadata:")
@@ -196,88 +203,75 @@ async def test_call_widget_tool(mcp_server):
 
 
 async def test_call_text_tool(mcp_server):
-    """Test calling a text-based tool."""
+    """Test calling a text-based tool (get_games_by_sport)."""
     print("=" * 60)
-    print("6. Testing Text Tool Call (calculator)")
+    print("6. Testing Text Tool Call (get_games_by_sport)")
     print("=" * 60)
 
-    # Test case 1: Simple addition
+    # Test with basketball
     request = types.CallToolRequest(
         params=types.CallToolRequestParams(
-            name="calculator",
-            arguments={"expression": "2 + 2"}
+            name="get_games_by_sport",
+            arguments={"date": "20251128", "sport": "basketball"}
         )
     )
 
     handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
     result = await handler(request)
 
-    print("\n✓ Text tool executed successfully\n")
-
     if hasattr(result, 'root'):
         tool_result = result.root
     else:
         tool_result = result
 
-    print("Test 1: 2 + 2")
+    is_error = getattr(tool_result, 'isError', False)
+    if is_error:
+        print("\n⚠️ Tool returned error (may be expected with external API)\n")
+    else:
+        print("\n✓ Text tool executed successfully\n")
+
+    print("Response:")
     if hasattr(tool_result, 'content'):
         for content in tool_result.content:
             if hasattr(content, 'text'):
-                print(f"  Result: {content.text}")
-
-    # Test case 2: Multiplication
-    request2 = types.CallToolRequest(
-        params=types.CallToolRequestParams(
-            name="calculator",
-            arguments={"expression": "10 * 5"}
-        )
-    )
-
-    result2 = await handler(request2)
-    if hasattr(result2, 'root'):
-        tool_result2 = result2.root
-    else:
-        tool_result2 = result2
-
-    print("\nTest 2: 10 * 5")
-    if hasattr(tool_result2, 'content'):
-        for content in tool_result2.content:
-            if hasattr(content, 'text'):
-                print(f"  Result: {content.text}")
-
-    # Test case 3: Error handling
-    request3 = types.CallToolRequest(
-        params=types.CallToolRequestParams(
-            name="calculator",
-            arguments={"expression": "invalid"}
-        )
-    )
-
-    result3 = await handler(request3)
-    if hasattr(result3, 'root'):
-        tool_result3 = result3.root
-    else:
-        tool_result3 = result3
-
-    print("\nTest 3: Error handling (invalid expression)")
-    if hasattr(tool_result3, 'content'):
-        for content in tool_result3.content:
-            if hasattr(content, 'text'):
-                print(f"  Result: {content.text}")
+                # Print first 500 chars
+                text = content.text
+                if len(text) > 500:
+                    print(f"  {text[:500]}...")
+                else:
+                    print(f"  {text}")
 
     return result
 
 
 async def test_read_resource(mcp_server):
-    """Test reading a resource."""
+    """Test reading a resource (game-result-viewer widget)."""
     print("=" * 60)
-    print("7. Testing Resource Read")
+    print("7. Testing Resource Read (game-result-viewer)")
     print("=" * 60)
+
+    # First get the widget URI from resources list
+    list_request = types.ListResourcesRequest()
+    list_handler = mcp_server._mcp_server.request_handlers[types.ListResourcesRequest]
+    list_result = await list_handler(list_request)
+
+    if hasattr(list_result, 'root'):
+        resources = list_result.root.resources
+    else:
+        resources = list_result.resources
+
+    if not resources:
+        print("\n⚠️ No resources available to read\n")
+        return None
+
+    # Use the first available resource URI
+    resource_uri = str(resources[0].uri)
+    print(f"\nReading resource: {resource_uri}\n")
 
     # Create resource read request
     request = types.ReadResourceRequest(
         params=types.ReadResourceRequestParams(
-            uri="ui://widget/example.html"
+            uri=resource_uri
         )
     )
 
@@ -285,7 +279,7 @@ async def test_read_resource(mcp_server):
     handler = mcp_server._mcp_server.request_handlers[types.ReadResourceRequest]
     result = await handler(request)
 
-    print("\n✓ Resource read successfully\n")
+    print("✓ Resource read successfully\n")
 
     # Extract and display result
     if hasattr(result, 'root'):
@@ -300,141 +294,6 @@ async def test_read_resource(mcp_server):
             print(f"HTML Size: {len(content.text)} bytes")
             print(f"\nHTML Preview (first 300 chars):")
             print(content.text[:300] + "...")
-
-    return result
-
-
-async def test_external_fetch(mcp_server):
-    """Test external API fetch tool (if configured)."""
-    print("=" * 60)
-    print("8. Testing External API Fetch (external-fetch)")
-    print("=" * 60)
-
-    # Check if external API is configured
-    if not CONFIG.has_external_api:
-        print("\n⏭️  External API not configured, skipping test")
-        print("   Set EXTERNAL_API_BASE_URL and EXTERNAL_API_KEY to enable\n")
-        return None
-
-    print(f"\n✓ External API configured: {CONFIG.external_api_base_url}\n")
-
-    # Test with JSONPlaceholder API (free public API)
-    # Note: This test will only work if EXTERNAL_API_BASE_URL is set to https://jsonplaceholder.typicode.com
-    request = types.CallToolRequest(
-        params=types.CallToolRequestParams(
-            name="external-fetch",
-            arguments={
-                "query": "/posts/1",
-                "response_mode": "text",
-            }
-        )
-    )
-
-    # Call the handler
-    handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
-    result = await handler(request)
-
-    print("✓ External API fetch executed\n")
-
-    # Extract result
-    if hasattr(result, 'root'):
-        tool_result = result.root
-    else:
-        tool_result = result
-
-    print("Response:")
-    if hasattr(tool_result, 'content'):
-        for content in tool_result.content:
-            if hasattr(content, 'text'):
-                # Print first 500 chars
-                text = content.text
-                if len(text) > 500:
-                    print(f"  {text[:500]}...")
-                else:
-                    print(f"  {text}")
-
-    is_error = getattr(tool_result, 'isError', False)
-    if is_error:
-        print("\n  ⚠️  Request returned an error (check API configuration)")
-    else:
-        print("\n  ✓ Request successful")
-
-    return result
-
-
-async def test_external_fetch_widget_mode(mcp_server):
-    """Test external API fetch with widget mode (if configured)."""
-    print("=" * 60)
-    print("9. Testing External API Fetch (Widget Mode)")
-    print("=" * 60)
-
-    # Check if external API is configured
-    if not CONFIG.has_external_api:
-        print("\n⏭️  External API not configured, skipping test")
-        print("   Set EXTERNAL_API_BASE_URL and EXTERNAL_API_KEY to enable\n")
-        return None
-
-    print(f"\n✓ External API configured: {CONFIG.external_api_base_url}\n")
-
-    # Test with JSONPlaceholder API
-    request = types.CallToolRequest(
-        params=types.CallToolRequestParams(
-            name="external-fetch",
-            arguments={
-                "query": "/posts/1",
-                "response_mode": "widget",  # Widget mode
-            }
-        )
-    )
-
-    # Call the handler
-    handler = mcp_server._mcp_server.request_handlers[types.CallToolRequest]
-    result = await handler(request)
-
-    print("✓ External API fetch (widget mode) executed\n")
-
-    # Extract result
-    if hasattr(result, 'root'):
-        tool_result = result.root
-    else:
-        tool_result = result
-
-    # Check for widget metadata
-    has_widget = False
-    meta_data = getattr(tool_result, 'meta', None) or getattr(tool_result, '_meta', None)
-
-    if meta_data and isinstance(meta_data, dict):
-        widget_meta = meta_data.get("openai.com/widget")
-        if widget_meta:
-            has_widget = True
-            print("Widget Response:")
-            print(f"  ✓ Widget metadata present")
-            print(f"  Template URI: {meta_data.get('openai/outputTemplate')}")
-            print(f"  Widget Accessible: {meta_data.get('openai/widgetAccessible')}")
-
-            # Show widget HTML size
-            if widget_meta.get('resource', {}).get('text'):
-                html_size = len(widget_meta['resource']['text'])
-                print(f"  HTML Size: {html_size} bytes")
-
-    # Check structured content
-    if hasattr(tool_result, 'structuredContent') and tool_result.structuredContent:
-        print(f"\nStructured Content (props for React):")
-        content = tool_result.structuredContent
-        print(f"  Success: {content.get('success')}")
-        print(f"  Endpoint: {content.get('endpoint')}")
-        if content.get('data'):
-            import json
-            data_preview = json.dumps(content.get('data'), indent=2)[:200]
-            print(f"  Data preview: {data_preview}...")
-
-    is_error = getattr(tool_result, 'isError', False)
-    if is_error:
-        print("\n  ⚠️  Request returned an error (check API configuration)")
-    elif has_widget:
-        print("\n  ✓ Widget response successful")
-    else:
-        print("\n  ⚠️  No widget metadata found")
 
     return result
 
@@ -474,12 +333,6 @@ async def main():
 
         # Test resource read
         await test_read_resource(mcp_server)
-
-        # Test external API fetch (if configured)
-        await test_external_fetch(mcp_server)
-
-        # Test external API fetch with widget mode (if configured)
-        await test_external_fetch_widget_mode(mcp_server)
 
         print("\n" + "=" * 60)
         print("✓ All tests passed!")
