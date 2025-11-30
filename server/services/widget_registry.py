@@ -4,7 +4,6 @@ from typing import List
 
 from server.config import Config
 from server.models import Widget
-from server.services.asset_loader import detect_widget_hash
 
 logger = logging.getLogger(__name__)
 

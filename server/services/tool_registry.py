@@ -5,10 +5,8 @@ from typing import Dict, List
 from server.config import Config
 from server.models import (
     ToolDefinition,
-    ToolType,
     Widget,
     WIDGET_TOOL_INPUT_SCHEMA,
-    EXTERNAL_TOOL_INPUT_SCHEMA,
     GET_GAMES_BY_SPORT_SCHEMA,
     GET_GAME_DETAILS_SCHEMA,
 )
@@ -43,27 +41,6 @@ def build_tools(
             game_result_viewer_widget = widget
             break
 
-    # External API tool (only if configured)
-    if cfg.has_external_api:
-        tools.append(
-            ToolDefinition(
-                name="external-fetch",
-                title="External API Fetch",
-                description=(
-                    "Fetch data from external API with dual response modes. "
-                    "Use 'text' mode for formatted output or 'widget' mode for interactive UI."
-                ),
-                input_schema=EXTERNAL_TOOL_INPUT_SCHEMA,
-                tool_type=ToolType.TEXT,  # Can return both text and widget based on response_mode
-                handler=None,  # Handled directly in _call_tool_request
-                invoking="Fetching from external API...",
-                invoked="API fetch complete",
-            )
-        )
-        logger.info("External API tool registered: %s", cfg.external_api_base_url)
-    else:
-        logger.debug("External API not configured, skipping external-fetch tool")
-
     # Sports data tools
     if get_games_by_sport_handler:
         tools.append(
@@ -83,7 +60,6 @@ def build_tools(
                     "\n- S-Birds → Incheon Shinhan Bank (WKBL)"
                 ),
                 input_schema=GET_GAMES_BY_SPORT_SCHEMA,
-                tool_type=ToolType.TEXT,
                 handler=get_games_by_sport_handler,
                 invoking="Fetching game schedules...",
                 invoked="Game schedules retrieved",
@@ -104,7 +80,6 @@ def build_tools(
                     "Use get_games_by_sport first to get the game_id."
                 ),
                 input_schema=GET_GAME_DETAILS_SCHEMA,
-                tool_type=ToolType.WIDGET,
                 widget=game_result_viewer_widget,
                 handler=get_game_details_handler,
                 invoking="Loading game details...",
@@ -138,6 +113,6 @@ def index_widgets_by_uri(tools: List[ToolDefinition]) -> Dict[str, Widget]:
     """
     result = {}
     for tool in tools:
-        if tool.is_widget_tool and tool.widget:
+        if tool.has_widget and tool.widget:
             result[tool.widget.template_uri] = tool.widget
     return result

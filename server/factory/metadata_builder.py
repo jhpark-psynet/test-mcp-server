@@ -16,7 +16,7 @@ def widget_tool_meta(tool: ToolDefinition) -> Dict[str, Any]:
     Returns:
         Metadata dictionary for widget tools
     """
-    if not tool.is_widget_tool or not tool.widget:
+    if not tool.has_widget:
         return {}
 
     return {

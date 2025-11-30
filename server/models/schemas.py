@@ -10,24 +10,6 @@ class WidgetToolInput(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
-class ExternalToolInput(BaseModel):
-    """External API fetch tool input schema."""
-    query: str = Field(
-        ...,
-        description="API endpoint path to fetch (e.g., '/users' or '/search')."
-    )
-    response_mode: str = Field(
-        default="text",
-        description="Response mode: 'text' for formatted text output, 'widget' for interactive UI.",
-        pattern="^(text|widget)$"
-    )
-    params: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Query parameters or request body for the API call."
-    )
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
-
-
 class GetGamesBySportInput(BaseModel):
     """Get games by sport tool input schema."""
     date: str = Field(
@@ -37,7 +19,7 @@ class GetGamesBySportInput(BaseModel):
     sport: str = Field(
         ...,
         description="Sport type to query.",
-        pattern="^(basketball|baseball|football)$"
+        pattern="^(basketball|soccer|volleyball|football)$"
     )
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
@@ -64,29 +46,6 @@ WIDGET_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
 }
 
-EXTERNAL_TOOL_INPUT_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "query": {
-            "type": "string",
-            "description": "API endpoint path to fetch (e.g., '/posts/1')."
-        },
-        "response_mode": {
-            "type": "string",
-            "enum": ["text", "widget"],
-            "default": "text",
-            "description": "Response mode: 'text' for formatted text, 'widget' for interactive UI."
-        },
-        "params": {
-            "type": "object",
-            "description": "Optional query parameters",
-            "additionalProperties": True
-        }
-    },
-    "required": ["query"],
-    "additionalProperties": False,
-}
-
 GET_GAMES_BY_SPORT_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -96,7 +55,7 @@ GET_GAMES_BY_SPORT_SCHEMA: Dict[str, Any] = {
         },
         "sport": {
             "type": "string",
-            "enum": ["basketball", "baseball", "football"],
+            "enum": ["basketball", "soccer", "volleyball", "football"],
             "description": "Sport type to query."
         }
     },

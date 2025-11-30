@@ -2,13 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
-
-
-class ToolType(str, Enum):
-    """Tool type enumeration."""
-    WIDGET = "widget"
-    TEXT = "text"
 
 
 @dataclass(frozen=True)
