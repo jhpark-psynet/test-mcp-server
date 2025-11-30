@@ -1,10 +1,13 @@
 """Base Sports API Client with common HTTP request logic."""
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from abc import ABC, abstractmethod
 import logging
 import httpx
 
 from server.config import CONFIG
+
+if TYPE_CHECKING:
+    from server.services.sports.base.endpoints import SportEndpointConfig
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +42,19 @@ class BaseSportsClient(ABC):
         """Return the sport name (e.g., 'basketball', 'soccer', 'volleyball').
 
         Must be implemented by subclasses.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def endpoint_config(self) -> "SportEndpointConfig":
+        """Return the endpoint configuration for this sport.
+
+        Must be implemented by subclasses to provide sport-specific
+        endpoint mappings.
+
+        Returns:
+            SportEndpointConfig instance for this sport
         """
         pass
 
@@ -89,19 +105,23 @@ class BaseSportsClient(ABC):
     def _get_endpoint_for_operation(self, operation: str) -> str:
         """Get the API endpoint for a specific operation.
 
+        Delegates to the sport-specific endpoint configuration.
+
         Args:
-            operation: One of 'games', 'team_stats', 'player_stats'
+            operation: Operation name (e.g., 'games', 'team_stats', 'player_stats')
 
         Returns:
             Full endpoint path
-        """
-        sport = self.get_sport_name()
 
-        if operation == "games":
-            return "/data3V1/livescore/gameList"
-        elif operation == "team_stats":
-            return f"/data3V1/livescore/{sport}TeamStat"
-        elif operation == "player_stats":
-            return f"/data3V1/livescore/{sport}PlayerStat"
-        else:
-            raise ValueError(f"Unknown operation: {operation}")
+        Raises:
+            ValueError: If operation is not supported for this sport
+        """
+        return self.endpoint_config.get_endpoint(operation)
+
+    def list_available_operations(self) -> Dict[str, str]:
+        """List all available operations for this sport.
+
+        Returns:
+            Dict mapping operation names to endpoint paths
+        """
+        return self.endpoint_config.list_operations()

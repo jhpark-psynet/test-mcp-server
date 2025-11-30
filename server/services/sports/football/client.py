@@ -1,65 +1,65 @@
-"""Soccer-specific Sports API client."""
+"""Football-specific Sports API client."""
 from typing import Dict, List, Any, Optional
 import logging
 
 from server.services.sports.base.client import BaseSportsClient
-from server.services.sports.soccer.mapper import SoccerMapper
-from server.services.sports.soccer.endpoints import SOCCER_ENDPOINTS
-from server.services.sports.soccer.mock_data import (
-    MOCK_SOCCER_GAMES,
-    MOCK_SOCCER_TEAM_STATS,
-    MOCK_SOCCER_PLAYER_STATS,
+from server.services.sports.football.mapper import FootballMapper
+from server.services.sports.football.endpoints import FOOTBALL_ENDPOINTS
+from server.services.sports.football.mock_data import (
+    MOCK_FOOTBALL_GAMES,
+    MOCK_FOOTBALL_TEAM_STATS,
+    MOCK_FOOTBALL_PLAYER_STATS,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class SoccerClient(BaseSportsClient):
-    """Soccer Sports API client."""
+class FootballClient(BaseSportsClient):
+    """Football Sports API client."""
 
     def __init__(self):
-        """Initialize soccer API client."""
+        """Initialize football API client."""
         super().__init__()
-        self.mapper = SoccerMapper()
+        self.mapper = FootballMapper()
 
     def get_sport_name(self) -> str:
         """Return the sport name."""
-        return "soccer"
+        return "football"
 
     @property
     def endpoint_config(self):
-        """Return soccer endpoint configuration."""
-        return SOCCER_ENDPOINTS
+        """Return football endpoint configuration."""
+        return FOOTBALL_ENDPOINTS
 
     def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
-        """Get soccer games for a specific date."""
+        """Get football games for a specific date."""
         if len(date) != 8 or not date.isdigit():
             raise ValueError(f"Invalid date format: {date}. Must be YYYYMMDD")
 
         if self.use_mock:
-            key = f"{date}_soccer"
-            games = MOCK_SOCCER_GAMES.get(key, [])
-            logger.info(f"[MOCK] Retrieved {len(games)} soccer games for {date}")
+            key = f"{date}_football"
+            games = MOCK_FOOTBALL_GAMES.get(key, [])
+            logger.info(f"[MOCK] Retrieved {len(games)} football games for {date}")
             return games
 
-        params = {"date": date, "sport": "soccer"}
+        params = {"date": date, "sport": "football"}
         try:
             endpoint = self._get_endpoint_for_operation("games")
             response = self._make_request(endpoint, params)
             games = self.mapper.map_games_list(response)
-            logger.info(f"[REAL API] Retrieved {len(games)} soccer games for {date}")
+            logger.info(f"[REAL API] Retrieved {len(games)} football games for {date}")
             return games
         except Exception as e:
-            logger.error(f"Failed to fetch soccer games from API: {e}")
+            logger.error(f"Failed to fetch football games from API: {e}")
             raise
 
     def get_team_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
-        """Get team statistics for a soccer game."""
+        """Get team statistics for a football game."""
         if self.use_mock:
-            stats = MOCK_SOCCER_TEAM_STATS.get(game_id)
+            stats = MOCK_FOOTBALL_TEAM_STATS.get(game_id)
             if stats is None:
                 raise ValueError(f"Game {game_id} not found")
-            logger.info(f"[MOCK] Retrieved soccer team stats for game {game_id}")
+            logger.info(f"[MOCK] Retrieved football team stats for game {game_id}")
             return stats
 
         params = {"game_id": game_id}
@@ -69,19 +69,19 @@ class SoccerClient(BaseSportsClient):
             stats = self.mapper.map_team_stats_list(response)
             if not stats:
                 raise ValueError(f"No team stats found for game {game_id}")
-            logger.info(f"[REAL API] Retrieved soccer team stats for game {game_id}")
+            logger.info(f"[REAL API] Retrieved football team stats for game {game_id}")
             return stats
         except Exception as e:
-            logger.error(f"Failed to fetch soccer team stats from API: {e}")
+            logger.error(f"Failed to fetch football team stats from API: {e}")
             raise
 
     def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
-        """Get player statistics for a soccer game."""
+        """Get player statistics for a football game."""
         if self.use_mock:
-            stats = MOCK_SOCCER_PLAYER_STATS.get(game_id)
+            stats = MOCK_FOOTBALL_PLAYER_STATS.get(game_id)
             if stats is None:
                 raise ValueError(f"Game {game_id} not found")
-            logger.info(f"[MOCK] Retrieved soccer player stats for game {game_id}")
+            logger.info(f"[MOCK] Retrieved football player stats for game {game_id}")
             return stats
 
         params = {"game_id": game_id}
@@ -91,8 +91,8 @@ class SoccerClient(BaseSportsClient):
             stats = self.mapper.map_player_stats_list(response)
             if not stats:
                 raise ValueError(f"No player stats found for game {game_id}")
-            logger.info(f"[REAL API] Retrieved soccer player stats for game {game_id}")
+            logger.info(f"[REAL API] Retrieved football player stats for game {game_id}")
             return stats
         except Exception as e:
-            logger.error(f"Failed to fetch soccer player stats from API: {e}")
+            logger.error(f"Failed to fetch football player stats from API: {e}")
             raise

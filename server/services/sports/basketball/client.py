@@ -4,6 +4,7 @@ import logging
 
 from server.services.sports.base.client import BaseSportsClient
 from server.services.sports.basketball.mapper import BasketballMapper
+from server.services.sports.basketball.endpoints import BASKETBALL_ENDPOINTS
 from server.services.sports.basketball.mock_data import (
     MOCK_BASKETBALL_GAMES,
     MOCK_BASKETBALL_TEAM_STATS,
@@ -24,6 +25,11 @@ class BasketballClient(BaseSportsClient):
     def get_sport_name(self) -> str:
         """Return the sport name."""
         return "basketball"
+
+    @property
+    def endpoint_config(self):
+        """Return basketball endpoint configuration."""
+        return BASKETBALL_ENDPOINTS
 
     def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
         """Get basketball games for a specific date.
