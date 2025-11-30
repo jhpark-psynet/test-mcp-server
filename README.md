@@ -8,11 +8,11 @@ MCP server with React widget support using FastMCP and OpenAI Apps SDK.
 test-mcp-server/
 ├── server/                      # Python FastMCP server (Modularized!)
 │   ├── main.py                 # Entry point (32 lines!)
-│   ├── config.py               # Configuration
+│   ├── config.py               # Configuration (Pydantic BaseSettings)
 │   ├── logging_config.py       # Logging setup
 │   ├── models/                 # Domain models
-│   │   ├── widget.py          # Widget, ToolType
-│   │   ├── tool.py            # ToolDefinition
+│   │   ├── widget.py          # Widget dataclass
+│   │   ├── tool.py            # ToolDefinition (has_widget property)
 │   │   └── schemas.py         # Pydantic schemas
 │   ├── services/               # Business logic
 │   │   ├── asset_loader.py    # HTML asset loading
@@ -21,19 +21,19 @@ test-mcp-server/
 │   │   ├── response_formatter.py  # API formatters
 │   │   ├── api_client.py      # ExternalApiClient (generic async)
 │   │   ├── exceptions.py      # Custom exceptions
-│   │   └── sports/            # ⭐ Modular Sports API (Phase 6)
+│   │   └── sports/            # Modular Sports API (Phase 6)
 │   │       ├── __init__.py    # SportsClientFactory
 │   │       ├── base/          # Base classes
 │   │       │   ├── client.py  # BaseSportsClient
 │   │       │   └── mapper.py  # BaseResponseMapper
 │   │       ├── basketball/    # Basketball module
 │   │       ├── soccer/        # Soccer module
-│   │       └── volleyball/    # Volleyball module
+│   │       ├── volleyball/    # Volleyball module
+│   │       └── football/      # Football module
 │   ├── handlers/               # Tool handlers
-│   │   ├── calculator.py      # Safe calculator (AST-based)
 │   │   └── sports.py          # Sports data handlers
 │   ├── factory/                # MCP server factory
-│   │   ├── safe_wrapper.py    # ⭐ SafeFastMCPWrapper (Phase 2)
+│   │   ├── safe_wrapper.py    # SafeFastMCPWrapper (Phase 2)
 │   │   ├── server_factory.py  # MCP server creation
 │   │   └── metadata_builder.py # OpenAI metadata
 │   ├── main.py.backup          # Original (933 lines)
@@ -41,7 +41,6 @@ test-mcp-server/
 ├── components/                  # React UI components
 │   ├── src/                    # React source code
 │   │   ├── example/           # Example widget (테스트용)
-│   │   ├── game-stats/        # Game statistics widget
 │   │   ├── game-result-viewer/ # Game results viewer
 │   │   └── index.css          # Shared styles
 │   ├── assets/                 # Built HTML/JS/CSS (generated)
@@ -49,10 +48,12 @@ test-mcp-server/
 │   ├── tsconfig.json
 │   ├── vite.config.ts
 │   └── build.ts                # Build script
-├── test_mcp.py                  # Integration tests (7/9 passing)
+├── test_mcp.py                  # MCP integration tests
+├── test_sports_api_integration.py  # Sports API integration tests
+├── test_environment.py          # Environment configuration tests
 ├── package.json                 # Root build scripts
-├── .env.example                 # Environment variables
-├── REFACTORING_PLAN.md         # Refactoring plan (Phase 1 ✅)
+├── API_INTEGRATION.md          # API integration guide
+├── REFACTORING_PLAN.md         # Refactoring plan (Phase 1-6 ✅)
 └── README.md
 ```
 
@@ -74,27 +75,22 @@ test-mcp-server/
 - ✅ .env file support with auto-loading
 - ✅ Type safety with Field validators
 
-**Phase 4** (Content-Based Cache Busting):
-- ✅ SHA-256 hash from file contents (8-character hex)
-- ✅ Automatic cache invalidation on code changes
-- ✅ Efficient caching when code unchanged
-
-**Phase 5** (Build Verification):
+**Phase 4** (Build Verification):
 - ✅ Automated build verification script
 - ✅ HTML/JS/CSS existence checks
 - ✅ HTML reference validation
 
-**Sports MCP Implementation**:
+**Phase 5** (Sports MCP Implementation):
 - ✅ Sports API integration (get_games_by_sport, get_game_details)
-- ✅ Game stats widget with team/player statistics
+- ✅ Game Result Viewer widget with team/player statistics
 - ✅ Multi-league support (NBA, KBL, WKBL, etc.)
 - ✅ Clean tool architecture (2 production tools)
 
-**Phase 6** (Sports API Modularization - Nov 27):
+**Phase 6** (Sports API Modularization):
 - ✅ Refactored Sports API into modular structure
 - ✅ Factory pattern (SportsClientFactory)
 - ✅ Base classes (BaseSportsClient, BaseResponseMapper)
-- ✅ Sport-specific modules (basketball, soccer, volleyball)
+- ✅ Sport-specific modules (basketball, soccer, volleyball, football)
 - ✅ Improved readability and extensibility
 
 ## How It Works
@@ -118,26 +114,19 @@ The server includes widgets for sports data visualization:
 - **Purpose**: Demonstrates basic widget functionality (테스트용)
 - **Props**: `message` (string)
 - **Location**: `components/src/example/`
-- **Status**: Skip 처리 (MCP Inspector에 표시 안 됨)
+- **Status**: 테스트용으로 코드만 유지 (툴 목록에서 제외됨)
 
-### 2. Game Stats Widget (`game-stats`)
+### 2. Game Result Viewer (`game-result-viewer`)
 - **Purpose**: Displays detailed game statistics with team and player stats
-- **Props**: `game_id`, `game_info`, `team_stats`, `player_stats`
-- **Location**: `components/src/game-stats/`
-- **Features**:
-  - Game header with team scores
-  - Team statistics table (FG, rebounds, assists, etc.)
-  - Player statistics table (points, rebounds, assists, shooting %)
-  - Responsive design with Tailwind CSS
-- **Used by**: `get_game_details` tool
-
-### 3. Game Result Viewer (`game-result-viewer`)
-- **Purpose**: Visualizes game results and schedules
+- **Props**: `GameData` (league, date, status, homeTeam, awayTeam, gameRecords)
 - **Location**: `components/src/game-result-viewer/`
 - **Features**:
-  - Game list with scores and status
-  - League and arena information
-  - Responsive design
+  - Game header with team scores and league info
+  - Team statistics comparison table
+  - Player statistics table (points, rebounds, assists, shooting %)
+  - Zod schema validation
+  - Responsive design with Tailwind CSS
+- **Used by**: `get_game_details` tool
 
 ## Available Tools
 
@@ -148,7 +137,7 @@ The server provides sports data MCP tools:
 - **Type**: Text-based tool
 - **Input**:
   - `date` (string) - Date in YYYYMMDD format (e.g., "20251118")
-  - `sport` (string) - Sport type: basketball, baseball, or football
+  - `sport` (string) - Sport type: basketball, soccer, volleyball, or football
 - **Output**: Formatted text with game schedules and results
 - **Features**:
   - Lists games by league (NBA, KBL, WKBL, etc.)
@@ -175,7 +164,7 @@ The server provides sports data MCP tools:
 - **Input**:
   - `game_id` (string) - Game ID from get_games_by_sport result
 - **Output**: Interactive widget with detailed game statistics
-- **Widget**: Uses the Game Stats Widget component
+- **Widget**: Uses the Game Result Viewer component
 - **Features**:
   - Game header with final scores
   - Team statistics (FG%, rebounds, assists, turnovers, etc.)
@@ -203,18 +192,12 @@ npm run install:server      # Install Python dependencies
 ### 2. Build React Components
 
 ```bash
-# Default build (without content hashing - simpler)
 npm run build
-
-# Production build with hashing (for cache busting)
-USE_HASH=true npm run build
 ```
 
 This will:
 - Build React components from `components/src/*/index.tsx`
 - Generate HTML/JS/CSS in `components/assets/`
-- Hash filenames with content-based SHA-256 (8 chars) when `USE_HASH` is enabled
-- Create HTML files referencing hashed or non-hashed assets
 
 ### 3. Environment Configuration
 
@@ -278,98 +261,26 @@ The MCP server will start on `http://0.0.0.0:8000`
 
 ## Build Process
 
-### Optional Hashing System
-
-The build system supports two modes for different needs:
-
-#### Default Mode (No Hashing)
-
-**Simple filenames** for easier development and deployment:
-
 ```bash
 npm run build
 ```
 
-1. **Build widgets**: Each widget is compiled to JS/CSS
-2. **Generate files**: Simple filenames like `example.js`, `example.css`
-3. **Generate HTML**: References non-hashed files
-
-**Benefits**:
-- ✅ Simple, predictable filenames (`example.js`, `example.css`)
-- ✅ Faster build (no hash calculation)
-- ✅ Easier debugging (no hash in URLs)
-- ✅ Simpler deployment process
+**What happens**:
+1. Each widget in `components/src/*/index.tsx` is compiled
+2. JS/CSS/HTML files are generated in `components/assets/`
+3. Simple filenames like `example.js`, `example.css`
 
 **Generated files**:
 ```
 components/assets/
-├── example.js           # Simple filename
-├── example.css          # Simple filename
-├── example.html         # References non-hashed files
-└── manifest.json        # Widget registry
+├── example.js
+├── example.css
+├── example.html
+├── game-result-viewer.js
+├── game-result-viewer.css
+├── game-result-viewer.html
+└── manifest.json
 ```
-
-**Limitations**:
-- ⚠️ Browser may cache old versions (need manual cache clear after updates)
-- ⚠️ Not ideal for CDN deployment with aggressive caching
-
-**When to use**:
-- ✅ Local development
-- ✅ Testing with MCP Inspector
-- ✅ Simple deployments without CDN
-- ✅ Most use cases
-
-#### Production Mode (With Hashing)
-
-**Content-based hashing** for automatic cache invalidation:
-
-```bash
-USE_HASH=true npm run build
-```
-
-1. **Build widgets**: Each widget is compiled to JS/CSS
-2. **Generate hashes**: SHA-256 hash of file contents (8 characters)
-3. **Rename files**: `example.js` → `example-40f54552.js`
-4. **Generate HTML**: References hashed files
-
-**Benefits**:
-- ✅ Automatic cache invalidation when code changes
-- ✅ Efficient caching when code is unchanged
-- ✅ Unique URLs for each version
-- ✅ No stale client-side code
-
-**Example**:
-```
-components/assets/
-├── example-40f54552.js       # Content hash: 40f54552
-├── example-40f54552.html     # Versioned HTML
-├── example-797e89ff.css      # Content hash: 797e89ff
-└── example.html              # Live HTML (used by server)
-```
-
-**How it works**:
-
-When you update `src/example/index.tsx`:
-```bash
-USE_HASH=true npm run build
-
-# Before: example-40f54552.js
-# After:  example-a1b2c3d4.js  ← New hash!
-```
-
-- HTML automatically updated to reference new hash
-- Browsers fetch new version (cache miss)
-- Old versions remain cached until code changes
-
-**When to use**:
-- ✅ CDN deployment
-- ✅ Production with aggressive browser caching
-- ✅ Need guaranteed cache invalidation
-- ✅ Frequent updates that must be immediately visible
-
-**When not to use**:
-- ❌ Simple deployments (default mode is simpler)
-- ❌ Local development (slows down iteration)
 
 ## Build Verification
 
@@ -398,24 +309,20 @@ Verifying widget builds...
 ============================================================
 Widget: example
   HTML: ✅ example.html
-  JS:   ✅ example-40f54552.js
-  CSS:  ✅ example-797e89ff.css
-  HTML → JS:  ✅ example-40f54552.js
-  HTML → CSS: ✅ example-797e89ff.css
+  JS:   ✅ example.js
+  CSS:  ✅ example.css
 
-Widget: api-result
-  HTML: ✅ api-result.html
-  JS:   ✅ api-result-c935fb46.js
-  CSS:  ✅ api-result-797e89ff.css
-  HTML → JS:  ✅ api-result-c935fb46.js
-  HTML → CSS: ✅ api-result-797e89ff.css
+Widget: game-result-viewer
+  HTML: ✅ game-result-viewer.html
+  JS:   ✅ game-result-viewer.js
+  CSS:  ✅ game-result-viewer.css
 
 ============================================================
 ✅ All widget builds verified successfully!
 
 Verified 2 widget(s):
   - example
-  - api-result
+  - game-result-viewer
 ```
 
 If verification fails, the build process will exit with an error and show what's missing. Fix the build and try again.
@@ -547,23 +454,9 @@ BASE_URL=http://your-domain.com:4444 npm run build
 
 Default: `http://localhost:4444`
 
-### USE_HASH
-
-Control whether to use content-based hashing for cache busting:
-
-```bash
-# Production mode (with hashing) - Default
-npm run build
-
-# Development mode (without hashing)
-USE_HASH=false npm run build
-```
-
-Default: `true` (hashing enabled)
-
 ### External API Configuration
 
-Configure external API integration for the `external-fetch` tool:
+Configure external API integration:
 
 ```bash
 EXTERNAL_API_BASE_URL=https://api.example.com
@@ -587,13 +480,32 @@ The server integrates with a sports data API to provide game schedules and detai
 - **Real-time Data**: Fetch current game results and scores
 - **Team Aliases**: Support for common team name variations
 
-### API Client
+### Modular Architecture (Phase 6)
 
-The `SportsApiClient` class (`server/services/sports_api_client.py`) provides:
+The Sports API uses a factory pattern with sport-specific clients:
+
+```
+SportsClientFactory.create_client("basketball")  # Returns BasketballClient
+SportsClientFactory.create_client("soccer")      # Returns SoccerClient
+SportsClientFactory.create_client("volleyball")  # Returns VolleyballClient
+SportsClientFactory.create_client("football")    # Returns FootballClient
+```
+
+**Module Structure** (`server/services/sports/`):
+- `__init__.py` - SportsClientFactory
+- `base/client.py` - BaseSportsClient (abstract base class)
+- `base/mapper.py` - BaseResponseMapper (field mapping)
+- `basketball/` - Basketball-specific implementation
+- `soccer/` - Soccer-specific implementation
+- `volleyball/` - Volleyball-specific implementation
+- `football/` - Football-specific implementation
+
+**Features**:
 - Mock data for development and testing
+- Automatic fallback to mock when API not configured
 - Structured data models for games, teams, and players
 - Support for multiple leagues and sports
-- Extensible architecture for real API integration
+- Extensible architecture for new sports
 
 ### Usage
 
@@ -770,7 +682,7 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 
 ### Technical Documentation
 - **[claude.md](./claude.md)** - 상세 기술 문서 및 사용법
-- **[.env.example](./.env.example)** - 환경 변수 설정 예시
+- **[API_INTEGRATION.md](./API_INTEGRATION.md)** - API 통합 가이드
 
 ## License
 

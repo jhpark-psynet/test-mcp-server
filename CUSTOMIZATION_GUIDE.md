@@ -6,8 +6,9 @@
 
 **현재 프로젝트 상태**:
 - Sports MCP 툴 2개: `get_games_by_sport`, `get_game_details`
-- 위젯 3개: `example` (테스트용), `game-result-viewer`, `game-stats`
+- 위젯 2개: `example` (테스트용), `game-result-viewer`
 - `example` 위젯은 툴 목록에서 제외됨 (테스트용으로 코드만 유지)
+- `get_game_details` 툴은 `game-result-viewer` 위젯 사용
 
 ---
 
@@ -175,33 +176,15 @@ if (rootElement) {
 export default WeatherWidget;
 ```
 
-#### Step 1.2: 빌드 설정 확인
+#### Step 1.2: 빌드
 
 `components/build.ts`는 자동으로 `src/` 폴더의 모든 위젯을 빌드합니다.
 
-**기본 빌드 (content hashing 비활성화)**:
 ```bash
 npm run build
 ```
 
-**프로덕션 빌드 (content hashing 활성화)**:
-```bash
-USE_HASH=true npm run build
-```
-
-**빌드 모드 선택 가이드**:
-- **기본값 (권장)**: `npm run build`
-  - 단순 파일명 (`weather.js`)
-  - 디버깅 용이
-  - 빠른 반복 개발
-  - 대부분의 배포 환경에 적합
-
-- **프로덕션 (해시 필요 시)**: `USE_HASH=true npm run build`
-  - 파일명에 SHA-256 해시 포함 (`weather-a1b2c3d4.js`)
-  - 브라우저 캐시 무효화 자동 처리
-  - CDN 배포 시 권장
-
-**예상 출력 (기본 모드)**:
+**예상 출력**:
 ```
 Building weather...
   JS:  weather.js
@@ -219,30 +202,6 @@ Artifacts:
     CSS: weather.css
     HTML: weather.html
 ============================================================
-
-Hash mode: disabled
-```
-
-**예상 출력 (해시 모드)**:
-```
-Building weather...
-  JS:  weather.js -> weather-a1b2c3d4.js
-  CSS: weather.css -> weather-e5f6g7h8.css
-✓ Built weather
-
-Build Summary
-============================================================
-Widgets built: 3
-Output directory: assets/
-
-Artifacts:
-  weather:
-    JS:  weather-a1b2c3d4.js
-    CSS: weather-e5f6g7h8.css
-    HTML: weather.html
-============================================================
-
-Hash mode: enabled
 ```
 
 #### Step 1.3: 서버에 위젯 등록
@@ -1014,7 +973,7 @@ npm run build
 # ============================================================
 # Widgets built: 3
 #   - example
-#   - api-result
+#   - game-result-viewer
 #   - weather
 # ============================================================
 # ✅ All widget builds verified successfully!
@@ -1025,8 +984,8 @@ python test_mcp.py
 # 예상 출력:
 # Testing Widget Loading: ✓
 # Testing Tool Loading: ✓
-# Testing Calculator: ✓
-# Testing Weather Widget: ✓
+# Testing get_games_by_sport: ✓
+# Testing get_game_details: ✓
 # All tests passed!
 ```
 
@@ -1099,14 +1058,10 @@ tail -f server.log
 # 예상 로그:
 INFO     Starting Test MCP Server
 INFO     Host: 0.0.0.0:8000
-INFO     External API: ✓ Configured
-INFO     Weather API: ✓ Configured
-INFO     Registered tools: 5
-  - calculator
-  - external-fetch
-  - json-formatter
-  - weather-widget
-  - get-weather
+INFO     Sports API: ✓ Configured
+INFO     Registered tools: 2
+  - get_games_by_sport
+  - get_game_details
 ```
 
 **헬스 체크**:
@@ -1152,7 +1107,7 @@ curl http://localhost:8000/health
 2. **get_game_details** (WIDGET)
    - 경기 상세 통계 표시
    - Input: `game_id`
-   - Widget: `game-stats-widget`
+   - Widget: `game-result-viewer`
 
 ### 6.4 실제 사용 예시
 
@@ -1602,18 +1557,20 @@ BASE_URL=https://cdn.yourdomain.com npm run build
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - 설계 패턴 및 아키텍처
 - **[REFACTORING_PLAN.md](./REFACTORING_PLAN.md)** - 리팩토링 계획
 - **[README.md](./README.md)** - 프로젝트 개요
-- **[.env.example](./.env.example)** - 환경 변수 예시
+- **[API_INTEGRATION.md](./API_INTEGRATION.md)** - API 통합 가이드
 
 ---
 
-**마지막 업데이트**: 2025-11-23
+**마지막 업데이트**: 2025-11-28
 **작성자**: Claude Code (with junho)
 
 ## 최근 업데이트 내역
 
+### 2025-11-28
+- ✅ 스포츠 4종목 지원 (basketball, soccer, volleyball, football)
+- ✅ 미사용 코드 정리 (game-stats 위젯, 미사용 핸들러)
+- ✅ 문서 소스 동기화
+
 ### 2025-11-23
-- ✅ Optional hashing 시스템 추가 (USE_HASH 환경 변수)
-- ✅ 기본값 변경: 해시 사용 안 함 (더 간단한 배포)
 - ✅ 위젯 로딩 상태 처리 베스트 프랙티스 추가
-- ✅ 빌드 모드 가이드 (기본 vs 해시)
 - ✅ window.openai.toolOutput 폴링 패턴 문서화

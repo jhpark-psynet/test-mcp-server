@@ -42,7 +42,7 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
 
 ## 3. Available Widgets
 
-서버에 포함된 빌트인 위젯:
+서버에 포함된 빌트인 위젯 2개:
 
 ### 1. Example Widget (`example`)
 - **목적**: 기본 위젯 기능 데모
@@ -61,7 +61,8 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
   - 선수별 상세 통계 (득점, 리바운드, 어시스트 등)
   - 팀 통계 비교 (필드골, 3점슛, 자유투 등)
   - Zod 스키마 검증
-  - 로딩 상태 처리 (window.openai.toolOutput 감지)
+  - 로딩 상태 처리 (window.openai.toolOutput 폴링)
+- **사용 툴**: `get_game_details`
 
 ## 4. Available Tools
 
@@ -72,7 +73,7 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
 - **타입**: Text-based tool
 - **입력**:
   - `date` (string) - 경기 날짜 (YYYYMMDD 형식)
-  - `sport` (string) - 스포츠 종류 (basketball, baseball, football)
+  - `sport` (string) - 스포츠 종류 (basketball, soccer, volleyball, football)
 - **출력**: 경기 일정 및 결과 (팀명, 스코어, 시간, 경기장, 경기 상태)
 - **기능**:
   - 특정 날짜의 경기 목록 조회
@@ -94,7 +95,7 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
 - **제한사항**: 종료된 경기만 지원 (state='f')
 - **사용법**: `get_games_by_sport`로 먼저 game_id 확인 후 사용
 
-## 5. Folder Structure ⭐ Refactored (Phase 1 Complete)
+## 5. Folder Structure (Phase 6 Complete)
 
 ```
 test-mcp-server/
@@ -102,13 +103,13 @@ test-mcp-server/
 ├── server/                         # Python MCP 서버 (Modularized!)
 │   ├── main.py                    # 엔트리포인트 (933줄 → 32줄!)
 │   ├── main.py.backup             # 원본 파일 백업 (933줄)
-│   ├── config.py                  # 설정 관리
+│   ├── config.py                  # 설정 관리 (Pydantic BaseSettings)
 │   ├── logging_config.py          # 로깅 설정
 │   │
 │   ├── models/                    # 도메인 모델
 │   │   ├── __init__.py
-│   │   ├── widget.py             # Widget, ToolType
-│   │   ├── tool.py               # ToolDefinition
+│   │   ├── widget.py             # Widget dataclass
+│   │   ├── tool.py               # ToolDefinition (has_widget property)
 │   │   └── schemas.py            # Pydantic 스키마
 │   │
 │   ├── services/                  # 비즈니스 로직
@@ -120,7 +121,7 @@ test-mcp-server/
 │   │   ├── api_client.py         # ExternalApiClient (httpx)
 │   │   ├── exceptions.py         # 커스텀 예외
 │   │   │
-│   │   └── sports/               # ⭐ 스포츠 API (모듈화, Phase 6)
+│   │   └── sports/               # 스포츠 API (모듈화, Phase 6)
 │   │       ├── __init__.py       # SportsClientFactory
 │   │       ├── base/             # 공통 기반 클래스
 │   │       │   ├── client.py    # BaseSportsClient (HTTP 로직)
@@ -133,19 +134,22 @@ test-mcp-server/
 │   │       │   ├── client.py    # SoccerClient
 │   │       │   ├── mapper.py    # SoccerMapper
 │   │       │   └── mock_data.py # 축구 Mock 데이터
-│   │       └── volleyball/       # 배구 전용 모듈
-│   │           ├── client.py    # VolleyballClient
-│   │           ├── mapper.py    # VolleyballMapper
-│   │           └── mock_data.py # 배구 Mock 데이터
+│   │       ├── volleyball/       # 배구 전용 모듈
+│   │       │   ├── client.py    # VolleyballClient
+│   │       │   ├── mapper.py    # VolleyballMapper
+│   │       │   └── mock_data.py # 배구 Mock 데이터
+│   │       └── football/         # 미식축구 전용 모듈
+│   │           ├── client.py    # FootballClient
+│   │           ├── mapper.py    # FootballMapper
+│   │           └── mock_data.py # 미식축구 Mock 데이터
 │   │
 │   ├── handlers/                  # 툴 핸들러
 │   │   ├── __init__.py
-│   │   ├── calculator.py         # ⭐ AST 기반 안전한 계산기
 │   │   └── sports.py             # 스포츠 데이터 핸들러 (factory 패턴 사용)
 │   │
 │   ├── factory/                   # MCP 서버 팩토리
 │   │   ├── __init__.py
-│   │   ├── safe_wrapper.py       # ⭐ SafeFastMCPWrapper (Phase 2)
+│   │   ├── safe_wrapper.py       # SafeFastMCPWrapper (Phase 2)
 │   │   ├── server_factory.py     # MCP 서버 생성
 │   │   └── metadata_builder.py   # OpenAI 메타데이터
 │   │
@@ -164,12 +168,11 @@ test-mcp-server/
 │   │
 │   ├── assets/                    # 빌드 결과물 (생성됨)
 │   │   ├── example.html           # MCP 서버가 읽는 HTML
-│   │   ├── example-9252.js        # 해시된 JS 번들 (USE_HASH=true일 때)
-│   │   ├── example-9252.css       # 해시된 CSS (USE_HASH=true일 때)
-│   │   ├── example.js             # 단순 JS (USE_HASH=false일 때)
+│   │   ├── example.js
+│   │   ├── example.css
 │   │   ├── game-result-viewer.html
-│   │   ├── game-result-viewer-192cf654.js
-│   │   └── game-result-viewer-192cf654.css
+│   │   ├── game-result-viewer.js
+│   │   └── game-result-viewer.css
 │   │
 │   ├── package.json               # Node 의존성
 │   ├── tsconfig.json              # TypeScript 설정
@@ -178,9 +181,11 @@ test-mcp-server/
 │   └── build.ts                   # 빌드 스크립트
 │
 ├── package.json                    # 루트 빌드 스크립트
-├── test_mcp.py                     # MCP 통합 테스트 (7/9 통과)
-├── .env.example                    # 환경 변수 예시
-├── REFACTORING_PLAN.md            # 리팩토링 계획 (Phase 1 ✅)
+├── test_mcp.py                     # MCP 통합 테스트
+├── test_sports_api_integration.py  # Sports API 통합 테스트
+├── test_environment.py             # 환경 설정 테스트
+├── API_INTEGRATION.md              # API 통합 가이드
+├── REFACTORING_PLAN.md            # 리팩토링 계획 (Phase 1-6 ✅)
 ├── IMPROVEMENT_RECOMMENDATIONS.md  # 개선 제안
 ├── README.md                       # 사용자 문서
 └── claude.md                       # 이 파일 (Claude용)
@@ -211,14 +216,12 @@ test-mcp-server/
 - ✅ 외부 스포츠 API 통합 (팀 통계, 선수 통계)
 - ✅ Zod 스키마 검증 및 에러 핸들링
 - ✅ 로딩 상태 처리 (window.openai.toolOutput 폴링)
-- ✅ Content-based hashing 시스템 (SHA-256, 8자리)
-- ✅ Optional hashing 지원 (USE_HASH 환경 변수)
 
 **Phase 6 성과** (2025-11-27):
 - ✅ Sports API 모듈화 리팩토링 (스포츠별 분리)
 - ✅ Factory 패턴 도입 (SportsClientFactory)
 - ✅ 기반 클래스 추상화 (BaseSportsClient, BaseResponseMapper)
-- ✅ 스포츠별 독립 모듈 (basketball, soccer, volleyball)
+- ✅ 스포츠별 독립 모듈 (basketball, soccer, volleyball, football)
 - ✅ 폴더 기반 구조로 가독성 및 확장성 향상
 - ✅ 통합 테스트: 모든 클라이언트 생성 및 데이터 조회 성공
 
@@ -227,9 +230,9 @@ test-mcp-server/
 | 파일 | 역할 |
 |------|------|
 | `server/main.py` | 엔트리포인트 (32줄, 로깅 + 앱 생성) |
-| `server/config.py` | Config 클래스, 환경 변수 관리 |
+| `server/config.py` | Config 클래스 (Pydantic BaseSettings) |
 | `server/logging_config.py` | 구조화된 로깅 설정 |
-| `server/models/widget.py` | Widget, ToolType 도메인 모델 |
+| `server/models/widget.py` | Widget 도메인 모델 |
 | `server/models/tool.py` | ToolDefinition 도메인 모델 |
 | `server/models/schemas.py` | Pydantic 스키마 (입력 검증) |
 | `server/services/asset_loader.py` | HTML 파일 로딩 (캐싱) |
@@ -238,26 +241,24 @@ test-mcp-server/
 | `server/services/response_formatter.py` | API 응답 포맷팅 |
 | `server/services/api_client.py` | ExternalApiClient (httpx async) |
 | `server/services/exceptions.py` | 커스텀 예외 클래스 |
-| `server/services/sports/__init__.py` | ⭐ SportsClientFactory (Phase 6) |
+| `server/services/sports/__init__.py` | SportsClientFactory (Phase 6) |
 | `server/services/sports/base/client.py` | BaseSportsClient (공통 HTTP 로직) |
 | `server/services/sports/base/mapper.py` | BaseResponseMapper (공통 필드 매핑) |
-| `server/services/sports/basketball/client.py` | BasketballClient (농구 API) |
-| `server/services/sports/basketball/mapper.py` | BasketballMapper (농구 필드 매핑) |
-| `server/services/sports/basketball/mock_data.py` | 농구 Mock 데이터 |
+| `server/services/sports/basketball/` | BasketballClient, Mapper, Mock 데이터 |
 | `server/services/sports/soccer/` | SoccerClient, Mapper, Mock 데이터 |
 | `server/services/sports/volleyball/` | VolleyballClient, Mapper, Mock 데이터 |
-| `server/handlers/calculator.py` | ⭐ AST 기반 안전한 계산기 |
-| `server/handlers/sports.py` | ⭐ 스포츠 데이터 핸들러 (Phase 6) |
-| `server/factory/safe_wrapper.py` | ⭐ SafeFastMCPWrapper (Phase 2) |
+| `server/services/sports/football/` | FootballClient, Mapper, Mock 데이터 |
+| `server/handlers/sports.py` | 스포츠 데이터 핸들러 (Phase 6) |
+| `server/factory/safe_wrapper.py` | SafeFastMCPWrapper (Phase 2) |
 | `server/factory/server_factory.py` | MCP 서버 생성 팩토리 |
 | `server/factory/metadata_builder.py` | OpenAI 메타데이터 생성 |
-| `components/src/*/index.tsx` | React 컴포넌트 (빌드 대상) |
 | `components/src/example/` | 예제 위젯 (테스트용) |
 | `components/src/game-result-viewer/` | 경기 결과 위젯 (스포츠 통계) |
-| `components/build.ts` | Vite 빌드 (Optional 해시, HTML 생성) |
+| `components/build.ts` | Vite 빌드 (HTML 생성) |
 | `components/assets/*.html` | MCP 리소스로 전달 |
-| `test_mcp.py` | MCP 통합 테스트 (7/9 통과) |
-| `.env.example` | 환경 변수 예시 |
+| `test_mcp.py` | MCP 통합 테스트 |
+| `test_sports_api_integration.py` | Sports API 통합 테스트 |
+| `test_environment.py` | 환경 설정 테스트 |
 
 ## 6. Development Guidelines
 
@@ -348,19 +349,9 @@ npm run install:server       # Python 의존성만 설치
 
 ### 빌드
 ```bash
-# 기본 빌드 (content hashing 비활성화 - 더 간단)
 npm run build                # React 컴포넌트 빌드 (components/assets/ 생성)
-
-# 프로덕션 빌드 (content hashing 활성화 - 캐시 무효화용)
-USE_HASH=true npm run build  # 해시된 파일명 (game-result-viewer-192cf654.js)
-
-# Watch 모드
 npm run build:watch          # Watch 모드로 빌드 (자동 재빌드)
 ```
-
-**빌드 모드 차이**:
-- **기본값 (USE_HASH 미지정)**: `game-result-viewer.js` (간단한 파일명, 대부분의 경우 권장)
-- **USE_HASH=true**: `game-result-viewer-192cf654.js` (CDN 배포 시 캐시 무효화)
 
 ### 서버 실행
 ```bash
@@ -483,16 +474,14 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 
 **테스트 커버리지** (`test_mcp.py`):
 - ✅ 위젯 로딩 (2개 위젯)
-- ✅ 도구 로딩 (3개 도구)
+- ✅ 도구 로딩 (2개 도구: get_games_by_sport, get_game_details)
 - ✅ MCP 프로토콜 도구 리스트
 - ✅ MCP 프로토콜 리소스 리스트
-- ✅ 위젯 도구 실행 (example-widget)
-- ✅ 텍스트 도구 실행 (calculator)
+- ✅ 위젯 도구 실행 (get_game_details)
+- ✅ 텍스트 도구 실행 (get_games_by_sport)
 - ✅ 리소스 읽기 (위젯 HTML)
-- ✅ 외부 API fetch - 텍스트 모드
-- ✅ 외부 API fetch - 위젯 모드
 
-**결과**: 9/9 테스트 통과 (유닛 테스트 포함 총 14/14)
+**결과**: Sports MCP 기능 테스트 통과
 
 ### 테스트 전략
 
@@ -542,13 +531,13 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 ✅ Tailwind CSS + Zod 통합
 ✅ Example Widget (props 전달 + 검증)
 ✅ Hot Reload (서버 자동 재시작)
-✅ Python 테스트 스크립트 (test_mcp.py - 9개 테스트)
-✅ **External API 통합 (Phase 1-3 완료)**
+✅ Python 테스트 스크립트 (test_mcp.py)
 ✅ ExternalApiClient (httpx 기반 async 클라이언트)
 ✅ 커스텀 예외 클래스 (ApiTimeoutError, ApiHttpError, ApiConnectionError)
-✅ external-fetch 툴 (Text & Widget 모드)
-✅ API Result Widget (인터랙티브 UI)
-✅ 이중 응답 모드 (텍스트/위젯)
+✅ Sports API 통합 (4개 스포츠: basketball, soccer, volleyball, football)
+✅ get_games_by_sport 툴 (텍스트 모드)
+✅ get_game_details 툴 (Game Result Viewer 위젯)
+✅ 스포츠별 모듈화 (Factory 패턴)
 
 ### 우선순위 작업
 
@@ -642,5 +631,5 @@ python test_mcp.py
 
 ---
 
-**마지막 업데이트**: 2025-11-27
-**프로젝트 버전**: 3.1.0 (Sports API Modularization - Phase 6)
+**마지막 업데이트**: 2025-11-28
+**프로젝트 버전**: 3.3.0 (Sports 4종목 확장, 미사용 코드 정리)
