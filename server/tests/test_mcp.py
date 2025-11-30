@@ -8,6 +8,8 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -18,6 +20,13 @@ from server.factory import create_mcp_server
 from server.handlers import get_games_by_sport_handler, get_game_details_handler
 
 
+@pytest.fixture
+def mcp_server():
+    """Create MCP server instance for testing."""
+    return create_mcp_server(CONFIG)
+
+
+@pytest.mark.asyncio
 async def test_widget_loading():
     """Test that widgets are loaded correctly."""
     print("=" * 60)
@@ -38,6 +47,7 @@ async def test_widget_loading():
     return widgets
 
 
+@pytest.mark.asyncio
 async def test_tool_loading():
     """Test that tools are loaded correctly (both widget and text-based)."""
     print("=" * 60)
@@ -73,6 +83,7 @@ async def test_tool_loading():
     return tools
 
 
+@pytest.mark.asyncio
 async def test_list_tools(mcp_server):
     """Test listing available tools."""
     print("=" * 60)
@@ -118,6 +129,7 @@ async def test_list_tools(mcp_server):
     return tools_list
 
 
+@pytest.mark.asyncio
 async def test_list_resources(mcp_server):
     """Test listing available resources."""
     print("=" * 60)
@@ -145,6 +157,7 @@ async def test_list_resources(mcp_server):
     return resources_list
 
 
+@pytest.mark.asyncio
 async def test_call_widget_tool(mcp_server):
     """Test calling a widget tool (get_game_details)."""
     print("=" * 60)
@@ -202,6 +215,7 @@ async def test_call_widget_tool(mcp_server):
     return result
 
 
+@pytest.mark.asyncio
 async def test_call_text_tool(mcp_server):
     """Test calling a text-based tool (get_games_by_sport)."""
     print("=" * 60)
@@ -244,6 +258,7 @@ async def test_call_text_tool(mcp_server):
     return result
 
 
+@pytest.mark.asyncio
 async def test_read_resource(mcp_server):
     """Test reading a resource (game-result-viewer widget)."""
     print("=" * 60)

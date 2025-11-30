@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import sys
 
+import pytest
+
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -11,6 +13,7 @@ from server.config import Config
 from server.factory.server_factory import create_mcp_server
 
 
+@pytest.mark.asyncio
 async def test_get_game_details():
     """Test get_game_details tool via MCP."""
     cfg = Config()
