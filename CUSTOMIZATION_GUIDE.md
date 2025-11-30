@@ -14,17 +14,436 @@
 
 ## 목차
 
-1. [새로운 위젯 추가하기](#1-새로운-위젯-추가하기)
-2. [새로운 툴 추가하기](#2-새로운-툴-추가하기)
-3. [외부 API 통합하기](#3-외부-api-통합하기)
-4. [테스트하기](#4-테스트하기)
-5. [배포 준비하기](#5-배포-준비하기)
+1. [스포츠 API 확장하기](#1-스포츠-api-확장하기)
+2. [새로운 위젯 추가하기](#2-새로운-위젯-추가하기)
+3. [새로운 툴 추가하기](#3-새로운-툴-추가하기)
+4. [외부 API 통합하기](#4-외부-api-통합하기)
+5. [테스트하기](#5-테스트하기)
+6. [배포 준비하기](#6-배포-준비하기)
 
 ---
 
-## 1. 새로운 위젯 추가하기
+## 1. 스포츠 API 확장하기
 
-### 예제: 날씨 정보 위젯
+스포츠 API는 **확장 가능한 아키텍처**로 설계되어 있습니다. 새로운 스포츠나 API operation을 추가할 때 기존 코드를 수정하지 않고 확장할 수 있습니다.
+
+### 1.1 아키텍처 개요
+
+```
+server/services/sports/
+├── __init__.py              # SportsClientFactory (레지스트리 패턴)
+├── base/
+│   ├── __init__.py
+│   ├── client.py            # BaseSportsClient (추상 클래스)
+│   └── endpoints.py         # CommonEndpoints, SportEndpointConfig
+├── basketball/
+│   ├── client.py            # BasketballClient
+│   ├── endpoints.py         # BASKETBALL_ENDPOINTS
+│   ├── mapper.py            # API 응답 매핑
+│   └── mock_data.py         # 테스트용 mock 데이터
+├── soccer/
+│   └── ... (동일 구조)
+├── volleyball/
+│   └── ... (동일 구조)
+└── football/
+    └── ... (동일 구조)
+```
+
+**핵심 클래스:**
+
+- `SportEndpointConfig`: 스포츠별 endpoint 설정
+- `CommonEndpoints`: 모든 스포츠가 공유하는 endpoint (games 등)
+- `SportsClientFactory`: 레지스트리 패턴으로 클라이언트 생성
+
+### 1.2 새로운 스포츠 추가하기
+
+**예제: 테니스(tennis) 추가**
+
+#### Step 1.2.1: 폴더 구조 생성
+
+```bash
+mkdir -p server/services/sports/tennis
+touch server/services/sports/tennis/__init__.py
+```
+
+#### Step 1.2.2: Endpoint 설정 작성
+
+**파일**: `server/services/sports/tennis/endpoints.py`
+
+```python
+"""Tennis-specific endpoint configuration."""
+from server.services.sports.base.endpoints import SportEndpointConfig, get_api_base_path
+
+
+TENNIS_ENDPOINTS = SportEndpointConfig(
+    sport_name="tennis",
+    endpoints={
+        # 팀/선수 통계
+        "team_stats": f"{get_api_base_path()}/tennisTeamStat",
+        "player_stats": f"{get_api_base_path()}/tennisPlayerStat",
+
+        # 테니스 전용 endpoint (예시)
+        # "set_scores": f"{get_api_base_path()}/tennisSetScore",
+        # "serve_stats": f"{get_api_base_path()}/tennisServeStats",
+    },
+    # 공통 endpoint 사용 (games, leagues 등)
+    use_common={"games"},
+)
+```
+
+**endpoint 설정 설명:**
+- `sport_name`: 스포츠 식별자
+- `endpoints`: 스포츠 전용 API endpoint 매핑
+- `use_common`: 공통 endpoint 사용 여부 (`CommonEndpoints`에서 가져옴)
+
+#### Step 1.2.3: Client 작성
+
+**파일**: `server/services/sports/tennis/client.py`
+
+```python
+"""Tennis-specific Sports API client."""
+from typing import Dict, List, Any, Optional
+import logging
+
+from server.services.sports.base.client import BaseSportsClient
+from server.services.sports.tennis.mapper import TennisMapper
+from server.services.sports.tennis.endpoints import TENNIS_ENDPOINTS
+from server.services.sports.tennis.mock_data import (
+    MOCK_TENNIS_GAMES,
+    MOCK_TENNIS_TEAM_STATS,
+    MOCK_TENNIS_PLAYER_STATS,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class TennisClient(BaseSportsClient):
+    """Tennis Sports API client."""
+
+    def __init__(self):
+        """Initialize tennis API client."""
+        super().__init__()
+        self.mapper = TennisMapper()
+
+    def get_sport_name(self) -> str:
+        """Return the sport name."""
+        return "tennis"
+
+    @property
+    def endpoint_config(self):
+        """Return tennis endpoint configuration."""
+        return TENNIS_ENDPOINTS
+
+    def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
+        """Get tennis games for a specific date."""
+        if len(date) != 8 or not date.isdigit():
+            raise ValueError(f"Invalid date format: {date}. Must be YYYYMMDD")
+
+        if self.use_mock:
+            key = f"{date}_tennis"
+            games = MOCK_TENNIS_GAMES.get(key, [])
+            logger.info(f"[MOCK] Retrieved {len(games)} tennis games for {date}")
+            return games
+
+        # Real API call
+        params = {
+            "search_date": date,
+            "compe": "tennis",
+            "fmt": "json",
+        }
+
+        endpoint = self._get_endpoint_for_operation("games")
+        response = self._make_request(endpoint, params)
+        games = self.mapper.map_games_list(response)
+        logger.info(f"[REAL API] Retrieved {len(games)} tennis games for {date}")
+        return games
+
+    def get_team_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+        """Get team statistics for a tennis match."""
+        if self.use_mock:
+            stats = MOCK_TENNIS_TEAM_STATS.get(game_id)
+            if stats is None:
+                raise ValueError(f"Game {game_id} not found")
+            return stats
+
+        params = {"game_id": game_id, "fmt": "json"}
+        endpoint = self._get_endpoint_for_operation("team_stats")
+        response = self._make_request(endpoint, params)
+        return self.mapper.map_team_stats_list(response)
+
+    def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+        """Get player statistics for a tennis match."""
+        if self.use_mock:
+            stats = MOCK_TENNIS_PLAYER_STATS.get(game_id)
+            if stats is None:
+                raise ValueError(f"Game {game_id} not found")
+            return stats
+
+        # Similar to team_stats implementation
+        params = {"game_id": game_id, "fmt": "json"}
+        endpoint = self._get_endpoint_for_operation("player_stats")
+        response = self._make_request(endpoint, params)
+        return self.mapper.map_player_stats_list(response)
+```
+
+#### Step 1.2.4: Mapper 작성
+
+**파일**: `server/services/sports/tennis/mapper.py`
+
+```python
+"""Tennis API response mapper."""
+from typing import Dict, List, Any
+
+
+class TennisMapper:
+    """Maps tennis API responses to internal format."""
+
+    def map_games_list(self, response: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Map games list API response."""
+        games = []
+        raw_games = response.get("gameList", [])
+
+        for game in raw_games:
+            games.append({
+                "game_id": game.get("gameId"),
+                "home_team": game.get("homeTeam", {}).get("name"),
+                "away_team": game.get("awayTeam", {}).get("name"),
+                "home_score": game.get("homeScore"),
+                "away_score": game.get("awayScore"),
+                "state": game.get("state"),  # b=before, i=in-progress, f=finished
+                "start_time": game.get("startTime"),
+            })
+
+        return games
+
+    def map_team_stats_list(self, response: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Map team stats API response."""
+        # Implement based on actual API response format
+        return response.get("teamStats", [])
+
+    def map_player_stats_list(self, response: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Map player stats API response."""
+        return response.get("playerStats", [])
+```
+
+#### Step 1.2.5: Mock 데이터 작성
+
+**파일**: `server/services/sports/tennis/mock_data.py`
+
+```python
+"""Mock data for tennis testing."""
+
+MOCK_TENNIS_GAMES = {
+    "20251128_tennis": [
+        {
+            "game_id": "TENNIS001",
+            "home_team": "Player A",
+            "away_team": "Player B",
+            "home_score": 2,
+            "away_score": 1,
+            "state": "f",
+            "start_time": "14:00",
+        },
+    ],
+}
+
+MOCK_TENNIS_TEAM_STATS = {
+    "TENNIS001": [
+        {"player": "Player A", "sets_won": 2, "games_won": 12, "aces": 5},
+        {"player": "Player B", "sets_won": 1, "games_won": 10, "aces": 3},
+    ],
+}
+
+MOCK_TENNIS_PLAYER_STATS = {
+    "TENNIS001": [
+        {"name": "Player A", "first_serve_pct": 65, "winners": 25, "unforced_errors": 15},
+        {"name": "Player B", "first_serve_pct": 60, "winners": 20, "unforced_errors": 20},
+    ],
+}
+```
+
+#### Step 1.2.6: __init__.py 작성
+
+**파일**: `server/services/sports/tennis/__init__.py`
+
+```python
+"""Tennis sports module."""
+from server.services.sports.tennis.client import TennisClient
+
+__all__ = ["TennisClient"]
+```
+
+#### Step 1.2.7: Factory에 등록
+
+**파일**: `server/services/sports/__init__.py`
+
+```python
+# 기존 import에 추가
+from server.services.sports.tennis import TennisClient
+
+# _registry에 추가
+_registry: Dict[str, Type[BaseSportsClient]] = {
+    "basketball": BasketballClient,
+    "soccer": SoccerClient,
+    "volleyball": VolleyballClient,
+    "football": FootballClient,
+    "tennis": TennisClient,  # 추가
+}
+```
+
+#### Step 1.2.8: 테스트
+
+```bash
+# 문법 검증
+python -m py_compile server/services/sports/tennis/endpoints.py
+python -m py_compile server/services/sports/tennis/client.py
+
+# import 테스트
+PYTHONPATH=. .venv/bin/python -c "
+from server.services.sports import SportsClientFactory
+print('Available sports:', SportsClientFactory.list_sports())
+
+client = SportsClientFactory.create_client('tennis')
+print('Tennis client:', client.get_sport_name())
+print('Operations:', list(client.list_available_operations().keys()))
+"
+```
+
+**예상 출력:**
+```
+Available sports: ['basketball', 'soccer', 'volleyball', 'football', 'tennis']
+Tennis client: tennis
+Operations: ['games', 'team_stats', 'player_stats']
+```
+
+### 1.3 새로운 Operation 추가하기
+
+기존 스포츠에 새로운 API operation을 추가하는 방법입니다.
+
+**예제: 농구에 `box_score` operation 추가**
+
+#### Step 1.3.1: endpoints.py 수정
+
+**파일**: `server/services/sports/basketball/endpoints.py`
+
+```python
+BASKETBALL_ENDPOINTS = SportEndpointConfig(
+    sport_name="basketball",
+    endpoints={
+        "team_stats": f"{get_api_base_path()}/basketballTeamStat",
+        "player_stats": f"{get_api_base_path()}/basketballPlayerStat",
+
+        # 새로운 operation 추가
+        "box_score": f"{get_api_base_path()}/basketballBoxScore",
+    },
+    use_common={"games"},
+)
+```
+
+#### Step 1.3.2: client.py에 메서드 추가
+
+**파일**: `server/services/sports/basketball/client.py`
+
+```python
+def get_box_score(self, game_id: str) -> Dict[str, Any]:
+    """Get box score for a basketball game.
+
+    Args:
+        game_id: Game ID
+
+    Returns:
+        Box score data
+    """
+    if self.use_mock:
+        # mock 데이터 반환
+        return MOCK_BASKETBALL_BOX_SCORES.get(game_id, {})
+
+    params = {"game_id": game_id, "fmt": "json"}
+    endpoint = self._get_endpoint_for_operation("box_score")
+    response = self._make_request(endpoint, params)
+    return self.mapper.map_box_score(response)
+```
+
+#### Step 1.3.3: 테스트
+
+```bash
+PYTHONPATH=. .venv/bin/python -c "
+from server.services.sports import SportsClientFactory
+
+client = SportsClientFactory.create_client('basketball')
+ops = client.list_available_operations()
+print('Basketball operations:', list(ops.keys()))
+print('box_score endpoint:', client._get_endpoint_for_operation('box_score'))
+"
+```
+
+### 1.4 공통 Endpoint 추가하기
+
+모든 스포츠에서 공유할 endpoint를 추가하는 방법입니다.
+
+**파일**: `server/services/sports/base/endpoints.py`
+
+```python
+@dataclass(frozen=True)
+class CommonEndpoints:
+    """Endpoints shared by all sports."""
+
+    @property
+    def games(self) -> str:
+        """Game list endpoint."""
+        return f"{get_api_base_path()}/gameList"
+
+    # 새로운 공통 endpoint 추가
+    @property
+    def leagues(self) -> str:
+        """League list endpoint."""
+        return f"{get_api_base_path()}/leagueList"
+
+    @property
+    def standings(self) -> str:
+        """Standings endpoint."""
+        return f"{get_api_base_path()}/standings"
+```
+
+그 후 각 스포츠의 `use_common`에 추가:
+
+```python
+BASKETBALL_ENDPOINTS = SportEndpointConfig(
+    sport_name="basketball",
+    endpoints={...},
+    use_common={"games", "leagues", "standings"},  # 추가
+)
+```
+
+### 1.5 환경별 Endpoint 경로
+
+`get_api_base_path()` 함수가 환경에 따라 다른 경로를 반환합니다:
+
+```python
+def get_api_base_path() -> str:
+    """Get API base path based on environment."""
+    if CONFIG.environment == "production":
+        return "/data3V1/livescore"
+    else:
+        # Development
+        return "/dev/data3V1/livescore"
+```
+
+**.env 파일에서 환경 설정:**
+
+```bash
+# 개발 환경
+ENVIRONMENT=development
+
+# 프로덕션 환경
+ENVIRONMENT=production
+```
+
+---
+
+## 2. 새로운 위젯 추가하기
+
+### 2.1 예제: 날씨 정보 위젯
 
 실제 사용 사례: **날씨 API 데이터를 시각화하는 위젯**
 
@@ -341,7 +760,7 @@ asyncio.run(test_weather_widget())
 
 ---
 
-## 2. 새로운 툴 추가하기
+## 3. 새로운 툴 추가하기
 
 ### 2.1 단순 텍스트 툴
 
@@ -580,7 +999,7 @@ elif tool.name == "database-query":
 
 ---
 
-## 3. 외부 API 통합하기
+## 4. 외부 API 통합하기
 
 ### 3.1 환경 변수 설정
 
@@ -789,7 +1208,7 @@ elif tool.name == "get-weather":
 
 ---
 
-## 4. 테스트하기
+## 5. 테스트하기
 
 ### 4.1 단위 테스트
 
@@ -919,7 +1338,7 @@ npm run server
 
 ---
 
-## 5. 배포 준비하기
+## 6. 배포 준비하기
 
 ### 5.1 환경 변수 체크리스트
 
@@ -1072,7 +1491,7 @@ curl http://localhost:8000/health
 
 ---
 
-## 6. 예제 프로젝트 정리 상태
+## 7. 예제 프로젝트 정리 상태
 
 현재 프로젝트는 이미 정리가 완료된 상태입니다:
 
@@ -1121,7 +1540,7 @@ npm run server
 
 ---
 
-## 7. 자주 묻는 질문 (FAQ)
+## 8. 자주 묻는 질문 (FAQ)
 
 ### Q1: 위젯 Props 변경 시 주의사항?
 
@@ -1169,7 +1588,7 @@ except Exception as e:
 
 ---
 
-## 8. 프로덕션 배포
+## 9. 프로덕션 배포
 
 ### 8.1 개발 환경 vs 프로덕션 환경
 
@@ -1561,10 +1980,17 @@ BASE_URL=https://cdn.yourdomain.com npm run build
 
 ---
 
-**마지막 업데이트**: 2025-11-28
+**마지막 업데이트**: 2025-11-30
 **작성자**: Claude Code (with junho)
 
 ## 최근 업데이트 내역
+
+### 2025-11-30
+- ✅ **Sports API Endpoint Extensibility 문서 추가** (섹션 1)
+  - SportEndpointConfig, CommonEndpoints 사용법
+  - 새로운 스포츠 추가 가이드 (테니스 예제)
+  - 새로운 Operation 추가 방법
+  - 환경별 Endpoint 설정
 
 ### 2025-11-28
 - ✅ 스포츠 4종목 지원 (basketball, soccer, volleyball, football)
