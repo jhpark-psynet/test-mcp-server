@@ -1,7 +1,36 @@
 """스포츠 데이터 핸들러."""
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from server.services.sports import SportsClientFactory
+
+
+def safe_int(value: Union[str, int, float, None], default: int = 0) -> int:
+    """안전하게 int로 변환. 빈 문자열, None, 공백 등을 처리.
+
+    Args:
+        value: 변환할 값
+        default: 변환 실패 시 반환할 기본값
+
+    Returns:
+        변환된 정수값 또는 기본값
+    """
+    if value is None:
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return default
+        try:
+            return int(value)
+        except ValueError:
+            return default
+    return default
+
+
 from server.services.sports.basketball.mock_data import MOCK_BASKETBALL_GAMES as MOCK_GAMES_DB
 
 
@@ -49,7 +78,7 @@ def get_games_by_sport_handler(arguments: Dict[str, Any]) -> str:
             state = game.get("state", "")
             arena = game.get("arena_name", "")
 
-            if state == "f":  # Finished
+            if state.upper() == "F":  # Finished
                 home_score = game.get("home_score", 0)
                 away_score = game.get("away_score", 0)
                 result = "W" if home_score > away_score else "L" if home_score < away_score else "D"
@@ -88,78 +117,57 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
     # Create sport-specific client
     client = SportsClientFactory.create_client(sport)
 
-    # Get game info - try MOCK DB first, then search recent dates in real API
+    # Get game info from MOCK DB only if mock mode is enabled
     game_info = None
 
-    # Try MOCK DB first
-    for games in MOCK_GAMES_DB.values():
-        for game in games:
-            if game["game_id"] == game_id:
-                game_info = game
-                break
-        if game_info:
-            break
-
-    # If not found in MOCK, search recent dates in real API
-    if not game_info:
-        from datetime import datetime, timedelta
-        today = datetime.now()
-
-        # Search last 7 days
-        for days_ago in range(7):
-            search_date = (today - timedelta(days=days_ago)).strftime("%Y%m%d")
-            try:
-                games = client.get_games_by_sport(search_date)
-                for game in games:
-                    if game.get("game_id") == game_id:
-                        game_info = game
-                        break
-                if game_info:
+    if client.use_mock:
+        for games in MOCK_GAMES_DB.values():
+            for game in games:
+                if game["game_id"] == game_id:
+                    game_info = game
                     break
-            except:
-                continue
+            if game_info:
+                break
 
-    if not game_info:
-        raise ValueError(f"Game {game_id} not found")
-
-    # Check if game is finished (state: F for finished, B for before, etc.)
-    state = game_info.get("state", "").upper()
-    if state != "F":
-        raise ValueError(f"Game {game_id} has not finished yet (state: {state}). Stats not available.")
+        if not game_info:
+            raise ValueError(f"Game {game_id} not found in mock data")
 
     # Get team stats
     team_stats = client.get_team_stats(game_id)
     if not team_stats or len(team_stats) < 2:
         raise ValueError(f"Team stats not found for game {game_id}")
 
+    # Extract team IDs from team_stats
+    home_team_id = team_stats[0].get("home_team_id", "")
+    away_team_id = team_stats[1].get("away_team_id", "")
+
     # Get player stats
     player_stats = client.get_player_stats(game_id)
     if not player_stats:
         raise ValueError(f"Player stats not found for game {game_id}")
 
-    # Format date: "20251118" -> "11.18 (월)"
-    match_date = game_info.get("match_date", "")
-    formatted_date = f"{match_date[4:6]}.{match_date[6:8]}"
-
-    # Map state to status (handle both uppercase and lowercase)
-    state_raw = game_info.get("state", "").upper()
-    state_map = {"F": "종료", "진행중": "진행중", "B": "예정"}
-    status = state_map.get(state_raw, "예정")
-
-    # League name
-    league = game_info.get("league_name", "NBA")
-
-    # Home team info
-    home_team_name = game_info.get("home_team_name", "")
-    home_score = int(game_info.get("home_score", 0))
-
-    # Away team info
-    away_team_name = game_info.get("away_team_name", "")
-    away_score = int(game_info.get("away_score", 0))
-
-    # Extract team IDs
-    home_team_id = game_info.get("home_team_id", "")
-    away_team_id = game_info.get("away_team_id", "")
+    # Use game_info if available (mock mode), otherwise use defaults
+    if game_info:
+        match_date = game_info.get("match_date", "")
+        formatted_date = f"{match_date[4:6]}.{match_date[6:8]}" if len(match_date) >= 8 else ""
+        state_raw = game_info.get("state", "").upper()
+        state_map = {"F": "종료", "진행중": "진행중", "B": "예정"}
+        status = state_map.get(state_raw, "종료")
+        league = game_info.get("league_name", "NBA")
+        home_team_name = game_info.get("home_team_name", "Home")
+        home_score = safe_int(game_info.get("home_score"), 0)
+        away_team_name = game_info.get("away_team_name", "Away")
+        away_score = safe_int(game_info.get("away_score"), 0)
+    else:
+        # Real API mode: game_info not available, use defaults
+        formatted_date = ""
+        status = "종료"
+        league = "NBA"
+        home_team_name = "Home"
+        away_team_name = "Away"
+        # Calculate scores from player stats
+        home_score = sum(safe_int(p.get("tot_score"), 0) for p in player_stats if p.get("team_id") == home_team_id)
+        away_score = sum(safe_int(p.get("tot_score"), 0) for p in player_stats if p.get("team_id") == away_team_id)
 
     # Build player lists
     home_players = []
@@ -180,13 +188,13 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
             minutes = 0
 
         player_data = {
-            "number": int(player.get("back_no", 0)),
+            "number": safe_int(player.get("back_no"), 0),
             "name": player.get("player_name", "Unknown"),
             "position": player.get("pos_sc", "-"),
             "minutes": minutes,
-            "rebounds": int(player.get("treb_cn", 0)),
-            "assists": int(player.get("assist_cn", 0)),
-            "points": int(player.get("tot_score", 0))
+            "rebounds": safe_int(player.get("treb_cn"), 0),
+            "assists": safe_int(player.get("assist_cn"), 0),
+            "points": safe_int(player.get("tot_score"), 0)
         }
 
         if player_team_id == home_team_id:
@@ -198,40 +206,40 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
     home_stats = team_stats[0]
     away_stats = team_stats[1]
 
-    home_fgm = int(home_stats.get("home_team_fgm_cn", 0))
-    home_fga = int(home_stats.get("home_team_fga_cn", 1))
-    away_fgm = int(away_stats.get("away_team_fgm_cn", 0))
-    away_fga = int(away_stats.get("away_team_fga_cn", 1))
+    home_fgm = safe_int(home_stats.get("home_team_fgm_cn"), 0)
+    home_fga = safe_int(home_stats.get("home_team_fga_cn"), 1)
+    away_fgm = safe_int(away_stats.get("away_team_fgm_cn"), 0)
+    away_fga = safe_int(away_stats.get("away_team_fga_cn"), 1)
 
-    home_3pm = int(home_stats.get("home_team_pgm3_cn", 0))
-    home_3pa = int(home_stats.get("home_team_pga3_cn", 1))
-    away_3pm = int(away_stats.get("away_team_pgm3_cn", 0))
-    away_3pa = int(away_stats.get("away_team_pga3_cn", 1))
+    home_3pm = safe_int(home_stats.get("home_team_pgm3_cn"), 0)
+    home_3pa = safe_int(home_stats.get("home_team_pga3_cn"), 1)
+    away_3pm = safe_int(away_stats.get("away_team_pgm3_cn"), 0)
+    away_3pa = safe_int(away_stats.get("away_team_pga3_cn"), 1)
 
-    home_ftm = int(home_stats.get("home_team_ftm_cn", 0))
-    home_fta = int(home_stats.get("home_team_fta_cn", 1))
-    away_ftm = int(away_stats.get("away_team_ftm_cn", 0))
-    away_fta = int(away_stats.get("away_team_fta_cn", 1))
+    home_ftm = safe_int(home_stats.get("home_team_ftm_cn"), 0)
+    home_fta = safe_int(home_stats.get("home_team_fta_cn"), 1)
+    away_ftm = safe_int(away_stats.get("away_team_ftm_cn"), 0)
+    away_fta = safe_int(away_stats.get("away_team_fta_cn"), 1)
 
-    home_oreb = int(home_stats.get("home_team_oreb_cn", 0))
-    home_dreb = int(home_stats.get("home_team_dreb_cn", 0))
-    away_oreb = int(away_stats.get("away_team_oreb_cn", 0))
-    away_dreb = int(away_stats.get("away_team_dreb_cn", 0))
+    home_oreb = safe_int(home_stats.get("home_team_oreb_cn"), 0)
+    home_dreb = safe_int(home_stats.get("home_team_dreb_cn"), 0)
+    away_oreb = safe_int(away_stats.get("away_team_oreb_cn"), 0)
+    away_dreb = safe_int(away_stats.get("away_team_dreb_cn"), 0)
 
-    home_ast = int(home_stats.get("home_team_assist_cn", 0))
-    away_ast = int(away_stats.get("away_team_assist_cn", 0))
+    home_ast = safe_int(home_stats.get("home_team_assist_cn"), 0)
+    away_ast = safe_int(away_stats.get("away_team_assist_cn"), 0)
 
-    home_tov = int(home_stats.get("home_team_turnover_cn", 0))
-    away_tov = int(away_stats.get("away_team_turnover_cn", 0))
+    home_tov = safe_int(home_stats.get("home_team_turnover_cn"), 0)
+    away_tov = safe_int(away_stats.get("away_team_turnover_cn"), 0)
 
-    home_stl = int(home_stats.get("home_team_steal_cn", 0))
-    away_stl = int(away_stats.get("away_team_steal_cn", 0))
+    home_stl = safe_int(home_stats.get("home_team_steal_cn"), 0)
+    away_stl = safe_int(away_stats.get("away_team_steal_cn"), 0)
 
-    home_blk = int(home_stats.get("home_team_block_cn", 0))
-    away_blk = int(away_stats.get("away_team_block_cn", 0))
+    home_blk = safe_int(home_stats.get("home_team_block_cn"), 0)
+    away_blk = safe_int(away_stats.get("away_team_block_cn"), 0)
 
-    home_pf = int(home_stats.get("home_team_pfoul_cn", 0))
-    away_pf = int(away_stats.get("away_team_pfoul_cn", 0))
+    home_pf = safe_int(home_stats.get("home_team_pfoul_cn"), 0)
+    away_pf = safe_int(away_stats.get("away_team_pfoul_cn"), 0)
 
     game_records = [
         {"label": "Field Goals", "home": f"{home_fgm}/{home_fga}", "away": f"{away_fgm}/{away_fga}"},

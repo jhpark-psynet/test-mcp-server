@@ -11,11 +11,7 @@ def get_api_base_path() -> str:
     Returns:
         Base path prefix for API endpoints
     """
-    if CONFIG.environment == "production":
-        return "/data3V1/livescore"
-    else:
-        # Development and all other environments
-        return "/dev/data3V1/livescore"
+    return "/data3V1/livescore"
 
 
 @dataclass(frozen=True)
