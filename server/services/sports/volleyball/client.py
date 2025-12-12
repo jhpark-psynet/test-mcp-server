@@ -31,7 +31,7 @@ class VolleyballClient(BaseSportsClient):
         """Return volleyball endpoint configuration."""
         return VOLLEYBALL_ENDPOINTS
 
-    def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
+    async def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
         """Get volleyball games for a specific date."""
         if len(date) != 8 or not date.isdigit():
             raise ValueError(f"Invalid date format: {date}. Must be YYYYMMDD")
@@ -45,7 +45,7 @@ class VolleyballClient(BaseSportsClient):
         params = {"date": date, "sport": "volleyball"}
         try:
             endpoint = self._get_endpoint_for_operation("games")
-            response = self._make_request(endpoint, params)
+            response = await self._make_request(endpoint, params)
             games = self.mapper.map_games_list(response)
             logger.info(f"[REAL API] Retrieved {len(games)} volleyball games for {date}")
             return games
@@ -53,7 +53,7 @@ class VolleyballClient(BaseSportsClient):
             logger.error(f"Failed to fetch volleyball games from API: {e}")
             raise
 
-    def get_team_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+    async def get_team_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
         """Get team statistics for a volleyball game."""
         if self.use_mock:
             stats = MOCK_VOLLEYBALL_TEAM_STATS.get(game_id)
@@ -65,7 +65,7 @@ class VolleyballClient(BaseSportsClient):
         params = {"game_id": game_id}
         try:
             endpoint = self._get_endpoint_for_operation("team_stats")
-            response = self._make_request(endpoint, params)
+            response = await self._make_request(endpoint, params)
             stats = self.mapper.map_team_stats_list(response)
             if not stats:
                 raise ValueError(f"No team stats found for game {game_id}")
@@ -75,7 +75,7 @@ class VolleyballClient(BaseSportsClient):
             logger.error(f"Failed to fetch volleyball team stats from API: {e}")
             raise
 
-    def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+    async def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
         """Get player statistics for a volleyball game."""
         if self.use_mock:
             stats = MOCK_VOLLEYBALL_PLAYER_STATS.get(game_id)
@@ -87,7 +87,7 @@ class VolleyballClient(BaseSportsClient):
         params = {"game_id": game_id}
         try:
             endpoint = self._get_endpoint_for_operation("player_stats")
-            response = self._make_request(endpoint, params)
+            response = await self._make_request(endpoint, params)
             stats = self.mapper.map_player_stats_list(response)
             if not stats:
                 raise ValueError(f"No player stats found for game {game_id}")

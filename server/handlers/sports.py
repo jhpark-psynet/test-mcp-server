@@ -34,7 +34,7 @@ def safe_int(value: Union[str, int, float, None], default: int = 0) -> int:
 from server.services.sports.basketball.mock_data import MOCK_BASKETBALL_GAMES as MOCK_GAMES_DB
 
 
-def get_games_by_sport_handler(arguments: Dict[str, Any]) -> str:
+async def get_games_by_sport_handler(arguments: Dict[str, Any]) -> str:
     """특정 날짜의 스포츠 경기 목록을 조회하는 핸들러.
 
     Args:
@@ -52,7 +52,7 @@ def get_games_by_sport_handler(arguments: Dict[str, Any]) -> str:
 
     # Let exceptions bubble up so server_factory can set isError=True
     client = SportsClientFactory.create_client(sport)
-    games = client.get_games_by_sport(date)
+    games = await client.get_games_by_sport(date)
 
     if not games:
         return f"No {sport} games found on {date}"
@@ -98,7 +98,7 @@ def get_games_by_sport_handler(arguments: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
     """경기의 상세 정보 (팀 통계 + 선수 통계)를 조회하는 핸들러 (위젯용).
 
     Args:
@@ -133,7 +133,7 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
             raise ValueError(f"Game {game_id} not found in mock data")
 
     # Get team stats
-    team_stats = client.get_team_stats(game_id)
+    team_stats = await client.get_team_stats(game_id)
     if not team_stats or len(team_stats) < 2:
         raise ValueError(f"Team stats not found for game {game_id}")
 
@@ -142,7 +142,7 @@ def get_game_details_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
     away_team_id = team_stats[1].get("away_team_id", "")
 
     # Get player stats
-    player_stats = client.get_player_stats(game_id)
+    player_stats = await client.get_player_stats(game_id)
     if not player_stats:
         raise ValueError(f"Player stats not found for game {game_id}")
 

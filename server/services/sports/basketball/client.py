@@ -31,7 +31,7 @@ class BasketballClient(BaseSportsClient):
         """Return basketball endpoint configuration."""
         return BASKETBALL_ENDPOINTS
 
-    def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
+    async def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
         """Get basketball games for a specific date.
 
         Args:
@@ -62,7 +62,7 @@ class BasketballClient(BaseSportsClient):
 
         try:
             endpoint = self._get_endpoint_for_operation("games")
-            response = self._make_request(endpoint, params)
+            response = await self._make_request(endpoint, params)
             games = self.mapper.map_games_list(response)
             logger.info(f"[REAL API] Retrieved {len(games)} basketball games for {date}")
             return games
@@ -70,7 +70,7 @@ class BasketballClient(BaseSportsClient):
             logger.error(f"Failed to fetch basketball games from API: {e}")
             raise
 
-    def get_team_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+    async def get_team_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
         """Get team statistics for a basketball game.
 
         Args:
@@ -110,7 +110,7 @@ class BasketballClient(BaseSportsClient):
 
         try:
             endpoint = self._get_endpoint_for_operation("team_stats")
-            response = self._make_request(endpoint, params)
+            response = await self._make_request(endpoint, params)
             stats = self.mapper.map_team_stats_list(response)
 
             if not stats:
@@ -122,7 +122,7 @@ class BasketballClient(BaseSportsClient):
             logger.error(f"Failed to fetch basketball team stats from API: {e}")
             raise
 
-    def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+    async def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
         """Get player statistics for a basketball game.
 
         Args:
@@ -157,7 +157,7 @@ class BasketballClient(BaseSportsClient):
         # Call real API - Player stats requires team_id
         # First get team IDs from team stats
         try:
-            team_stats = self.get_team_stats(game_id)
+            team_stats = await self.get_team_stats(game_id)
             if not team_stats or len(team_stats) < 2:
                 raise ValueError(f"Could not get team IDs for game {game_id}")
 
@@ -181,7 +181,7 @@ class BasketballClient(BaseSportsClient):
                     "fmt": "json",
                 }
 
-                response = self._make_request(endpoint, params)
+                response = await self._make_request(endpoint, params)
                 team_players = self.mapper.map_player_stats_list(response)
                 all_player_stats.extend(team_players)
 

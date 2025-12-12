@@ -14,6 +14,8 @@ import sys
 import json
 from pathlib import Path
 
+import pytest
+
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -63,7 +65,8 @@ def test_configuration():
     return True
 
 
-def test_games_by_sport():
+@pytest.mark.asyncio
+async def test_games_by_sport():
     """테스트 2: 경기 목록 조회."""
     print_section("Test 2: Get Games by Sport")
 
@@ -73,7 +76,7 @@ def test_games_by_sport():
 
     try:
         print_info(f"Fetching games for {test_sport} on {test_date}...")
-        games = client.get_games_by_sport(test_date)
+        games = await client.get_games_by_sport(test_date)
 
         print_success(f"Retrieved {len(games)} games")
 
@@ -102,7 +105,8 @@ def test_games_by_sport():
         return False
 
 
-def test_team_stats():
+@pytest.mark.asyncio
+async def test_team_stats():
     """테스트 3: 팀 통계 조회."""
     print_section("Test 3: Get Team Stats")
 
@@ -111,7 +115,7 @@ def test_team_stats():
 
     try:
         print_info(f"Fetching team stats for game {test_game_id}...")
-        stats = client.get_team_stats(test_game_id)
+        stats = await client.get_team_stats(test_game_id)
 
         if stats and len(stats) >= 2:
             print_success(f"Retrieved team stats for 2 teams")
@@ -139,7 +143,8 @@ def test_team_stats():
         return False
 
 
-def test_player_stats():
+@pytest.mark.asyncio
+async def test_player_stats():
     """테스트 4: 선수 통계 조회."""
     print_section("Test 4: Get Player Stats")
 
@@ -148,7 +153,7 @@ def test_player_stats():
 
     try:
         print_info(f"Fetching player stats for game {test_game_id}...")
-        stats = client.get_player_stats(test_game_id)
+        stats = await client.get_player_stats(test_game_id)
 
         if stats and len(stats) > 0:
             print_success(f"Retrieved player stats for {len(stats)} players")
@@ -176,7 +181,8 @@ def test_player_stats():
         return False
 
 
-def test_error_handling():
+@pytest.mark.asyncio
+async def test_error_handling():
     """테스트 5: 에러 처리."""
     print_section("Test 5: Error Handling")
 
@@ -184,7 +190,7 @@ def test_error_handling():
     try:
         print_info("Testing invalid date format...")
         client = SportsClientFactory.create_client('basketball')
-        client.get_games_by_sport("invalid")
+        await client.get_games_by_sport("invalid")
         print_error("Should have raised ValueError for invalid date")
         return False
     except (ValueError, Exception) as e:
@@ -203,7 +209,7 @@ def test_error_handling():
     try:
         print_info("Testing non-existent game...")
         client = SportsClientFactory.create_client('basketball')
-        client.get_team_stats("NONEXISTENT")
+        await client.get_team_stats("NONEXISTENT")
         print_error("Should have raised ValueError for non-existent game")
         return False
     except (ValueError, Exception) as e:
@@ -212,7 +218,7 @@ def test_error_handling():
     return True
 
 
-def main():
+async def main():
     """Run all tests."""
     print("\n" + "=" * 80)
     print(" Sports API Integration Test Suite")
@@ -222,10 +228,10 @@ def main():
 
     # Run tests
     results.append(("Configuration", test_configuration()))
-    results.append(("Get Games by Sport", test_games_by_sport()))
-    results.append(("Get Team Stats", test_team_stats()))
-    results.append(("Get Player Stats", test_player_stats()))
-    results.append(("Error Handling", test_error_handling()))
+    results.append(("Get Games by Sport", await test_games_by_sport()))
+    results.append(("Get Team Stats", await test_team_stats()))
+    results.append(("Get Player Stats", await test_player_stats()))
+    results.append(("Error Handling", await test_error_handling()))
 
     # Print summary
     print_section("Test Summary")
@@ -259,4 +265,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import asyncio
+    sys.exit(asyncio.run(main()))

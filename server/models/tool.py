@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Awaitable, Callable, Dict, Optional, Union
 
 from server.models.widget import Widget
 
@@ -15,7 +15,12 @@ class ToolDefinition:
     description: str
     input_schema: Dict[str, Any]
     widget: Optional[Widget] = None
-    handler: Optional[Callable[[Dict[str, Any]], Any]] = None
+    handler: Optional[
+        Union[
+            Callable[[Dict[str, Any]], Any],
+            Callable[[Dict[str, Any]], Awaitable[Any]]
+        ]
+    ] = None
     invoking: str = "Processing..."
     invoked: str = "Completed"
 

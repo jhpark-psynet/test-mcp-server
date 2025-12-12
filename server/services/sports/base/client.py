@@ -5,6 +5,7 @@ import logging
 import httpx
 
 from server.config import CONFIG
+from server.errors import APIError, APIErrorCode
 
 if TYPE_CHECKING:
     from server.services.sports.base.endpoints import SportEndpointConfig
@@ -58,8 +59,8 @@ class BaseSportsClient(ABC):
         """
         pass
 
-    def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Any:
-        """Make HTTP request to the Sports API.
+    async def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Any:
+        """Make async HTTP request to the Sports API.
 
         Args:
             endpoint: API endpoint path (e.g., "/data3V1/livescore/gameList")
@@ -69,7 +70,7 @@ class BaseSportsClient(ABC):
             API response (JSON)
 
         Raises:
-            ValueError: HTTP error, timeout, or other errors
+            APIError: On HTTP error, timeout, or connection failure
         """
         # Add API key to parameters
         params_with_key = {**params, "auth_key": self.api_key}
@@ -77,30 +78,34 @@ class BaseSportsClient(ABC):
         # Construct full URL
         url = self.base_url if not endpoint else f"{self.base_url}{endpoint}"
 
-        logger.debug(f"Making request to {url} with params: {params}")
+        logger.debug(f"Making async request to {url} with params: {params}")
 
         try:
-            with httpx.Client(timeout=self.timeout) as client:
-                response = client.get(url, params=params_with_key)
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, params=params_with_key)
                 response.raise_for_status()
                 return response.json()
 
         except httpx.TimeoutException as e:
             logger.error(f"Request timeout: {url}")
-            raise ValueError(f"API request timed out after {self.timeout}s") from e
+            raise APIError(APIErrorCode.TIMEOUT, f"timeout={self.timeout}s") from e
 
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error {e.response.status_code}: {e.response.text}")
             if e.response.status_code == 404:
-                raise ValueError(f"API endpoint not found: {url}") from e
+                raise APIError(APIErrorCode.NOT_FOUND, f"endpoint={endpoint}") from e
             elif e.response.status_code >= 500:
-                raise ValueError(f"API server error: {e.response.status_code}") from e
+                raise APIError(APIErrorCode.SERVER_ERROR, f"status={e.response.status_code}") from e
             else:
-                raise ValueError(f"API request failed: {e.response.status_code}") from e
+                raise APIError(APIErrorCode.UNKNOWN, f"status={e.response.status_code}") from e
+
+        except httpx.ConnectError as e:
+            logger.error(f"Connection error: {url} - {e}")
+            raise APIError(APIErrorCode.CONNECTION_ERROR, str(e)) from e
 
         except Exception as e:
             logger.error(f"Unexpected error during API request: {e}")
-            raise ValueError(f"API request failed: {str(e)}") from e
+            raise APIError(APIErrorCode.UNKNOWN, str(e)) from e
 
     def _get_endpoint_for_operation(self, operation: str) -> str:
         """Get the API endpoint for a specific operation.

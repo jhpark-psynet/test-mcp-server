@@ -2,13 +2,16 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from server.handlers import get_games_by_sport_handler, get_game_details_handler
 
 
-def test_get_games_by_sport():
+@pytest.mark.asyncio
+async def test_get_games_by_sport():
     """Test get_games_by_sport handler."""
     print("\n" + "="*60)
     print("Testing get_games_by_sport")
@@ -20,7 +23,7 @@ def test_get_games_by_sport():
     }
 
     try:
-        result = get_games_by_sport_handler(arguments)
+        result = await get_games_by_sport_handler(arguments)
         print(f"\n✅ Success!")
         print(f"\nResult (first 800 chars):\n{result[:800]}")
         if len(result) > 800:
@@ -33,7 +36,8 @@ def test_get_games_by_sport():
         return False
 
 
-def test_get_game_details():
+@pytest.mark.asyncio
+async def test_get_game_details():
     """Test get_game_details handler."""
     print("\n" + "="*60)
     print("Testing get_game_details")
@@ -44,26 +48,27 @@ def test_get_game_details():
     }
 
     try:
-        result = get_game_details_handler(arguments)
+        result = await get_game_details_handler(arguments)
         print(f"\n✅ Success!")
         print(f"\nResult type: {type(result)}")
         print(f"\nResult keys: {list(result.keys())}")
-        print(f"\nGame ID: {result['game_id']}")
-        print(f"\nGame Info:")
-        for key, value in result['game_info'].items():
-            print(f"  - {key}: {value}")
-        print(f"\nTeam Stats: {len(result['team_stats'])} teams")
-        print(f"Player Stats: {len(result['player_stats'])} players")
+        print(f"\nLeague: {result.get('league')}")
+        print(f"Date: {result.get('date')}")
+        print(f"Status: {result.get('status')}")
 
-        # Show some player stats
-        if result['player_stats']:
-            print(f"\nSample Player (first):")
-            player = result['player_stats'][0]
-            print(f"  - Name: {player.get('player_name')}")
-            print(f"  - Team ID: {player.get('team_id')}")
-            print(f"  - Points: {player.get('tot_score')}")
-            print(f"  - Rebounds: {player.get('treb_cn')}")
-            print(f"  - Assists: {player.get('assist_cn')}")
+        # Check team data
+        home_team = result.get('homeTeam', {})
+        away_team = result.get('awayTeam', {})
+        print(f"\nHome Team: {home_team.get('name')} - Score: {home_team.get('score')}")
+        print(f"Away Team: {away_team.get('name')} - Score: {away_team.get('score')}")
+        print(f"Home Players: {len(home_team.get('players', []))}")
+        print(f"Away Players: {len(away_team.get('players', []))}")
+
+        # Check game records
+        game_records = result.get('gameRecords', [])
+        print(f"\nGame Records: {len(game_records)} stats")
+        if game_records:
+            print(f"Sample record: {game_records[0]}")
 
         return True
     except Exception as e:
@@ -73,17 +78,17 @@ def test_get_game_details():
         return False
 
 
-def main():
+async def main():
     """Run all tests."""
     print("\n" + "="*60)
     print("Sports MCP Tools Test (Direct Handler Calls)")
     print("="*60)
 
     # Test 1: get_games_by_sport
-    test1_passed = test_get_games_by_sport()
+    test1_passed = await test_get_games_by_sport()
 
     # Test 2: get_game_details
-    test2_passed = test_get_game_details()
+    test2_passed = await test_get_game_details()
 
     # Summary
     print("\n" + "="*60)
@@ -101,4 +106,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())

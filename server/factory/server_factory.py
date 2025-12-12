@@ -1,12 +1,15 @@
 """MCP 서버 팩토리."""
 from __future__ import annotations
 
+import inspect
 import logging
 from typing import Any, Dict, List
 
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from pydantic import ValidationError
+
+from server.errors import APIError, format_validation_errors
 
 from server.config import Config
 from server.models import (
@@ -194,7 +197,7 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                     content=[
                         types.TextContent(
                             type="text",
-                            text=f"Input validation error: {exc.errors()}",
+                            text=format_validation_errors(exc.errors()),
                         )
                     ],
                     isError=True,
@@ -207,7 +210,24 @@ def create_mcp_server(cfg: Config) -> FastMCP:
             if tool.name == "get_game_details" and tool.handler:
                 # Execute handler to get structured data
                 try:
-                    structured_data = tool.handler(validated_args)
+                    # Support both sync and async handlers
+                    if inspect.iscoroutinefunction(tool.handler):
+                        structured_data = await tool.handler(validated_args)
+                    else:
+                        structured_data = tool.handler(validated_args)
+                except APIError as exc:
+                    logger.error("API error [%s]: %s", exc.code.value, exc.detail)
+                    return types.ServerResult(
+                        types.CallToolResult(
+                            content=[
+                                types.TextContent(
+                                    type="text",
+                                    text=exc.user_message,
+                                )
+                            ],
+                            isError=True,
+                        )
+                    )
                 except Exception as exc:
                     logger.error("Tool execution error: %s", exc)
                     return types.ServerResult(
@@ -215,7 +235,7 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                             content=[
                                 types.TextContent(
                                     type="text",
-                                    text=f"Execution error: {str(exc)}",
+                                    text="An unexpected error occurred. Please try again later.",
                                 )
                             ],
                             isError=True,
@@ -289,7 +309,7 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                         content=[
                             types.TextContent(
                                 type="text",
-                                text=f"Input validation error: {exc.errors()}",
+                                text=format_validation_errors(exc.errors()),
                             )
                         ],
                         isError=True,
@@ -298,7 +318,24 @@ def create_mcp_server(cfg: Config) -> FastMCP:
 
             # Execute handler
             try:
-                result_text = tool.handler(validated_args)
+                # Support both sync and async handlers
+                if inspect.iscoroutinefunction(tool.handler):
+                    result_text = await tool.handler(validated_args)
+                else:
+                    result_text = tool.handler(validated_args)
+            except APIError as exc:
+                logger.error("API error [%s]: %s", exc.code.value, exc.detail)
+                return types.ServerResult(
+                    types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=exc.user_message,
+                            )
+                        ],
+                        isError=True,
+                    )
+                )
             except Exception as exc:
                 logger.error("Tool execution error: %s", exc)
                 return types.ServerResult(
@@ -306,7 +343,7 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                         content=[
                             types.TextContent(
                                 type="text",
-                                text=f"Execution error: {str(exc)}",
+                                text="An unexpected error occurred. Please try again later.",
                             )
                         ],
                         isError=True,
