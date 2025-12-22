@@ -11,10 +11,18 @@ BASKETBALL_ENDPOINTS = SportEndpointConfig(
         # Player statistics
         "player_stats": f"{get_api_base_path()}/basketballPlayerStat",
 
+        # Lineup (starting lineup + bench)
+        "lineup": f"{get_api_base_path()}/basketballLineup",
+
+        # Team rankings by league/season
+        "team_rank": f"{get_api_base_path()}/basketballTeamRank",
+
+        # Team vs team comparison (recent games, records, stats)
+        "team_vs_list": f"{get_api_base_path()}/basketballTeamVsList",
+
         # Future extensibility examples (commented out):
         # "box_score": "/nba/v1/boxscore",
         # "play_by_play": "/nba/v1/playbyplay",
-        # "standings": "/nba/v1/standings",
         # "quarter_scores": f"{get_api_base_path()}/basketballQuarterScore",
     },
     # Use common endpoints for these operations

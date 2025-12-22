@@ -9,6 +9,9 @@ from server.services.sports.basketball.mock_data import (
     MOCK_BASKETBALL_GAMES,
     MOCK_BASKETBALL_TEAM_STATS,
     MOCK_BASKETBALL_PLAYER_STATS,
+    MOCK_BASKETBALL_LINEUP,
+    MOCK_BASKETBALL_TEAM_RANK,
+    MOCK_BASKETBALL_TEAM_VS_LIST,
 )
 
 logger = logging.getLogger(__name__)
@@ -195,4 +198,156 @@ class BasketballClient(BaseSportsClient):
 
         except Exception as e:
             logger.error(f"Failed to fetch basketball player stats from API: {e}")
+            raise
+
+    async def get_lineup(self, game_id: str, team_id: str) -> Optional[List[Dict[str, Any]]]:
+        """Get lineup for a basketball team in a game.
+
+        Args:
+            game_id: Game ID
+            team_id: Team ID
+
+        Returns:
+            List of players in lineup or None
+
+        Raises:
+            ValueError: Game or team not found
+        """
+        # Use mock data
+        if self.use_mock:
+            key = f"{game_id}_{team_id}"
+            lineup = MOCK_BASKETBALL_LINEUP.get(key)
+
+            if lineup is None:
+                raise ValueError(f"Lineup not found for game {game_id}, team {team_id}")
+
+            logger.info(f"[MOCK] Retrieved basketball lineup for game {game_id}, team {team_id}")
+            return lineup
+
+        # Call real API
+        params = {
+            "game_id": game_id,
+            "team_id": team_id,
+            "fmt": "json",
+        }
+
+        try:
+            endpoint = self._get_endpoint_for_operation("lineup")
+            response = await self._make_request(endpoint, params)
+            lineup = self.mapper.map_lineup_list(response)
+
+            if not lineup:
+                raise ValueError(f"No lineup found for game {game_id}, team {team_id}")
+
+            logger.info(f"[REAL API] Retrieved {len(lineup)} players in lineup for game {game_id}, team {team_id}")
+            return lineup
+
+        except Exception as e:
+            logger.error(f"Failed to fetch basketball lineup from API: {e}")
+            raise
+
+    async def get_team_rank(self, season_id: str, league_id: str) -> Optional[List[Dict[str, Any]]]:
+        """Get team rankings for a basketball league/season.
+
+        Args:
+            season_id: Season ID (e.g., "2025")
+            league_id: League ID (e.g., "OT313" for NBA)
+
+        Returns:
+            List of team rankings or None
+
+        Raises:
+            ValueError: Rankings not found
+        """
+        # Use mock data
+        if self.use_mock:
+            key = f"{season_id}_{league_id}"
+            rankings = MOCK_BASKETBALL_TEAM_RANK.get(key)
+
+            if rankings is None:
+                raise ValueError(f"Rankings not found for season {season_id}, league {league_id}")
+
+            logger.info(f"[MOCK] Retrieved basketball team rankings for season {season_id}, league {league_id}")
+            return rankings
+
+        # Call real API
+        params = {
+            "season_id": season_id,
+            "league_id": league_id,
+            "fmt": "json",
+        }
+
+        try:
+            endpoint = self._get_endpoint_for_operation("team_rank")
+            response = await self._make_request(endpoint, params)
+            rankings = self.mapper.map_team_rank_list(response)
+
+            if not rankings:
+                raise ValueError(f"No rankings found for season {season_id}, league {league_id}")
+
+            logger.info(f"[REAL API] Retrieved {len(rankings)} team rankings for season {season_id}, league {league_id}")
+            return rankings
+
+        except Exception as e:
+            logger.error(f"Failed to fetch basketball team rankings from API: {e}")
+            raise
+
+    async def get_team_vs_list(
+        self,
+        season_id: str,
+        league_id: str,
+        game_id: str,
+        home_team_id: str,
+        away_team_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Get team vs team comparison data for a basketball game.
+
+        Args:
+            season_id: Season ID (e.g., "2025")
+            league_id: League ID (e.g., "OT313" for NBA)
+            game_id: Game ID
+            home_team_id: Home team ID
+            away_team_id: Away team ID
+
+        Returns:
+            Team comparison data or None
+
+        Raises:
+            ValueError: Comparison data not found
+        """
+        # Use mock data
+        if self.use_mock:
+            data = MOCK_BASKETBALL_TEAM_VS_LIST.get(game_id)
+
+            if data is None:
+                logger.warning(f"[MOCK] Team vs list not found for game {game_id}")
+                return None
+
+            logger.info(f"[MOCK] Retrieved basketball team vs list for game {game_id}")
+            return data
+
+        # Call real API
+        params = {
+            "season_id": season_id,
+            "league_id": league_id,
+            "game_id": game_id,
+            "home_team_id": home_team_id,
+            "away_team_id": away_team_id,
+            "fmt": "json",
+        }
+
+        try:
+            endpoint = self._get_endpoint_for_operation("team_vs_list")
+            response = await self._make_request(endpoint, params)
+            data = self.mapper.map_team_vs_list(response)
+
+            if not data:
+                logger.warning(f"[REAL API] No team vs list found for game {game_id}")
+                return None
+
+            logger.info(f"[REAL API] Retrieved basketball team vs list for game {game_id}")
+            return data
+
+        except Exception as e:
+            logger.error(f"Failed to fetch basketball team vs list from API: {e}")
             raise

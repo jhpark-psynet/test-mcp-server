@@ -1,235 +1,19 @@
 import { createRoot } from 'react-dom/client';
 import { useState, useEffect } from 'react';
 import { z } from 'zod';
-import { GameResultViewer } from './GameResultViewer';
-import { GameDataSchema, type GameData } from './types';
+import { BasketballViewer, BasketballGameDataSchema } from './sports/basketball';
+import { VolleyballViewer, VolleyballGameDataSchema } from './sports/volleyball';
+import { SoccerViewer, SoccerGameDataSchema } from './sports/soccer';
 import '../index.css';
 
-// Mock data for development (will be replaced by toolOutput from OpenAI Apps SDK)
-const MOCK_GAME_DATA: GameData = {
-  league: 'NBA',
-  date: '11.18',
-  status: '종료',
-  homeTeam: {
-    name: '클리블랜드',
-    shortName: '클리블랜드',
-    logo: '',
-    record: '-',
-    score: 118,
-    players: [
-      { number: 45, name: '도노반 미첼', position: 'G', minutes: 35, rebounds: 6, assists: 8, points: 28 },
-      { number: 4, name: '에반 모블리', position: 'F', minutes: 32, rebounds: 10, assists: 3, points: 18 },
-    ],
-  },
-  awayTeam: {
-    name: '밀워키',
-    shortName: '밀워키',
-    logo: '',
-    record: '-',
-    score: 106,
-    players: [
-      { number: 34, name: '야니스 아데토쿤보', position: 'F', minutes: 36, rebounds: 12, assists: 6, points: 32 },
-      { number: 0, name: '데이미언 릴라드', position: 'G', minutes: 34, rebounds: 4, assists: 7, points: 24 },
-    ],
-  },
-  gameRecords: [
-    { label: '필드골', home: '45/88', away: '40/92' },
-    { label: '3점슛', home: '12/30', away: '10/35' },
-    { label: '자유투', home: '16/20', away: '16/22' },
-    { label: '리바운드', home: 45, away: 40 },
-    { label: '어시스트', home: 28, away: 22 },
-    { label: '턴오버', home: 12, away: 15 },
-    { label: '스틸', home: 8, away: 6 },
-    { label: '블록', home: 5, away: 3 },
-    { label: '파울', home: 18, away: 20 },
-  ],
-};
-
-// Legacy transformation function (not used anymore - handler returns GameData directly)
-function transformApiDataToGameData_LEGACY(apiData: any): GameData {
-  const { game_info, team_stats, player_stats } = apiData;
-
-  // Parse date format (YYYYMMDD to readable format)
-  const formatDate = (dateStr: string): string => {
-    if (dateStr.length !== 8) return dateStr;
-    const year = dateStr.substring(0, 4);
-    const month = dateStr.substring(4, 6);
-    const day = dateStr.substring(6, 8);
-    const date = new Date(`${year}-${month}-${day}`);
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    const weekday = weekdays[date.getDay()];
-    return `${month}.${day} (${weekday})`;
-  };
-
-  // Map league name to LeagueType
-  const mapLeague = (league: string): LeagueType => {
-    if (league === 'NBA' || league === 'KBL' || league === 'WKBL') {
-      return league;
-    }
-    return 'NBA'; // default
-  };
-
-  // Convert time string "MM:SS" to minutes
-  const parseMinutes = (timeStr: string): number => {
-    if (!timeStr || typeof timeStr !== 'string') return 0;
-    const parts = timeStr.split(':');
-    if (parts.length === 2) {
-      return parseInt(parts[0], 10) || 0;
-    }
-    if (parts.length === 3) {
-      // HH:MM:SS format
-      return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) || 0;
-    }
-    return 0;
-  };
-
-  // Extract home and away team stats
-  const homeTeamStats = team_stats[0] || {};
-  const awayTeamStats = team_stats[1] || {};
-
-  // Group players by team
-  const homePlayers = player_stats.filter(
-    (p: any) => p.team_id === homeTeamStats.home_team_id
-  );
-  const awayPlayers = player_stats.filter(
-    (p: any) => p.team_id === awayTeamStats.away_team_id
-  );
-
-  // Transform player stats
-  const transformPlayer = (player: any) => ({
-    number: parseInt(player.back_no || '0', 10),
-    name: player.player_name || 'Unknown',
-    position: player.pos_sc || '-',
-    minutes: parseMinutes(player.player_time),
-    rebounds: parseInt(player.treb_cn || '0', 10),
-    assists: parseInt(player.assist_cn || '0', 10),
-    points: parseInt(player.tot_score || '0', 10),
+// 개발용 mock 데이터 주입 (VITE_INCLUDE_MOCK=true 일 때만)
+if (import.meta.env.VITE_INCLUDE_MOCK === 'true') {
+  import('./mock-data').then(({ mockBasketballData }) => {
+    window.openai = {
+      toolOutput: mockBasketballData,
+    };
+    console.log('[DEV] Mock data injected:', mockBasketballData);
   });
-
-  // Create game records from team stats
-  const createGameRecords = () => {
-    const records = [];
-
-    // Field Goals
-    const homeFgm = parseInt(homeTeamStats.home_team_fgm_cn || '0', 10);
-    const homeFga = parseInt(homeTeamStats.home_team_fga_cn || '1', 10);
-    const awayFgm = parseInt(awayTeamStats.away_team_fgm_cn || '0', 10);
-    const awayFga = parseInt(awayTeamStats.away_team_fga_cn || '1', 10);
-    records.push({
-      label: '필드골',
-      home: `${homeFgm}/${homeFga}`,
-      away: `${awayFgm}/${awayFga}`,
-    });
-
-    // 3-Pointers
-    const home3pm = parseInt(homeTeamStats.home_team_pgm3_cn || '0', 10);
-    const home3pa = parseInt(homeTeamStats.home_team_pga3_cn || '1', 10);
-    const away3pm = parseInt(awayTeamStats.away_team_pgm3_cn || '0', 10);
-    const away3pa = parseInt(awayTeamStats.away_team_pga3_cn || '1', 10);
-    records.push({
-      label: '3점슛',
-      home: `${home3pm}/${home3pa}`,
-      away: `${away3pm}/${away3pa}`,
-    });
-
-    // Free Throws
-    const homeFtm = parseInt(homeTeamStats.home_team_ftm_cn || '0', 10);
-    const homeFta = parseInt(homeTeamStats.home_team_fta_cn || '1', 10);
-    const awayFtm = parseInt(awayTeamStats.away_team_ftm_cn || '0', 10);
-    const awayFta = parseInt(awayTeamStats.away_team_fta_cn || '1', 10);
-    records.push({
-      label: '자유투',
-      home: `${homeFtm}/${homeFta}`,
-      away: `${awayFtm}/${awayFta}`,
-    });
-
-    // Rebounds
-    const homeOreb = parseInt(homeTeamStats.home_team_oreb_cn || '0', 10);
-    const homeDreb = parseInt(homeTeamStats.home_team_dreb_cn || '0', 10);
-    const awayOreb = parseInt(awayTeamStats.away_team_oreb_cn || '0', 10);
-    const awayDreb = parseInt(awayTeamStats.away_team_dreb_cn || '0', 10);
-    records.push({
-      label: '리바운드',
-      home: homeOreb + homeDreb,
-      away: awayOreb + awayDreb,
-    });
-
-    // Assists
-    records.push({
-      label: '어시스트',
-      home: parseInt(homeTeamStats.home_team_assist_cn || '0', 10),
-      away: parseInt(awayTeamStats.away_team_assist_cn || '0', 10),
-    });
-
-    // Turnovers
-    records.push({
-      label: '턴오버',
-      home: parseInt(homeTeamStats.home_team_turnover_cn || '0', 10),
-      away: parseInt(awayTeamStats.away_team_turnover_cn || '0', 10),
-    });
-
-    // Steals
-    records.push({
-      label: '스틸',
-      home: parseInt(homeTeamStats.home_team_steal_cn || '0', 10),
-      away: parseInt(awayTeamStats.away_team_steal_cn || '0', 10),
-    });
-
-    // Blocks
-    records.push({
-      label: '블록',
-      home: parseInt(homeTeamStats.home_team_block_cn || '0', 10),
-      away: parseInt(awayTeamStats.away_team_block_cn || '0', 10),
-    });
-
-    // Fouls
-    records.push({
-      label: '파울',
-      home: parseInt(homeTeamStats.home_team_pfoul_cn || '0', 10),
-      away: parseInt(awayTeamStats.away_team_pfoul_cn || '0', 10),
-    });
-
-    return records;
-  };
-
-  // Get short team name (extract first 2-3 characters)
-  const getShortName = (fullName: string): string => {
-    // Remove common prefixes
-    const cleaned = fullName.replace(/^(뉴|골든|샌)\s*/, '');
-    return cleaned.split(' ')[0] || fullName.slice(0, 3);
-  };
-
-  return {
-    league: mapLeague(game_info.league),
-    date: formatDate(game_info.date),
-    status: '종료' as GameStatus, // Assuming finished games only
-    homeTeam: {
-      name: game_info.home_team,
-      shortName: getShortName(game_info.home_team),
-      logo: '', // No logo data in API response
-      record: '-', // No record data in API response
-      score: game_info.home_score,
-      players: homePlayers.map(transformPlayer),
-    },
-    awayTeam: {
-      name: game_info.away_team,
-      shortName: getShortName(game_info.away_team),
-      logo: '', // No logo data in API response
-      record: '-', // No record data in API response
-      score: game_info.away_score,
-      players: awayPlayers.map(transformPlayer),
-    },
-    gameRecords: createGameRecords(),
-  };
-}
-
-function ErrorFallback({ error }: { error: string }) {
-  return (
-    <div className="max-w-2xl mx-auto my-8 p-8 bg-red-50 rounded-lg shadow-lg border-2 border-red-200">
-      <h1 className="text-2xl font-bold text-red-800 mb-4">Validation Error</h1>
-      <p className="text-red-600 font-mono text-sm whitespace-pre-wrap">{error}</p>
-    </div>
-  );
 }
 
 // Declare global window type for OpenAI Apps SDK
@@ -239,60 +23,177 @@ declare global {
       toolInput?: any;
       toolOutput?: any;
       toolResponseMetadata?: any;
+      theme?: 'light' | 'dark';
     };
   }
 }
 
-// Wrapper component that reactively listens to window.openai.toolOutput
+// 테마 감지 및 적용 훅
+function useTheme() {
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    let currentTheme: 'light' | 'dark' = 'light';
+
+    const updateTheme = () => {
+      // OpenAI Apps SDK의 테마 감지
+      const sdkTheme = window.openai?.theme;
+
+      // 시스템 다크 모드 감지 (폴백)
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      const newTheme = sdkTheme || (systemPrefersDark ? 'dark' : 'light');
+
+      // 테마가 변경된 경우에만 업데이트
+      if (newTheme !== currentTheme) {
+        currentTheme = newTheme;
+        setTheme(newTheme);
+        document.documentElement.setAttribute('data-theme', newTheme);
+      }
+    };
+
+    // 초기 테마 설정
+    updateTheme();
+
+    // 시스템 테마 변경 감지
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', updateTheme);
+
+    // OpenAI 테마 변경 감지를 위한 폴링 (SDK에서 테마 변경 시)
+    const intervalId = setInterval(updateTheme, 1000);
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateTheme);
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  return theme;
+}
+
+// 전체 게임 데이터 스키마 (sportType으로 분기)
+const GameDataSchema = z.discriminatedUnion('sportType', [
+  BasketballGameDataSchema,
+  VolleyballGameDataSchema,
+  SoccerGameDataSchema,
+  // 추후 다른 스포츠 스키마 추가
+  // BaseballGameDataSchema,
+]);
+
+type GameData = z.infer<typeof GameDataSchema>;
+
+// 에러 폴백 컴포넌트
+function ErrorFallback({ error }: { error: string }) {
+  return (
+    <div className="max-w-2xl mx-auto my-8 p-8 bg-danger-soft rounded-lg shadow-lg border border-danger-outline">
+      <h1 className="text-2xl font-bold text-danger mb-4">Validation Error</h1>
+      <p className="text-danger-soft font-mono text-sm whitespace-pre-wrap">{error}</p>
+    </div>
+  );
+}
+
+// 로딩 컴포넌트
+function Loading() {
+  return (
+    <div className="max-w-2xl mx-auto my-8 p-8 bg-surface-secondary rounded-lg shadow-lg">
+      <p className="text-secondary">Loading game data...</p>
+    </div>
+  );
+}
+
+// 지원하지 않는 스포츠 타입
+function UnsupportedSport({ sportType }: { sportType: string }) {
+  return (
+    <div className="max-w-2xl mx-auto my-8 p-8 bg-caution-soft rounded-lg shadow-lg border border-caution-outline">
+      <h1 className="text-2xl font-bold text-caution mb-4">Unsupported Sport</h1>
+      <p className="text-caution-soft">
+        스포츠 타입 "{sportType}"은(는) 아직 지원되지 않습니다.
+      </p>
+      <p className="text-caution text-sm mt-2">
+        지원 종목: basketball, soccer, baseball, volleyball
+      </p>
+    </div>
+  );
+}
+
+// 스포츠 타입에 따라 적절한 뷰어 렌더링
+function SportViewer({ data }: { data: GameData }) {
+  switch (data.sportType) {
+    case 'basketball':
+      return <BasketballViewer data={data} />;
+    case 'volleyball':
+      return <VolleyballViewer data={data} />;
+    case 'soccer':
+      return <SoccerViewer data={data} />;
+    // 추후 다른 스포츠 뷰어 추가
+    // case 'baseball':
+    //   return <BaseballViewer data={data} />;
+    default:
+      return <UnsupportedSport sportType={(data as any).sportType} />;
+  }
+}
+
+// 메인 앱 컴포넌트
 function GameResultViewerApp() {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 테마 훅 적용
+  useTheme();
+
   useEffect(() => {
-    // Function to read and validate data from window.openai.toolOutput
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
     const updateGameData = () => {
       try {
         const rawData = window.openai?.toolOutput;
 
-        // DEBUG: Log what we receive
-        console.log('[game-result-viewer] window.openai:', window.openai);
-        console.log('[game-result-viewer] toolOutput:', rawData);
-        console.log('[game-result-viewer] toolOutput type:', typeof rawData);
-        console.log('[game-result-viewer] toolOutput keys:', rawData ? Object.keys(rawData) : 'none');
-
-        // If no data available yet, keep loading state
+        // 데이터가 아직 없으면 대기
         if (!rawData || (typeof rawData === 'object' && Object.keys(rawData).length === 0)) {
-          console.log('[game-result-viewer] No data yet, waiting...');
           return;
         }
 
-        console.log('[game-result-viewer] Attempting validation...');
+        // 데이터 검증
         const validatedData = GameDataSchema.parse(rawData);
-        console.log('[game-result-viewer] Validation successful!', validatedData);
+
         setGameData(validatedData);
         setError(null);
+
+        // 데이터 로드 성공 시 폴링 중단
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
       } catch (err) {
-        console.error('[game-result-viewer] Error:', err);
         if (err instanceof z.ZodError) {
           const errorMessage = err.errors
             .map((e) => `${e.path.join('.')}: ${e.message}`)
             .join('\n');
-          console.error('[game-result-viewer] Validation errors:', errorMessage);
+          console.error('[game-result-viewer] ZodError:', JSON.stringify(err.errors, null, 2));
           setError(errorMessage);
         } else {
           setError(String(err));
         }
+
+        // 에러 발생 시에도 폴링 중단
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
       }
     };
 
-    // Initial data load
+    // 초기 데이터 로드
     updateGameData();
 
-    // Poll for changes in window.openai.toolOutput
-    // This ensures we catch data updates even if they arrive after initial render
-    const intervalId = setInterval(updateGameData, 100);
+    // 데이터가 아직 없으면 폴링 시작
+    if (!gameData && !error) {
+      intervalId = setInterval(updateGameData, 100);
+    }
 
-    return () => clearInterval(intervalId);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   if (error) {
@@ -300,21 +201,21 @@ function GameResultViewerApp() {
   }
 
   if (!gameData) {
-    return (
-      <div className="max-w-2xl mx-auto my-8 p-8 bg-gray-50 rounded-lg shadow-lg">
-        <p className="text-gray-600">Loading game data...</p>
-      </div>
-    );
+    return <Loading />;
   }
 
-  return <GameResultViewer data={gameData} />;
+  return (
+    <div style={{ maxWidth: '420px', margin: '0 auto' }}>
+      <SportViewer data={gameData} />
+    </div>
+  );
 }
 
-// Initialize the app
+// 앱 초기화
 const rootElement = document.getElementById('game-result-viewer-root');
 if (rootElement) {
   const root = createRoot(rootElement);
   root.render(<GameResultViewerApp />);
 }
 
-export default GameResultViewer;
+export default GameResultViewerApp;

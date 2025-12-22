@@ -171,6 +171,23 @@ class Config(BaseSettings):
         description="Use mock data instead of real API (for development/testing)"
     )
 
+    # Cache settings
+    cache_ttl_seconds: int = Field(
+        default=300,
+        alias="CACHE_TTL_SECONDS",
+        ge=10,
+        le=3600,
+        description="TTL for game list cache in seconds (default: 300 = 5 minutes)"
+    )
+
+    cache_max_size: int = Field(
+        default=100,
+        alias="CACHE_MAX_SIZE",
+        ge=10,
+        le=1000,
+        description="Maximum number of cached entries (default: 100)"
+    )
+
     # Validators
     @field_validator('log_level')
     @classmethod

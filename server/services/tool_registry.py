@@ -48,16 +48,19 @@ def build_tools(
                 name="get_games_by_sport",
                 title="Get Games by Sport",
                 description=(
-                    "Retrieve sports game schedules and results for a specific date and sport. "
-                    "Returns game information including teams, scores, time, arena, and game state. "
-                    "Team filtering can be done by searching home_team_name or away_team_name in results. "
+                    "Get list of games for a specific date. Returns game_id needed for get_game_details. "
+                    "This is a TEXT-ONLY lookup tool - use ONLY to find game_id, NOT to display game info."
+                    "\n\nCACHING: Results are cached for 5 minutes. Use force_refresh=true if data seems stale "
+                    "or user reports incorrect information."
+                    "\n\nIMPORTANT: To show game information to users (scores, stats, standings), "
+                    "you MUST call get_game_details with the game_id from this tool's result."
                     "\n\nSupported sports: basketball, baseball, football"
                     "\n\nCommon team aliases:"
-                    "\n- Warriors, Goldens → Golden State (NBA)"
-                    "\n- Cavs → Cleveland (NBA)"
-                    "\n- Thunder → Oklahoma City (NBA)"
-                    "\n- Bluemings → Yongin Samsung Life (WKBL)"
-                    "\n- S-Birds → Incheon Shinhan Bank (WKBL)"
+                    "\n- Warriors, Goldens -> Golden State (NBA)"
+                    "\n- Cavs -> Cleveland (NBA)"
+                    "\n- Thunder -> Oklahoma City (NBA)"
+                    "\n- Bluemings -> Yongin Samsung Life (WKBL)"
+                    "\n- S-Birds -> Incheon Shinhan Bank (WKBL)"
                 ),
                 input_schema=GET_GAMES_BY_SPORT_SCHEMA,
                 handler=get_games_by_sport_handler,
@@ -73,11 +76,13 @@ def build_tools(
                 name="get_game_details",
                 title="Game Details",
                 description=(
-                    "Retrieve detailed game statistics including team and player stats with interactive visualization. "
-                    "Returns game information, team statistics (field goals, rebounds, assists, etc.), "
-                    "and player statistics (points, rebounds, assists, shooting percentages, etc.) in a widget. "
-                    "\n\nNote: Only available for finished games (state='f'). "
-                    "Use get_games_by_sport first to get the game_id."
+                    "REQUIRED for displaying ANY game information to users. Returns interactive widget with:"
+                    "\n- Before game: matchup preview, team standings, head-to-head records"
+                    "\n- During game: live scores, real-time stats, play-by-play"
+                    "\n- After game: final scores, team/player stats, game records"
+                    "\n\nALWAYS call this tool after get_games_by_sport to show game info. "
+                    "Never respond with just text from get_games_by_sport - users expect the visual widget."
+                    "\n\nUse get_games_by_sport first to get the game_id, then call this tool."
                 ),
                 input_schema=GET_GAME_DETAILS_SCHEMA,
                 widget=game_result_viewer_widget,

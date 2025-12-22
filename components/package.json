@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsx build.ts && tsx verify-build.ts",
+    "build:dev": "VITE_INCLUDE_MOCK=true tsx build.ts && tsx verify-build.ts",
     "build:only": "tsx build.ts",
     "verify": "tsx verify-build.ts",
     "build:watch": "tsx build.ts --watch",
@@ -24,8 +25,10 @@
     "vite": "^7.1.1"
   },
   "dependencies": {
+    "@openai/apps-sdk-ui": "^0.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tw-animate-css": "^1.2.5",
     "zod": "^3.23.0"
   }
 }

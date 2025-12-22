@@ -21,6 +21,10 @@ class GetGamesBySportInput(BaseModel):
         description="Sport type to query.",
         pattern="^(basketball|soccer|volleyball|football)$"
     )
+    force_refresh: bool = Field(
+        default=False,
+        description="Force refresh from API, ignoring cache. Use when data seems stale."
+    )
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
@@ -29,6 +33,10 @@ class GetGameDetailsInput(BaseModel):
     game_id: str = Field(
         ...,
         description="Game ID to query (from get_games_by_sport result)."
+    )
+    date: str = Field(
+        ...,
+        description="Date of the game (YYYYMMDD format, same as used in get_games_by_sport)."
     )
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
@@ -57,6 +65,11 @@ GET_GAMES_BY_SPORT_SCHEMA: Dict[str, Any] = {
             "type": "string",
             "enum": ["basketball", "soccer", "volleyball", "football"],
             "description": "Sport type to query."
+        },
+        "force_refresh": {
+            "type": "boolean",
+            "description": "Force refresh from API, ignoring cache. Use when data seems stale.",
+            "default": False
         }
     },
     "required": ["date", "sport"],
@@ -69,8 +82,12 @@ GET_GAME_DETAILS_SCHEMA: Dict[str, Any] = {
         "game_id": {
             "type": "string",
             "description": "Game ID to query (from get_games_by_sport result)."
+        },
+        "date": {
+            "type": "string",
+            "description": "Date of the game (YYYYMMDD format, same as used in get_games_by_sport)."
         }
     },
-    "required": ["game_id"],
+    "required": ["game_id", "date"],
     "additionalProperties": False,
 }

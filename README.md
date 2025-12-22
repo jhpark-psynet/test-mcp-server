@@ -20,6 +20,7 @@ test-mcp-server/
 │   │   ├── tool_registry.py   # Tool registry
 │   │   ├── response_formatter.py  # API formatters
 │   │   ├── api_client.py      # ExternalApiClient (generic async)
+│   │   ├── cache.py           # TTL cache for API responses
 │   │   ├── exceptions.py      # Custom exceptions
 │   │   └── sports/            # Modular Sports API (Phase 6)
 │   │       ├── __init__.py    # SportsClientFactory
@@ -48,6 +49,8 @@ test-mcp-server/
 │   ├── tsconfig.json
 │   ├── vite.config.ts
 │   └── build.ts                # Build script
+├── tests/                       # Test suite
+│   └── test_cache.py           # Cache module tests (18 tests)
 ├── test_mcp.py                  # MCP integration tests
 ├── test_sports_api_integration.py  # Sports API integration tests
 ├── test_environment.py          # Environment configuration tests
@@ -92,6 +95,14 @@ test-mcp-server/
 - ✅ Base classes (BaseSportsClient, BaseResponseMapper)
 - ✅ Sport-specific modules (basketball, soccer, volleyball, football)
 - ✅ Improved readability and extensibility
+
+**Phase 7** (TTL Cache Implementation):
+- ✅ In-memory TTL cache for game list API responses
+- ✅ Configurable TTL (default: 5 minutes) and max size (default: 100)
+- ✅ Data validation before caching (required fields check)
+- ✅ `force_refresh` parameter for cache bypass
+- ✅ Cache hit/miss logging for debugging
+- ✅ 18 unit tests for cache module
 
 ## How It Works
 
@@ -138,12 +149,14 @@ The server provides sports data MCP tools:
 - **Input**:
   - `date` (string) - Date in YYYYMMDD format (e.g., "20251118")
   - `sport` (string) - Sport type: basketball, soccer, volleyball, or football
+  - `force_refresh` (boolean, optional) - Force refresh from API, ignoring cache
 - **Output**: Formatted text with game schedules and results
 - **Features**:
   - Lists games by league (NBA, KBL, WKBL, etc.)
   - Shows scores, time, arena, and game state
   - Includes game IDs for detailed queries
-  - Team alias support (e.g., "Warriors" → "Golden State")
+  - Team alias support (e.g., "Warriors" -> "Golden State")
+  - **TTL Cache**: Results cached for 5 minutes to reduce API calls
 - **Example**:
   ```json
   {"date": "20251118", "sport": "basketball"}
@@ -170,7 +183,10 @@ The server provides sports data MCP tools:
   - Team statistics (FG%, rebounds, assists, turnovers, etc.)
   - Player statistics (points, rebounds, assists, shooting %, etc.)
   - Sortable tables with responsive design
-- **Note**: Only available for finished games (state='f')
+- **Supports all game states**:
+  - Before game (state='s'): Team comparison, head-to-head records, standings
+  - During game (state='p'): Live scores, current stats
+  - After game (state='f'): Final scores, full player stats, game records
 - **Example**:
   ```json
   {"game_id": "OT2025313104237"}
@@ -683,6 +699,38 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 ### Technical Documentation
 - **[claude.md](./claude.md)** - 상세 기술 문서 및 사용법
 - **[API_INTEGRATION.md](./API_INTEGRATION.md)** - API 통합 가이드
+
+## Deployment
+
+### Cloudflare Tunnel
+
+The server can be exposed to the internet using Cloudflare Tunnel:
+
+```bash
+# Install cloudflared
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
+sudo dpkg -i /tmp/cloudflared.deb
+
+# Login and create tunnel
+cloudflared tunnel login
+cloudflared tunnel create mcpapps
+
+# Configure tunnel (/etc/cloudflared/config.yml)
+tunnel: <UUID>
+credentials-file: /etc/cloudflared/<UUID>.json
+
+ingress:
+  - hostname: mcpapps.yourdomain.com
+    service: http://localhost:8000
+  - service: http_status:404
+
+# Route DNS and start
+cloudflared tunnel route dns mcpapps mcpapps.yourdomain.com
+sudo cloudflared service install
+sudo systemctl start cloudflared
+```
+
+**Production URL**: `https://mcpapps.selfwell.kr/mcp`
 
 ## License
 
