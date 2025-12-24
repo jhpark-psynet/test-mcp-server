@@ -12,6 +12,18 @@ export type Conference = '동부' | '서부';
 // 최근 경기 결과
 export type RecentGameResult = 'W' | 'L';
 
+// 라인업 포지션 (선발: 21-25, 벤치: 5)
+export type LineupPosition = 'C' | 'PF' | 'SF' | 'PG' | 'SG' | 'BENCH';
+
+// 라인업 선수 정보
+export interface LineupPlayer {
+  playerId: string;        // 선수 ID
+  name: string;            // 선수명
+  number: number;          // 등번호
+  position: LineupPosition; // 포지션
+  isStarter: boolean;      // 선발 여부
+}
+
 // 선수 스탯
 export interface BasketballPlayerStats {
   number: number;        // 등번호
@@ -48,6 +60,7 @@ export interface BasketballTeamInfo {
   quarterScores?: QuarterScores;  // 쿼터별 점수
   players: BasketballPlayerStats[];
   recentGames?: RecentGameResult[];  // 최근 5경기 결과
+  lineup?: LineupPlayer[];  // 라인업 (선발 + 벤치)
 }
 
 // 경기 기록 (팀 비교 스탯)
@@ -68,6 +81,26 @@ export interface HeadToHeadRecord {
     awayScore: number;
     winner: 'home' | 'away';
   }[];
+}
+
+// 팀별 시즌 통계 (vs API에서 제공)
+export interface TeamSeasonStats {
+  winRate: string;           // 승률 (0.741)
+  avgPoints: number;         // 평균 득점
+  avgPointsAgainst: number;  // 평균 실점
+  fgPct: string;             // FG%
+  threePct: string;          // 3P%
+  avgRebounds: number;       // 평균 리바운드
+  avgAssists: number;        // 평균 어시스트
+  avgSteals?: number;        // 평균 스틸
+  avgBlocks?: number;        // 평균 블록
+  avgTurnovers?: number;     // 평균 턴오버
+}
+
+// 양팀 비교 데이터
+export interface TeamComparisonData {
+  home: TeamSeasonStats;
+  away: TeamSeasonStats;
 }
 
 // 리그 순위 팀 정보
@@ -100,11 +133,22 @@ export interface BasketballGameData {
   gameRecords?: BasketballGameRecord[];   // 팀 스탯 비교
   headToHead?: HeadToHeadRecord;          // 맞대결 기록
   standings?: LeagueStandings[];          // 리그 순위 (동부/서부)
+  teamComparison?: TeamComparisonData;    // 양팀 시즌 통계 비교
 }
 
 // ===== Zod 스키마 =====
 
 export const RecentGameResultSchema = z.enum(['W', 'L']);
+
+export const LineupPositionSchema = z.enum(['C', 'PF', 'SF', 'PG', 'SG', 'BENCH']);
+
+export const LineupPlayerSchema = z.object({
+  playerId: z.string(),
+  name: z.string(),
+  number: z.number(),
+  position: LineupPositionSchema,
+  isStarter: z.boolean(),
+});
 
 export const QuarterScoresSchema = z.object({
   q1: z.number(),
@@ -139,6 +183,7 @@ export const BasketballTeamInfoSchema = z.object({
   quarterScores: QuarterScoresSchema.optional(),
   players: z.array(BasketballPlayerStatsSchema),
   recentGames: z.array(RecentGameResultSchema).optional(),
+  lineup: z.array(LineupPlayerSchema).optional(),
 });
 
 export const BasketballGameRecordSchema = z.object({
@@ -157,6 +202,24 @@ export const HeadToHeadRecordSchema = z.object({
     awayScore: z.number(),
     winner: z.enum(['home', 'away']),
   })).optional(),
+});
+
+export const TeamSeasonStatsSchema = z.object({
+  winRate: z.string(),
+  avgPoints: z.number(),
+  avgPointsAgainst: z.number(),
+  fgPct: z.string(),
+  threePct: z.string(),
+  avgRebounds: z.number(),
+  avgAssists: z.number(),
+  avgSteals: z.number().optional(),
+  avgBlocks: z.number().optional(),
+  avgTurnovers: z.number().optional(),
+});
+
+export const TeamComparisonDataSchema = z.object({
+  home: TeamSeasonStatsSchema,
+  away: TeamSeasonStatsSchema,
 });
 
 export const StandingsTeamSchema = z.object({
@@ -188,4 +251,5 @@ export const BasketballGameDataSchema = z.object({
   gameRecords: z.array(BasketballGameRecordSchema).optional(),
   headToHead: HeadToHeadRecordSchema.optional(),
   standings: z.array(LeagueStandingsSchema).optional(),
+  teamComparison: TeamComparisonDataSchema.optional(),
 });

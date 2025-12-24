@@ -30,11 +30,11 @@ export function Scoreboard({ league, date, time, status, venue, homeTeam, awayTe
   };
 
   const TeamLogo = ({ team }: { team: BasketballTeamInfo }) => (
-    <div className="w-10 h-10 flex items-center justify-center">
+    <div className="w-12 h-12 flex items-center justify-center">
       {team.logo ? (
-        <img src={team.logo} alt={team.name} className="w-9 h-9 object-contain" />
+        <img src={team.logo} alt={team.name} className="w-11 h-11 object-contain" />
       ) : (
-        <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-xs font-semibold text-gray-600">
+        <div className="w-11 h-11 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
           {team.shortName.slice(0, 2)}
         </div>
       )}

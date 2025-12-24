@@ -1,17 +1,84 @@
 import type { BasketballGameData } from './sports/basketball/types';
 
+// 경기 예정 목 데이터 (teamComparison 포함)
 export const mockBasketballData: BasketballGameData = {
   sportType: 'basketball',
   league: 'NBA',
+  date: '12.24',
+  time: '11:00',
+  status: '예정',
+  venue: 'Chase Center',
+  homeTeam: {
+    name: '골든스테이트 워리어스',
+    shortName: '골든스테이트',
+    logo: 'https://lscdn.psynet.co.kr/livescore/photo/spt/livescore/emb_new/emblem_mid_OT31260.png',
+    record: '20승 7패',
+    score: 0,
+    players: [],
+    recentGames: ['W', 'W', 'L', 'W', 'W'],
+  },
+  awayTeam: {
+    name: '로스앤젤레스 레이커스',
+    shortName: 'LA레이커스',
+    logo: 'https://lscdn.psynet.co.kr/livescore/photo/spt/livescore/emb_new/emblem_mid_OT31254.png',
+    record: '18승 9패',
+    score: 0,
+    players: [],
+    recentGames: ['L', 'W', 'W', 'L', 'W'],
+  },
+  teamComparison: {
+    home: {
+      winRate: '0.741',
+      avgPoints: 118.5,
+      avgPointsAgainst: 108.2,
+      fgPct: '0.482',
+      threePct: '0.378',
+      avgRebounds: 45.3,
+      avgAssists: 28.1,
+      avgSteals: 8.2,
+      avgBlocks: 5.4,
+      avgTurnovers: 13.1,
+    },
+    away: {
+      winRate: '0.667',
+      avgPoints: 114.2,
+      avgPointsAgainst: 110.5,
+      fgPct: '0.468',
+      threePct: '0.365',
+      avgRebounds: 43.8,
+      avgAssists: 26.4,
+      avgSteals: 7.5,
+      avgBlocks: 4.8,
+      avgTurnovers: 14.2,
+    },
+  },
+  standings: [
+    {
+      conference: '서부',
+      teams: [
+        { rank: 1, name: '오클라호마시티', shortName: 'OKC', wins: 22, losses: 5, winRate: '0.815', recentGames: ['W', 'W', 'W', 'W', 'L'] },
+        { rank: 2, name: '골든스테이트', shortName: 'GSW', wins: 20, losses: 7, winRate: '0.741', recentGames: ['W', 'W', 'L', 'W', 'W'] },
+        { rank: 3, name: 'LA레이커스', shortName: 'LAL', wins: 18, losses: 9, winRate: '0.667', recentGames: ['L', 'W', 'W', 'L', 'W'] },
+        { rank: 4, name: '휴스턴', shortName: 'HOU', wins: 17, losses: 10, winRate: '0.630', recentGames: ['W', 'L', 'W', 'W', 'L'] },
+        { rank: 5, name: '덴버', shortName: 'DEN', wins: 16, losses: 10, winRate: '0.615', recentGames: ['W', 'W', 'L', 'L', 'W'] },
+      ],
+    },
+  ],
+};
+
+// 경기 종료 목 데이터 (기존)
+export const mockFinishedBasketballData: BasketballGameData = {
+  sportType: 'basketball',
+  league: 'NBA',
   date: '2024-12-18',
-  status: '진행중',
+  status: '종료',
   homeTeam: {
     name: 'Los Angeles Lakers',
     shortName: 'LAL',
     logo: '',
     record: '15승 8패',
-    score: 87,
-    quarterScores: { q1: 28, q2: 22, q3: 25, q4: 12 },
+    score: 112,
+    quarterScores: { q1: 28, q2: 22, q3: 25, q4: 37 },
     recentGames: ['W', 'W', 'L', 'W', 'L'],
     players: [
       { number: 23, name: 'LeBron James', position: 'F', minutes: 32, rebounds: 8, assists: 9, points: 28 },
@@ -26,8 +93,8 @@ export const mockBasketballData: BasketballGameData = {
     shortName: 'GSW',
     logo: '',
     record: '12승 11패',
-    score: 82,
-    quarterScores: { q1: 25, q2: 20, q3: 22, q4: 15 },
+    score: 105,
+    quarterScores: { q1: 25, q2: 20, q3: 22, q4: 38 },
     recentGames: ['L', 'W', 'W', 'L', 'L'],
     players: [
       { number: 30, name: 'Stephen Curry', position: 'G', minutes: 34, rebounds: 5, assists: 6, points: 32 },
@@ -45,15 +112,4 @@ export const mockBasketballData: BasketballGameData = {
     { label: '어시스트', home: 25, away: 22 },
     { label: '턴오버', home: 10, away: 12 },
   ],
-  headToHead: {
-    totalGames: 10,
-    homeWins: 6,
-    awayWins: 4,
-    recentMatches: [
-      { date: '2024-11-15', homeScore: 118, awayScore: 112, winner: 'home' },
-      { date: '2024-10-22', homeScore: 105, awayScore: 110, winner: 'away' },
-    ],
-  },
 };
-
-// 다른 스포츠 mock 데이터도 여기에 추가 가능

@@ -20,6 +20,36 @@ logger = logging.getLogger(__name__)
 class BasketballClient(BaseSportsClient):
     """Basketball Sports API client."""
 
+    # League name -> League ID mapping
+    LEAGUE_ID_MAP = {
+        "NBA": "OT313",
+        "KBL": "KBL",
+        "WKBL": "WKBL",
+    }
+
+    # Team ID -> Display name mapping
+    TEAM_NAME_MAP = {
+        # NBA - Eastern Conference
+        "OT31237": "클리블랜드", "OT31264": "인디애나", "OT31246": "보스턴",
+        "OT31240": "올랜도", "OT31238": "밀워키", "OT31263": "뉴욕닉스",
+        "OT31241": "디트로이트", "OT31265": "브루클린", "OT31266": "마이애미",
+        "OT31267": "필라델피아", "OT31243": "시카고", "OT31239": "토론토",
+        "OT31244": "애틀랜타", "OT31261": "샬렛", "OT31262": "워싱턴",
+        # NBA - Western Conference
+        "OT31255": "오클라호마시티", "OT31257": "멤피스", "OT31252": "휴스턴",
+        "OT31254": "LA레이커스", "OT31250": "덴버", "OT31253": "LA클리퍼스",
+        "OT31256": "미네소타", "OT31258": "피닉스", "OT31260": "골든스테이트",
+        "OT31251": "댈러스", "OT31259": "새크라멘토", "OT31245": "샌안토니오",
+        "OT31247": "포틀랜드", "OT31248": "유타", "OT31249": "뉴올리언스",
+        # KBL
+        "3LG": "창원LG", "3SK": "서울SK", "3KT": "수원KT", "3SS": "서울삼성",
+        "3KG": "안양정관장", "3OR": "고양오리온", "3KA": "울산현대모비스",
+        "3DB": "원주DB", "3HN": "대구한국가스공사", "3SN": "소노",
+        # WKBL
+        "3KB": "청주KB스타즈", "3HB": "하나원큐",
+        "3BK": "BNK썸", "3SH": "신한은행", "3WB": "우리은행",
+    }
+
     def __init__(self):
         """Initialize basketball API client."""
         super().__init__()
@@ -33,6 +63,18 @@ class BasketballClient(BaseSportsClient):
     def endpoint_config(self):
         """Return basketball endpoint configuration."""
         return BASKETBALL_ENDPOINTS
+
+    def get_league_id_map(self) -> Dict[str, str]:
+        """Return basketball league name -> ID mapping."""
+        return self.LEAGUE_ID_MAP
+
+    def get_team_name_map(self) -> Dict[str, str]:
+        """Return basketball team ID -> name mapping."""
+        return self.TEAM_NAME_MAP
+
+    def get_default_league(self) -> str:
+        """Return default league for basketball."""
+        return "NBA"
 
     async def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
         """Get basketball games for a specific date.

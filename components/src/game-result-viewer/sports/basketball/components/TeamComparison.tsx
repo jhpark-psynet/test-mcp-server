@@ -1,134 +1,126 @@
 import type {
   BasketballTeamInfo,
-  HeadToHeadRecord,
   RecentGameResult,
-  GameStatus,
-  BasketballLeague,
+  TeamComparisonData,
 } from '../types';
 
 interface TeamComparisonProps {
-  league: BasketballLeague;
-  date: string;
-  time?: string;
-  status: GameStatus;
-  venue?: string;
   homeTeam: BasketballTeamInfo;
   awayTeam: BasketballTeamInfo;
-  headToHead?: HeadToHeadRecord;
+  teamComparison?: TeamComparisonData;
 }
 
 /**
  * 양팀 비교 컴포넌트
- * - 팀 헤더 (경기전: 날짜/시간, 경기중/후: vs)
+ * - 팀 헤더 (앰블럼만 표시)
  * - 최근 5경기
- * - 맞대결 기록
+ * - 시즌 통계 비교 (승률, 평균 득점, 필드골% 등)
  */
 export function TeamComparison({
-  league,
-  date,
-  time,
-  status,
-  venue,
   homeTeam,
   awayTeam,
-  headToHead,
+  teamComparison,
 }: TeamComparisonProps) {
+  const hasRecentGames = homeTeam.recentGames?.length || awayTeam.recentGames?.length;
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      {/* 헤더 (예정 경기에는 숨김) */}
-      {status !== '예정' && (
-        <div className="px-3 py-2 border-b border-gray-100">
-          <h3 className="text-sm font-medium" style={{ color: '#1f2937' }}>양팀 비교</h3>
-        </div>
-      )}
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      {/* 헤더 */}
+      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-800">양팀 비교</h3>
+      </div>
 
-      {/* 팀 헤더 (경기전일 때 날짜/시간 표시) */}
-      <div className="px-3 py-2 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          {/* 홈팀 */}
-          <div className="flex items-center gap-2">
-            <TeamLogo team={homeTeam} size="sm" />
-            <span className="font-medium" style={{ color: '#1f2937' }}>{homeTeam.shortName}</span>
-          </div>
+      {/* 팀 헤더 - 앰블럼만 크게 표시 */}
+      <div className="px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-center gap-8">
+          {/* 홈팀 앰블럼 */}
+          <TeamLogo team={homeTeam} size="lg" />
 
-          {/* 중앙 정보 */}
-          <div className="text-center">
-            {status === '예정' ? (
-              <div>
-                <div className="text-xs font-medium" style={{ color: '#2563eb' }}>{league}</div>
-                <div className="text-sm font-bold" style={{ color: '#1f2937' }}>{date} {time}</div>
-                {venue && <div className="text-xs mt-1" style={{ color: '#6b7280' }}>{venue}</div>}
-              </div>
-            ) : (
-              <span style={{ color: '#6b7280' }}>vs</span>
-            )}
-          </div>
+          {/* VS */}
+          <span className="text-xl font-bold text-gray-400">VS</span>
 
-          {/* 원정팀 */}
-          <div className="flex items-center gap-2">
-            <span className="font-medium" style={{ color: '#1f2937' }}>{awayTeam.shortName}</span>
-            <TeamLogo team={awayTeam} size="sm" />
-          </div>
+          {/* 원정팀 앰블럼 */}
+          <TeamLogo team={awayTeam} size="lg" />
         </div>
       </div>
 
-      {/* 최근 5경기 - 서버에서 미제공으로 임시 숨김 */}
-      {/* {(homeTeam.recentGames || awayTeam.recentGames) && (
-        <div className="px-4 py-3 border-b border-subtle">
-          <div className="text-xs text-tertiary mb-2 text-center">최근 5경기</div>
+      {/* 최근 5경기 */}
+      {hasRecentGames && (
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="text-xs font-medium text-gray-500 mb-2 text-center">최근 5경기</div>
           <div className="flex items-center justify-between">
             <RecentGamesDisplay games={homeTeam.recentGames} align="left" />
             <RecentGamesDisplay games={awayTeam.recentGames} align="right" />
           </div>
         </div>
-      )} */}
+      )}
 
-      {/* 맞대결 기록 - 서버에서 미제공으로 임시 숨김 */}
-      {/* {headToHead && (
+      {/* 시즌 통계 비교 */}
+      {teamComparison && (
         <div className="px-4 py-3">
-          <div className="text-xs text-tertiary mb-2 text-center">
-            상대 전적 (최근 {headToHead.totalGames}경기)
+          <div className="text-xs font-medium text-gray-500 mb-3 text-center">시즌 통계</div>
+          <div className="space-y-3">
+            <StatCompareRow
+              label="승률"
+              homeValue={formatPercent(teamComparison.home.winRate)}
+              awayValue={formatPercent(teamComparison.away.winRate)}
+              homeRaw={parseFloat(teamComparison.home.winRate)}
+              awayRaw={parseFloat(teamComparison.away.winRate)}
+            />
+            <StatCompareRow
+              label="평균 득점"
+              homeValue={teamComparison.home.avgPoints.toFixed(1)}
+              awayValue={teamComparison.away.avgPoints.toFixed(1)}
+              homeRaw={teamComparison.home.avgPoints}
+              awayRaw={teamComparison.away.avgPoints}
+            />
+            <StatCompareRow
+              label="평균 실점"
+              homeValue={teamComparison.home.avgPointsAgainst.toFixed(1)}
+              awayValue={teamComparison.away.avgPointsAgainst.toFixed(1)}
+              homeRaw={teamComparison.home.avgPointsAgainst}
+              awayRaw={teamComparison.away.avgPointsAgainst}
+              lowerIsBetter
+            />
+            <StatCompareRow
+              label="필드골 %"
+              homeValue={formatPercent(teamComparison.home.fgPct)}
+              awayValue={formatPercent(teamComparison.away.fgPct)}
+              homeRaw={parseFloat(teamComparison.home.fgPct)}
+              awayRaw={parseFloat(teamComparison.away.fgPct)}
+            />
+            <StatCompareRow
+              label="3점슛 %"
+              homeValue={formatPercent(teamComparison.home.threePct)}
+              awayValue={formatPercent(teamComparison.away.threePct)}
+              homeRaw={parseFloat(teamComparison.home.threePct)}
+              awayRaw={parseFloat(teamComparison.away.threePct)}
+            />
+            <StatCompareRow
+              label="리바운드"
+              homeValue={teamComparison.home.avgRebounds.toFixed(1)}
+              awayValue={teamComparison.away.avgRebounds.toFixed(1)}
+              homeRaw={teamComparison.home.avgRebounds}
+              awayRaw={teamComparison.away.avgRebounds}
+            />
+            <StatCompareRow
+              label="어시스트"
+              homeValue={teamComparison.home.avgAssists.toFixed(1)}
+              awayValue={teamComparison.away.avgAssists.toFixed(1)}
+              homeRaw={teamComparison.home.avgAssists}
+              awayRaw={teamComparison.away.avgAssists}
+            />
           </div>
-          <div className="flex items-center justify-center gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-default">{headToHead.homeWins}</div>
-              <div className="text-xs text-tertiary">승</div>
-            </div>
-            <div className="text-tertiary">-</div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-default">{headToHead.awayWins}</div>
-              <div className="text-xs text-tertiary">승</div>
-            </div>
-          </div>
-
-          {headToHead.recentMatches && headToHead.recentMatches.length > 0 && (
-            <div className="mt-3 space-y-1">
-              {headToHead.recentMatches.slice(0, 5).map((match, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs">
-                  <span className="text-tertiary">{match.date}</span>
-                  <div className="flex items-center gap-2">
-                    <span className={match.winner === 'home' ? 'font-bold text-default' : 'text-tertiary'}>
-                      {match.homeScore}
-                    </span>
-                    <span className="text-tertiary">-</span>
-                    <span className={match.winner === 'away' ? 'font-bold text-default' : 'text-tertiary'}>
-                      {match.awayScore}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
-      )} */}
+      )}
     </div>
   );
 }
 
 // 팀 로고
-function TeamLogo({ team, size = 'md' }: { team: BasketballTeamInfo; size?: 'sm' | 'md' }) {
-  const sizeClass = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
-  const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs';
+function TeamLogo({ team, size = 'md' }: { team: BasketballTeamInfo; size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClass = size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-16 h-16' : 'w-10 h-10';
+  const textSize = size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-base' : 'text-xs';
 
   return (
     <div className={`${sizeClass} flex items-center justify-center`}>
@@ -136,8 +128,7 @@ function TeamLogo({ team, size = 'md' }: { team: BasketballTeamInfo; size?: 'sm'
         <img src={team.logo} alt={team.name} className={`${sizeClass} object-contain`} />
       ) : (
         <div
-          className={`${sizeClass} rounded-full flex items-center justify-center ${textSize} font-semibold`}
-          style={{ backgroundColor: '#eff6ff', color: '#4b5563' }}
+          className={`${sizeClass} rounded-full flex items-center justify-center ${textSize} font-semibold bg-blue-50 text-gray-600`}
         >
           {team.shortName.slice(0, 2)}
         </div>
@@ -161,17 +152,64 @@ function RecentGamesDisplay({
       {games.slice(0, 5).map((result, idx) => (
         <div
           key={idx}
-          className="w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-sm"
-          style={{
-            backgroundColor: result === 'W' ? '#2563eb' : '#eff6ff',
-            color: result === 'W' ? '#ffffff' : '#4b5563'
-          }}
+          className={`w-6 h-6 flex items-center justify-center text-[11px] font-bold rounded ${
+            result === 'W'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-600'
+          }`}
         >
           {result}
         </div>
       ))}
     </div>
   );
+}
+
+// 통계 비교 행
+function StatCompareRow({
+  label,
+  homeValue,
+  awayValue,
+  homeRaw,
+  awayRaw,
+  lowerIsBetter = false,
+}: {
+  label: string;
+  homeValue: string;
+  awayValue: string;
+  homeRaw: number;
+  awayRaw: number;
+  lowerIsBetter?: boolean;
+}) {
+  // 우위 판단
+  let homeBetter = homeRaw > awayRaw;
+  if (lowerIsBetter) homeBetter = homeRaw < awayRaw;
+  const awayBetter = !homeBetter && homeRaw !== awayRaw;
+
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className={homeBetter ? 'text-blue-600 font-bold' : 'text-gray-600'}>
+        {homeValue}
+      </span>
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className={awayBetter ? 'text-blue-600 font-bold' : 'text-gray-600'}>
+        {awayValue}
+      </span>
+    </div>
+  );
+}
+
+// 퍼센트 포맷
+// - 0.741 -> 74.1% (비율로 전달된 경우)
+// - 58.60 -> 58.6% (이미 퍼센트로 전달된 경우)
+function formatPercent(value: string): string {
+  const num = parseFloat(value);
+  if (isNaN(num)) return value;
+  // 이미 퍼센트 값인지 확인 (1보다 크면 이미 퍼센트)
+  if (num > 1) {
+    return `${num.toFixed(1)}%`;
+  }
+  return `${(num * 100).toFixed(1)}%`;
 }
 
 export default TeamComparison;

@@ -104,6 +104,15 @@ test-mcp-server/
 - ✅ Cache hit/miss logging for debugging
 - ✅ 18 unit tests for cache module
 
+**Phase 8** (Multi-Sport Handler Refactoring):
+- ✅ Refactored `get_game_details_handler` for all sports support
+- ✅ Extended `BaseSportsClient` with optional methods (`get_lineup`, `get_team_rank`, `get_team_vs_list`)
+- ✅ Extended `BaseResponseMapper` with `build_game_records()` abstract method
+- ✅ Sport-specific `gameRecords` implementation (basketball, soccer, volleyball, football)
+- ✅ Dynamic feature detection via `has_operation()` check
+- ✅ Handler code reduction: 713 → 624 lines
+- ✅ New sports can be added without modifying handler
+
 ## How It Works
 
 1. **React Components** → Build to HTML/JS/CSS in `components/assets/`
@@ -522,6 +531,15 @@ SportsClientFactory.create_client("football")    # Returns FootballClient
 - Structured data models for games, teams, and players
 - Support for multiple leagues and sports
 - Extensible architecture for new sports
+- Sport-specific game records via `build_game_records()`
+
+**Sport-specific Game Records**:
+| Sport | Statistics |
+|-------|------------|
+| Basketball | 필드골, 3점슛, 자유투, 리바운드, 어시스트, 턴오버, 스틸, 블록, 파울 (9) |
+| Soccer | 슈팅, 유효슈팅, 점유율, 패스, 패스성공률, 파울, 코너킥, 오프사이드 (8) |
+| Volleyball | 공격 성공률, 블로킹, 서브 에이스, 서브 실패, 리시브 효율, 세트당 득점, 디그 (7) |
+| Football | 총 야드, 패싱 야드, 러싱 야드, 1st 다운, 터노버, 소유 시간, 3rd 다운 성공률 (7) |
 
 ### Usage
 

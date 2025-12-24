@@ -1,5 +1,5 @@
 """Base Sports API Client with common HTTP request logic."""
-from typing import Dict, Any, Optional, TYPE_CHECKING
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from abc import ABC, abstractmethod
 import logging
 import httpx
@@ -130,3 +130,80 @@ class BaseSportsClient(ABC):
             Dict mapping operation names to endpoint paths
         """
         return self.endpoint_config.list_operations()
+
+    def has_operation(self, operation: str) -> bool:
+        """Check if this sport supports a specific operation.
+
+        Args:
+            operation: Operation name (e.g., 'lineup', 'team_rank')
+
+        Returns:
+            True if operation is supported
+        """
+        return self.endpoint_config.has_operation(operation)
+
+    # === Sport-specific configuration (override in subclasses) ===
+
+    def get_league_id_map(self) -> Dict[str, str]:
+        """Return league name -> league ID mapping.
+
+        Override in subclass to provide sport-specific league mappings.
+        """
+        return {}
+
+    def get_team_name_map(self) -> Dict[str, str]:
+        """Return team ID -> display name mapping.
+
+        Override in subclass to provide sport-specific team name mappings.
+        """
+        return {}
+
+    def get_default_league(self) -> str:
+        """Return default league name for this sport.
+
+        Override in subclass to provide sport-specific default.
+        """
+        return ""
+
+    # === Optional API methods (override in subclasses that support them) ===
+
+    async def get_lineup(
+        self, game_id: str, team_id: str
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Get lineup for a team in a game.
+
+        Override in subclasses that support lineup API.
+
+        Returns:
+            List of players in lineup or None if not supported
+        """
+        return None
+
+    async def get_team_rank(
+        self, season_id: str, league_id: str
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Get team rankings for a league/season.
+
+        Override in subclasses that support team rank API.
+
+        Returns:
+            List of team rankings or None if not supported
+        """
+        return None
+
+    async def get_team_vs_list(
+        self,
+        season_id: str,
+        league_id: str,
+        game_id: str,
+        home_team_id: str,
+        away_team_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Get team vs team comparison data.
+
+        Override in subclasses that support team vs API.
+
+        Returns:
+            Team comparison data or None if not supported
+        """
+        return None

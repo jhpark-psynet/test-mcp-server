@@ -40,6 +40,35 @@ class BaseResponseMapper(ABC):
         """
         pass
 
+    @abstractmethod
+    def build_game_records(
+        self, home_stats: Dict[str, Any], away_stats: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Build game records (stats comparison) for display.
+
+        Each sport should implement this to return sport-specific statistics.
+        For example:
+        - Basketball: 필드골, 3점슛, 자유투, 리바운드, etc.
+        - Soccer: 슈팅, 점유율, 패스, 파울, etc.
+        - Volleyball: 공격성공률, 블로킹, 서브, etc.
+
+        Args:
+            home_stats: Home team statistics
+            away_stats: Away team statistics
+
+        Returns:
+            List of game record dicts with 'label', 'home', 'away' keys
+        """
+        pass
+
+    def get_position_map(self) -> Dict[str, str]:
+        """Return position code -> display name mapping.
+
+        Override in subclass to provide sport-specific position mappings.
+        For example, basketball: {"21": "C", "22": "PF", ...}
+        """
+        return {}
+
     def _apply_field_mapping(
         self,
         data: Dict[str, Any],

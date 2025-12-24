@@ -25,17 +25,12 @@ export function BeforeGame({ data }: BeforeGameProps) {
         awayTeam={data.awayTeam}
       />
 
-      {/* 양팀 비교 - 맞대결/최근경기 서버 미제공으로 임시 숨김 */}
-      {/* <TeamComparison
-        league={data.league}
-        date={data.date}
-        time={data.time}
-        status={data.status}
-        venue={data.venue}
+      {/* 양팀 비교 (최근 5경기 + 시즌 통계) */}
+      <TeamComparison
         homeTeam={data.homeTeam}
         awayTeam={data.awayTeam}
-        headToHead={data.headToHead}
-      /> */}
+        teamComparison={data.teamComparison}
+      />
 
       {/* 리그 순위 */}
       {data.standings && data.standings.length > 0 && (
