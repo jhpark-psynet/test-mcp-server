@@ -9,6 +9,7 @@ from server.services.sports.soccer.mock_data import (
     MOCK_SOCCER_GAMES,
     MOCK_SOCCER_TEAM_STATS,
     MOCK_SOCCER_PLAYER_STATS,
+    MOCK_SOCCER_LINEUP,
 )
 
 logger = logging.getLogger(__name__)
@@ -95,4 +96,38 @@ class SoccerClient(BaseSportsClient):
             return stats
         except Exception as e:
             logger.error(f"Failed to fetch soccer player stats from API: {e}")
+            raise
+
+    async def get_lineup(self, game_id: str, team_id: str) -> Optional[List[Dict[str, Any]]]:
+        """Get lineup for a soccer team in a game.
+
+        Args:
+            game_id: Game ID
+            team_id: Team ID
+
+        Returns:
+            List of players in lineup or None
+
+        Raises:
+            ValueError: Game or team not found
+        """
+        if self.use_mock:
+            key = f"{game_id}_{team_id}"
+            lineup = MOCK_SOCCER_LINEUP.get(key)
+            if lineup is None:
+                raise ValueError(f"Lineup not found for game {game_id}, team {team_id}")
+            logger.info(f"[MOCK] Retrieved soccer lineup for game {game_id}, team {team_id}")
+            return lineup
+
+        params = {"game_id": game_id, "team_id": team_id, "fmt": "json"}
+        try:
+            endpoint = self._get_endpoint_for_operation("lineup")
+            response = await self._make_request(endpoint, params)
+            lineup = self.mapper.map_lineup_list(response)
+            if not lineup:
+                raise ValueError(f"No lineup found for game {game_id}, team {team_id}")
+            logger.info(f"[REAL API] Retrieved {len(lineup)} players in lineup for game {game_id}, team {team_id}")
+            return lineup
+        except Exception as e:
+            logger.error(f"Failed to fetch soccer lineup from API: {e}")
             raise

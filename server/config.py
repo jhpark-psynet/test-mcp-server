@@ -44,6 +44,12 @@ class Config(BaseSettings):
         description="Application name"
     )
 
+    description_version: str = Field(
+        default="1.0.0",
+        alias="DESCRIPTION_VERSION",
+        description="Version shown in tool descriptions"
+    )
+
     # Assets
     assets_dir: Path = Field(
         default_factory=lambda: Path(__file__).resolve().parent.parent / "components" / "assets",

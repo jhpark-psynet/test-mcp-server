@@ -1,5 +1,5 @@
 """Base Response Mapper with common field mapping logic."""
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 from abc import ABC, abstractmethod
 import logging
 
@@ -68,6 +68,14 @@ class BaseResponseMapper(ABC):
         For example, basketball: {"21": "C", "22": "PF", ...}
         """
         return {}
+
+    def get_starter_positions(self) -> Set[str]:
+        """Return position codes that indicate a starter.
+
+        Override in subclasses for sport-specific starter positions.
+        Default returns empty set (no starters identified by position).
+        """
+        return set()
 
     def _apply_field_mapping(
         self,

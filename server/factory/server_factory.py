@@ -394,7 +394,23 @@ def create_app(cfg: Config):
     mcp = create_mcp_server(cfg)
     app = mcp.streamable_http_app()
 
-    # Add CORS middleware if available (optional dependency)
+    # Mount static files for widget assets FIRST
+    try:
+        from starlette.staticfiles import StaticFiles
+        from starlette.routing import Mount
+
+        if cfg.assets_dir.exists():
+            # Add static file route at /assets
+            app.routes.insert(0,
+                Mount("/assets", StaticFiles(directory=str(cfg.assets_dir)), name="assets")
+            )
+            logger.info(f"Static files mounted at /assets from {cfg.assets_dir}")
+        else:
+            logger.warning(f"Assets directory not found: {cfg.assets_dir}")
+    except Exception as e:
+        logger.warning(f"Static files not mounted: {e}")
+
+    # Add CORS middleware AFTER routes are set up (middleware wraps everything)
     try:
         from starlette.middleware.cors import CORSMiddleware
 
@@ -408,21 +424,5 @@ def create_app(cfg: Config):
         logger.debug("CORS middleware applied")
     except Exception as e:
         logger.debug(f"CORS middleware not applied: {e}")
-
-    # Mount static files for widget assets
-    try:
-        from starlette.staticfiles import StaticFiles
-        from starlette.routing import Mount
-
-        if cfg.assets_dir.exists():
-            # Add static file route at /assets
-            app.routes.append(
-                Mount("/assets", StaticFiles(directory=str(cfg.assets_dir)), name="assets")
-            )
-            logger.info(f"Static files mounted at /assets from {cfg.assets_dir}")
-        else:
-            logger.warning(f"Assets directory not found: {cfg.assets_dir}")
-    except Exception as e:
-        logger.warning(f"Static files not mounted: {e}")
 
     return app

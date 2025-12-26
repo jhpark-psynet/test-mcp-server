@@ -1,5 +1,5 @@
 """Basketball-specific response mapper."""
-from typing import Dict, List, Any, Union
+from typing import Dict, List, Any, Union, Set
 from server.services.sports.base.mapper import BaseResponseMapper
 
 
@@ -34,6 +34,9 @@ class BasketballMapper(BaseResponseMapper):
         "25": "SG",   # 슈팅가드
         "5": "BENCH", # 벤치
     }
+
+    # Starter position codes
+    STARTER_POSITIONS: Set[str] = {"21", "22", "23", "24", "25"}
 
     def get_game_field_map(self) -> Dict[str, str]:
         """Return field mapping for basketball games list."""
@@ -216,6 +219,10 @@ class BasketballMapper(BaseResponseMapper):
     def get_position_map(self) -> Dict[str, str]:
         """Return basketball position code -> display name mapping."""
         return self.POSITION_MAP
+
+    def get_starter_positions(self) -> Set[str]:
+        """Return basketball starter position codes."""
+        return self.STARTER_POSITIONS
 
     def build_game_records(
         self, home_stats: Dict[str, Any], away_stats: Dict[str, Any]

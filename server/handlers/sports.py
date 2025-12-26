@@ -1,5 +1,6 @@
 """스포츠 데이터 핸들러."""
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from server.services.sports import SportsClientFactory
@@ -255,15 +256,17 @@ async def _get_standings_data(
 
     standings: List[Dict[str, Any]] = []
     try:
-        season_id = "2025"
+        season_id = datetime.now().strftime("%Y")
         if game_info:
-            season_id = game_info.get("match_date", "2025")[:4]
+            match_date = game_info.get("match_date", "")
+            if match_date and len(match_date) >= 4:
+                season_id = match_date[:4]
 
         team_rank_data = await client.get_team_rank(season_id=season_id, league_id=league_id)
 
         if team_rank_data:
             team_name_map = client.get_team_name_map()
-            conference_map = {"EAST": "동부", "WEST": "서부"}
+            conference_map = client.get_conference_map()
             grouped: Dict[str, List[Dict[str, Any]]] = {}
 
             for team in team_rank_data:
@@ -322,9 +325,11 @@ async def _get_team_vs_data(
         return result
 
     try:
-        season_id = "2025"
+        season_id = datetime.now().strftime("%Y")
         if game_info:
-            season_id = game_info.get("match_date", "2025")[:4]
+            match_date = game_info.get("match_date", "")
+            if match_date and len(match_date) >= 4:
+                season_id = match_date[:4]
 
         team_vs_data = await client.get_team_vs_list(
             season_id=season_id,
@@ -409,7 +414,7 @@ async def _get_lineup_data(
 
         if lineup_data:
             position_map = mapper.get_position_map()
-            starter_positions = {"21", "22", "23", "24", "25"}
+            starter_positions = mapper.get_starter_positions()
 
             for player in lineup_data:
                 pos_no = str(player.get("pos_no", "5"))

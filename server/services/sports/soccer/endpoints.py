@@ -11,10 +11,8 @@ SOCCER_ENDPOINTS = SportEndpointConfig(
         # Player statistics
         "player_stats": f"{get_api_base_path()}/soccerPlayerStat",
 
-        # Future extensibility examples (commented out):
-        # "lineups": "/fifa/v2/lineups",
-        # "possession": "/fifa/v2/possession",
-        # "half_time_score": f"{get_api_base_path()}/soccerHalfTimeScore",
+        # Lineup
+        "lineup": f"{get_api_base_path()}/soccerLineup",
     },
     use_common={"games"},
 )

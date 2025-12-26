@@ -165,6 +165,14 @@ class BaseSportsClient(ABC):
         """
         return ""
 
+    def get_conference_map(self) -> Dict[str, str]:
+        """Return conference/group name mapping.
+
+        Override in subclass to provide sport-specific conference mappings.
+        e.g., {"EAST": "동부", "WEST": "서부"} for NBA
+        """
+        return {}
+
     # === Optional API methods (override in subclasses that support them) ===
 
     async def get_lineup(

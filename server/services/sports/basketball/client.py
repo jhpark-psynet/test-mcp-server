@@ -76,6 +76,10 @@ class BasketballClient(BaseSportsClient):
         """Return default league for basketball."""
         return "NBA"
 
+    def get_conference_map(self) -> Dict[str, str]:
+        """Return basketball conference name mapping."""
+        return {"EAST": "동부", "WEST": "서부"}
+
     async def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
         """Get basketball games for a specific date.
 

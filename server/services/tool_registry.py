@@ -48,7 +48,7 @@ def build_tools(
                 name="get_games_by_sport",
                 title="Get Games by Sport",
                 description=(
-                    "Get list of games for a specific date. Returns game_id needed for get_game_details. "
+                    f"[v{cfg.description_version}] Get list of games for a specific date. Returns game_id needed for get_game_details. "
                     "This is a TEXT-ONLY lookup tool - use ONLY to find game_id, NOT to display game info."
                     "\n\nCACHING: Results are cached for 5 minutes. Use force_refresh=true if data seems stale "
                     "or user reports incorrect information."
@@ -76,7 +76,7 @@ def build_tools(
                 name="get_game_details",
                 title="Game Details",
                 description=(
-                    "REQUIRED for displaying ANY game information to users. Returns interactive widget with:"
+                    f"[v{cfg.description_version}] REQUIRED for displaying ANY game information to users. Returns interactive widget with:"
                     "\n- Before game: matchup preview, team standings, head-to-head records"
                     "\n- During game: live scores, real-time stats, play-by-play"
                     "\n- After game: final scores, team/player stats, game records"

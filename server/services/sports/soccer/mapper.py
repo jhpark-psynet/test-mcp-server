@@ -1,5 +1,5 @@
 """Soccer-specific response mapper."""
-from typing import Dict, List, Any, Union
+from typing import Dict, List, Any, Union, Set
 from server.services.sports.base.mapper import BaseResponseMapper
 
 
@@ -24,6 +24,19 @@ def _safe_int(value: Union[str, int, float, None], default: int = 0) -> int:
 
 class SoccerMapper(BaseResponseMapper):
     """Response mapper for Soccer API."""
+
+    # Position code -> display name mapping
+    POSITION_MAP: Dict[str, str] = {
+        "1": "GK",       # 골키퍼
+        "2": "DF",       # 수비
+        "3": "MF",       # 미드필더
+        "4": "FW",       # 공격수
+        "5": "BENCH",    # 벤치
+        "14": "STARTER", # 선발 (포지션 미지정)
+    }
+
+    # Starter position codes
+    STARTER_POSITIONS: Set[str] = {"1", "2", "3", "4", "14"}
 
     def get_game_field_map(self) -> Dict[str, str]:
         """Return field mapping for soccer games list."""
@@ -108,3 +121,29 @@ class SoccerMapper(BaseResponseMapper):
                 "away": _safe_int(away_stats.get("away_team_yellow_cn"), 0),
             },
         ]
+
+    def get_position_map(self) -> Dict[str, str]:
+        """Return soccer position map."""
+        return self.POSITION_MAP
+
+    def get_starter_positions(self) -> Set[str]:
+        """Return soccer starter position codes."""
+        return self.STARTER_POSITIONS
+
+    def get_lineup_field_map(self) -> Dict[str, str]:
+        """Return field mapping for soccer lineup."""
+        return {
+            "PLAYER_ID": "player_id",
+            "PLAYER_NAME": "player_name",
+            "BACK_NO": "back_no",
+            "POS_NO": "pos_no",
+            "GOAL_CN": "goal_cn",
+            "RATING": "rating",
+        }
+
+    def map_lineup_list(self, response: Any) -> List[Dict[str, Any]]:
+        """Map lineup API response to standardized format."""
+        data = response.get("Data", {})
+        items = data.get("list", [])
+        field_map = self.get_lineup_field_map()
+        return [self._apply_field_mapping(item, field_map) for item in items]
