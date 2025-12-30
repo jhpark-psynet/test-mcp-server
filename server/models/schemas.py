@@ -34,9 +34,35 @@ class GetGameDetailsInput(BaseModel):
         ...,
         description="Game ID to query (from get_games_by_sport result)."
     )
+    sport: str = Field(
+        ...,
+        description="Sport type (must match the sport used in get_games_by_sport).",
+        pattern="^(basketball|soccer|volleyball)$"
+    )
     date: str = Field(
         ...,
         description="Date of the game (YYYYMMDD format, same as used in get_games_by_sport)."
+    )
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+
+class GetPlayerSeasonStatsInput(BaseModel):
+    """Get player season stats tool input schema."""
+    league_id: str = Field(
+        ...,
+        description="League ID (e.g., 'OT22187' for K League)."
+    )
+    season_id: str = Field(
+        ...,
+        description="Season ID (e.g., '2025')."
+    )
+    team_id: str = Field(
+        ...,
+        description="Team ID (e.g., 'OT22253')."
+    )
+    player_id: str = Field(
+        ...,
+        description="Player ID (e.g., 'OT253039')."
     )
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
@@ -83,11 +109,40 @@ GET_GAME_DETAILS_SCHEMA: Dict[str, Any] = {
             "type": "string",
             "description": "Game ID to query (from get_games_by_sport result)."
         },
+        "sport": {
+            "type": "string",
+            "enum": ["basketball", "soccer", "volleyball"],
+            "description": "Sport type (must match the sport used in get_games_by_sport)."
+        },
         "date": {
             "type": "string",
             "description": "Date of the game (YYYYMMDD format, same as used in get_games_by_sport)."
         }
     },
-    "required": ["game_id", "date"],
+    "required": ["game_id", "sport", "date"],
+    "additionalProperties": False,
+}
+
+GET_PLAYER_SEASON_STATS_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "league_id": {
+            "type": "string",
+            "description": "League ID (e.g., 'OT22187' for K League)."
+        },
+        "season_id": {
+            "type": "string",
+            "description": "Season ID (e.g., '2025')."
+        },
+        "team_id": {
+            "type": "string",
+            "description": "Team ID (e.g., 'OT22253')."
+        },
+        "player_id": {
+            "type": "string",
+            "description": "Player ID (e.g., 'OT253039')."
+        }
+    },
+    "required": ["league_id", "season_id", "team_id", "player_id"],
     "additionalProperties": False,
 }

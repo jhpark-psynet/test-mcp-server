@@ -225,3 +225,144 @@ def verify_assets(cfg: Config):
 - 안정성: FastMCP 래퍼, 환경변수 검증
 - 빌드: 콘텐츠 해싱, 자동 검증
 
+---
+
+## 🔧 하드코딩 개선 사항 (2025-12-27)
+
+코드베이스 분석 결과, 다음과 같은 하드코딩된 값들이 발견되어 개선이 권장됩니다.
+
+### 🔴 높은 우선순위
+
+#### 1. 팀 로고 URL 템플릿 설정화
+- **위치**: `server/handlers/sports.py:19`
+- **현재 상태**:
+  ```python
+  TEAM_LOGO_URL_TEMPLATE = "https://lscdn.psynet.co.kr/livescore/photo/spt/livescore/emb_new/emblem_mid_{team_id}.png"
+  ```
+- **문제**: URL이 변경되면 코드 수정 필요
+- **권장**: `config.py`에 환경변수로 이동
+  ```python
+  team_logo_url_template: str = Field(
+      default="https://lscdn.psynet.co.kr/livescore/photo/spt/livescore/emb_new/emblem_mid_{team_id}.png",
+      alias="TEAM_LOGO_URL_TEMPLATE",
+  )
+  ```
+
+#### 2. 스포츠 상태 코드 매핑 외부화
+- **위치**: `server/handlers/sports.py:229-230`
+- **현재 상태**:
+  ```python
+  state_map = {"F": "종료", "I": "진행중", "B": "예정"}
+  ```
+- **문제**: 새 상태 추가/변경 시 코드 수정 필요
+- **권장**: JSON 설정 파일로 분리
+  ```json
+  // config/sports_metadata.json
+  {
+    "game_states": {
+      "F": "종료",
+      "I": "진행중",
+      "B": "예정"
+    }
+  }
+  ```
+
+#### 3. 포지션 매핑 통합 및 외부화
+- **위치**:
+  - `server/handlers/sports.py:695-709` (축구 포지션 12개)
+  - `server/services/sports/basketball/mapper.py:29-36` (농구 포지션)
+  - `server/services/sports/soccer/mapper.py:29-36` (축구 포지션)
+- **문제**: 중복된 매핑 존재, 유지보수 어려움
+- **권장**: 스포츠별 메타데이터 JSON 파일로 통합
+  ```json
+  // config/soccer_metadata.json
+  {
+    "positions": {
+      "1": {"code": "GK", "name": "골키퍼"},
+      "2": {"code": "DF", "name": "수비"},
+      "3": {"code": "MF", "name": "미드필더"},
+      "4": {"code": "FW", "name": "공격수"}
+    }
+  }
+  ```
+
+#### 4. 팀/리그 매핑 데이터 외부화
+- **위치**: `server/services/sports/basketball/client.py:24-51`
+- **현재 상태**:
+  ```python
+  LEAGUE_ID_MAP = {"NBA": "OT313", "KBL": "KBL", "WKBL": "WKBL"}
+  TEAM_NAME_MAP = {"OT31237": "클리블랜드", ...}  # 약 40개 팀
+  ```
+- **문제**: 새 팀/리그 추가 시 코드 수정 필요
+- **권장**: 별도 데이터 파일 또는 DB로 분리
+  ```json
+  // data/teams/basketball.json
+  {
+    "leagues": {"NBA": "OT313", "KBL": "KBL"},
+    "teams": {"OT31237": {"name": "클리블랜드", "league": "NBA"}}
+  }
+  ```
+
+### 🟡 중간 우선순위
+
+#### 5. 로깅 설정 유연화
+- **위치**: `server/logging_config.py:39-56`
+- **현재 상태**:
+  ```python
+  maxBytes=10 * 1024 * 1024,  # 10MB 하드코딩
+  backupCount=5,              # 백업 수 하드코딩
+  logging.getLogger("httpx").setLevel(logging.WARNING)  # 레벨 하드코딩
+  ```
+- **권장**: config.py에 설정 추가
+  ```python
+  log_max_bytes: int = Field(default=10 * 1024 * 1024, alias="LOG_MAX_BYTES")
+  log_backup_count: int = Field(default=5, alias="LOG_BACKUP_COUNT")
+  third_party_log_level: str = Field(default="WARNING", alias="THIRD_PARTY_LOG_LEVEL")
+  ```
+
+#### 6. 날짜 형식 상수 정의
+- **위치**: `server/services/sports/soccer/client.py:39-40`
+- **현재 상태**:
+  ```python
+  if len(date) != 8 or not date.isdigit():  # 매직 넘버 8
+  ```
+- **권장**: 상수로 정의
+  ```python
+  DATE_FORMAT_LENGTH = 8  # YYYYMMDD
+  DATE_FORMAT_PATTERN = r"^\d{8}$"
+  ```
+
+### 🟢 낮은 우선순위
+
+#### 7. 필수 필드 목록 설정화
+- **위치**: `server/services/cache.py:22`
+- **현재 상태**:
+  ```python
+  REQUIRED_GAME_FIELDS = {"game_id", "home_team_name", "away_team_name"}
+  ```
+- **상태**: 변경 빈도 낮음, 현재로선 허용 가능
+
+### ✅ 이미 양호한 상태
+
+다음 설정들은 이미 환경변수로 구성 가능:
+- 스포츠 API URL (`SPORTS_API_BASE_URL`)
+- HTTP 포트 (`HTTP_PORT`)
+- 컴포넌트 URL (`COMPONENT_BASE_URL`)
+- 캐시 TTL (`CACHE_TTL_SECONDS`)
+- API 타임아웃 (`EXTERNAL_API_TIMEOUT_S`)
+
+### 권장 구현 순서
+
+1. **Phase 1**: 팀 로고 URL 템플릿 → config.py로 이동 (간단)
+2. **Phase 2**: 스포츠 메타데이터 JSON 파일 구조 설계
+3. **Phase 3**: 상태/포지션 매핑을 JSON으로 마이그레이션
+4. **Phase 4**: 팀/리그 데이터 외부화 (가장 큰 작업)
+5. **Phase 5**: 로깅 설정 유연화
+
+### 예상 효과
+
+- **유지보수성**: 메타데이터 변경 시 코드 수정 없이 설정만 변경
+- **확장성**: 새 스포츠/리그/팀 추가 용이
+- **운영**: 환경별 설정 분리 가능 (개발/스테이징/프로덕션)
+- **테스트**: 모의 데이터 주입 용이
+

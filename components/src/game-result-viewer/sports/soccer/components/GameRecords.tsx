@@ -9,6 +9,9 @@ interface GameRecordsProps {
 export function GameRecords({ homeTeam, awayTeam, gameRecords }: GameRecordsProps) {
   if (!gameRecords || gameRecords.length === 0) return null;
 
+  const homeColor = homeTeam.primaryColor || '#3b82f6';
+  const awayColor = awayTeam.primaryColor || '#ef4444';
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="px-3 py-2 border-b border-gray-100">
@@ -19,11 +22,11 @@ export function GameRecords({ homeTeam, awayTeam, gameRecords }: GameRecordsProp
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs" style={{ color: '#4b5563' }}>
-              <th className="text-center py-1 w-20" style={{ color: homeTeam.primaryColor }}>
+              <th className="text-center py-1 w-20" style={{ color: homeColor }}>
                 {homeTeam.shortName}
               </th>
               <th className="text-center py-1">항목</th>
-              <th className="text-center py-1 w-20" style={{ color: awayTeam.primaryColor }}>
+              <th className="text-center py-1 w-20" style={{ color: awayColor }}>
                 {awayTeam.shortName}
               </th>
             </tr>

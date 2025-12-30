@@ -19,7 +19,9 @@ export function TeamComparison({
   awayTeam,
   headToHead,
 }: TeamComparisonProps) {
-  const showHeader = status !== '경기전';
+  const showHeader = status !== '예정';
+  const homeColor = homeTeam.primaryColor || '#3b82f6';
+  const awayColor = awayTeam.primaryColor || '#ef4444';
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -38,7 +40,7 @@ export function TeamComparison({
           </div>
 
           <div className="text-center">
-            {status === '경기전' ? (
+            {status === '예정' ? (
               <div>
                 <div className="text-xs" style={{ color: '#6b7280' }}>{league}</div>
                 <div className="text-sm font-medium" style={{ color: '#4b5563' }}>{date}</div>
@@ -75,7 +77,7 @@ export function TeamComparison({
           </div>
           <div className="flex items-center justify-center gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: homeTeam.primaryColor }}>
+              <div className="text-2xl font-bold" style={{ color: homeColor }}>
                 {headToHead.homeWins}
               </div>
               <div className="text-xs" style={{ color: '#6b7280' }}>승</div>
@@ -85,7 +87,7 @@ export function TeamComparison({
               <div className="text-xs" style={{ color: '#6b7280' }}>무</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: awayTeam.primaryColor }}>
+              <div className="text-2xl font-bold" style={{ color: awayColor }}>
                 {headToHead.awayWins}
               </div>
               <div className="text-xs" style={{ color: '#6b7280' }}>승</div>
@@ -100,7 +102,7 @@ export function TeamComparison({
                   <div className="flex items-center gap-2">
                     <span
                       style={{
-                        color: match.winner === 'home' ? homeTeam.primaryColor : '#6b7280',
+                        color: match.winner === 'home' ? homeColor : '#6b7280',
                         fontWeight: match.winner === 'home' ? 700 : 400
                       }}
                     >
@@ -109,7 +111,7 @@ export function TeamComparison({
                     <span style={{ color: '#6b7280' }}>-</span>
                     <span
                       style={{
-                        color: match.winner === 'away' ? awayTeam.primaryColor : '#6b7280',
+                        color: match.winner === 'away' ? awayColor : '#6b7280',
                         fontWeight: match.winner === 'away' ? 700 : 400
                       }}
                     >
@@ -129,6 +131,8 @@ export function TeamComparison({
 function TeamLogo({ team, size = 'md' }: { team: SoccerTeamInfo; size?: 'sm' | 'md' }) {
   const sizeClass = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
   const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs';
+  const primaryColor = team.primaryColor || '#3b82f6';
+  const secondaryColor = team.secondaryColor || '#1d4ed8';
 
   return (
     <div className={`${sizeClass} flex items-center justify-center`}>
@@ -137,7 +141,7 @@ function TeamLogo({ team, size = 'md' }: { team: SoccerTeamInfo; size?: 'sm' | '
       ) : (
         <div
           className={`${sizeClass} rounded-full flex items-center justify-center ${textSize} font-semibold text-white`}
-          style={{ background: `linear-gradient(135deg, ${team.primaryColor}, ${team.secondaryColor})` }}
+          style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
         >
           {team.shortName.slice(0, 2)}
         </div>

@@ -9,6 +9,9 @@ interface GoalTimelineProps {
 export function GoalTimeline({ goals, homeTeam, awayTeam }: GoalTimelineProps) {
   if (!goals || goals.length === 0) return null;
 
+  const homeColor = homeTeam.primaryColor || '#3b82f6';
+  const awayColor = awayTeam.primaryColor || '#ef4444';
+
   // 시간순 정렬
   const sortedGoals = [...goals].sort((a, b) => {
     const aTime = a.minute + (a.addedTime || 0) / 100;
@@ -25,7 +28,7 @@ export function GoalTimeline({ goals, homeTeam, awayTeam }: GoalTimelineProps) {
       <div className="p-3 space-y-2">
         {sortedGoals.map((goal, idx) => {
           const isHome = goal.team === 'home';
-          const teamColor = isHome ? homeTeam.primaryColor : awayTeam.primaryColor;
+          const teamColor = isHome ? homeColor : awayColor;
 
           return (
             <div

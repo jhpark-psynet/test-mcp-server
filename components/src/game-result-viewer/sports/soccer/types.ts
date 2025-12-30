@@ -1,15 +1,10 @@
 import { z } from 'zod';
 
-// 지원하는 축구 리그
-export type SoccerLeague =
-  | 'K리그1' | 'K리그2'                    // 한국
-  | 'EPL' | '라리가' | '분데스리가' | '세리에A' | '리그앙'  // 유럽 5대 리그
-  | 'UEFA챔피언스리그' | 'UEFA유로파리그'  // UEFA
-  | 'AFC챔피언스리그'                      // 아시아
-  | '월드컵' | '아시안컵';                 // 국가대항전
+// 리그명 (다양한 리그 지원을 위해 문자열로 처리)
+export type SoccerLeague = string;
 
-// 경기 상태
-export type GameStatus = '경기전' | '경기중' | '하프타임' | '경기종료';
+// 경기 상태 (서버 반환 값에 맞춤)
+export type GameStatus = '예정' | '진행중' | '종료';
 
 // 경기 진행 상황 (경기중일 때)
 export type SoccerPeriod = '전반' | '후반' | '연장전반' | '연장후반' | '승부차기';
@@ -67,8 +62,8 @@ export interface SoccerTeamInfo {
   halfScores?: HalfScores;
   players: SoccerPlayerStats[];
   recentGames?: RecentGameResult[];
-  primaryColor: string;
-  secondaryColor: string;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 // 팀 기록 비교
@@ -181,8 +176,8 @@ export const SoccerTeamInfoSchema = z.object({
   halfScores: HalfScoresSchema.optional(),
   players: z.array(SoccerPlayerStatsSchema),
   recentGames: z.array(RecentGameResultSchema).optional(),
-  primaryColor: z.string(),
-  secondaryColor: z.string(),
+  primaryColor: z.string().optional(),
+  secondaryColor: z.string().optional(),
 });
 
 export const SoccerGameRecordSchema = z.object({
@@ -223,17 +218,12 @@ export const LeagueStandingsSchema = z.object({
   teams: z.array(StandingsTeamSchema),
 });
 
-export const GameStatusSchema = z.enum(['경기전', '경기중', '하프타임', '경기종료']);
+export const GameStatusSchema = z.enum(['예정', '진행중', '종료']);
 
 export const SoccerPeriodSchema = z.enum(['전반', '후반', '연장전반', '연장후반', '승부차기']);
 
-export const SoccerLeagueSchema = z.enum([
-  'K리그1', 'K리그2',
-  'EPL', '라리가', '분데스리가', '세리에A', '리그앙',
-  'UEFA챔피언스리그', 'UEFA유로파리그',
-  'AFC챔피언스리그',
-  '월드컵', '아시안컵',
-]);
+// 리그명은 다양하므로 문자열로 처리
+export const SoccerLeagueSchema = z.string();
 
 export const SoccerGameDataSchema = z.object({
   sportType: z.literal('soccer'),

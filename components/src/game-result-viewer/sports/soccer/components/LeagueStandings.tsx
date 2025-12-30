@@ -10,6 +10,8 @@ export function LeagueStandings({ standings, homeTeam, awayTeam }: LeagueStandin
   if (!standings || standings.length === 0) return null;
 
   const currentStandings = standings[0];
+  const homeColor = homeTeam.primaryColor || '#3b82f6';
+  const awayColor = awayTeam.primaryColor || '#ef4444';
 
   const getResultColor = (result: RecentGameResult) => {
     switch (result) {
@@ -44,9 +46,9 @@ export function LeagueStandings({ standings, homeTeam, awayTeam }: LeagueStandin
               const isHomeTeam = team.shortName === homeTeam.shortName;
               const isAwayTeam = team.shortName === awayTeam.shortName;
               const teamColor = isHomeTeam
-                ? homeTeam.primaryColor
+                ? homeColor
                 : isAwayTeam
-                ? awayTeam.primaryColor
+                ? awayColor
                 : undefined;
 
               return (

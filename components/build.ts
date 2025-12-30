@@ -5,6 +5,20 @@ import fg from "fast-glob";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+
+// ES module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from parent directory's .env files
+const ENV = process.env.ENV || "development";
+const envFile = path.resolve(__dirname, "..", `.env.${ENV}`);
+if (fs.existsSync(envFile)) {
+  dotenv.config({ path: envFile });
+  console.log(`Loaded config from: .env.${ENV}`);
+}
 
 const entries = fg.sync("src/**/index.tsx");
 const outDir = "assets";

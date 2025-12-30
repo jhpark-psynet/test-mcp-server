@@ -166,9 +166,16 @@ async def _get_game_info(
     game_info = None
 
     if client.use_mock:
-        # Mock mode: basketball mock data만 사용
-        from server.services.sports.basketball.mock_data import MOCK_BASKETBALL_GAMES
-        for games in MOCK_BASKETBALL_GAMES.values():
+        # Mock mode: 스포츠별 mock data 사용
+        mock_games = {}
+        if sport == "basketball":
+            from server.services.sports.basketball.mock_data import MOCK_BASKETBALL_GAMES
+            mock_games = MOCK_BASKETBALL_GAMES
+        elif sport == "soccer":
+            from server.services.sports.soccer.mock_data import MOCK_SOCCER_GAMES
+            mock_games = MOCK_SOCCER_GAMES
+
+        for games in mock_games.values():
             for game in games:
                 if game["game_id"] == game_id:
                     game_info = game
@@ -177,7 +184,7 @@ async def _get_game_info(
                 break
 
         if not game_info:
-            raise ValueError(f"Game {game_id} not found in mock data")
+            raise ValueError(f"Game {game_id} not found in {sport} mock data")
     else:
         # Real API mode
         if date_param:
@@ -523,10 +530,12 @@ async def _build_live_or_finished_game_response(
     except Exception as e:
         logger.warning(f"[WARN] Player stats not available for game {game_id}: {e}")
 
-    # Calculate scores from player stats if finished
+    # Calculate scores from player stats if finished (basketball only)
+    # For other sports, use scores from game data directly
     home_score = basic_info["home_score"]
     away_score = basic_info["away_score"]
-    if basic_info["status"] == "종료" and player_stats:
+    sport_type = client.get_sport_name()
+    if sport_type == "basketball" and basic_info["status"] == "종료" and player_stats:
         home_score = sum(safe_int(p.get("tot_score"), 0) for p in player_stats if p.get("team_id") == home_team_id)
         away_score = sum(safe_int(p.get("tot_score"), 0) for p in player_stats if p.get("team_id") == away_team_id)
 
@@ -539,8 +548,11 @@ async def _build_live_or_finished_game_response(
     home_lineup = await _get_lineup_data(client, mapper, game_id, home_team_id)
     away_lineup = await _get_lineup_data(client, mapper, game_id, away_team_id)
 
-    # Build player lists
-    home_players, away_players = _build_player_lists(player_stats, home_team_id, away_team_id)
+    # Build player lists (스포츠 타입에 따라 다른 포맷 사용)
+    sport_type = client.get_sport_name()
+    home_players, away_players = _build_player_lists(
+        player_stats, home_team_id, away_team_id, sport_type
+    )
 
     # Build game records using mapper
     game_records = mapper.build_game_records(home_stats, away_stats)
@@ -590,39 +602,279 @@ async def _build_live_or_finished_game_response(
 
 
 def _build_player_lists(
-    player_stats: List[Dict[str, Any]], home_team_id: str, away_team_id: str
+    player_stats: List[Dict[str, Any]],
+    home_team_id: str,
+    away_team_id: str,
+    sport_type: str = "basketball",
 ) -> tuple:
-    """선수 통계를 홈/어웨이 리스트로 분리."""
+    """선수 통계를 홈/어웨이 리스트로 분리.
+
+    Args:
+        player_stats: 선수 통계 리스트
+        home_team_id: 홈팀 ID
+        away_team_id: 원정팀 ID
+        sport_type: 스포츠 종류 (soccer, basketball, etc.)
+
+    Returns:
+        (home_players, away_players) 튜플
+    """
+    # 스포츠별 빌더 함수 선택
+    builder_map = {
+        "soccer": _build_soccer_player_data,
+        "basketball": _build_basketball_player_data,
+    }
+    builder = builder_map.get(sport_type, _build_basketball_player_data)
+
     home_players = []
     away_players = []
 
     for player in player_stats:
-        player_team_id = player.get("team_id", "")
-
-        # Parse minutes
-        player_time = player.get("player_time", "0:00")
-        minutes = 0
-        try:
-            time_parts = player_time.split(":")
-            if len(time_parts) >= 2:
-                minutes = int(time_parts[0]) * 60 + int(time_parts[1])
-                minutes = round(minutes / 60)
-        except:
-            minutes = 0
-
-        player_data = {
-            "number": safe_int(player.get("back_no"), 0),
-            "name": player.get("player_name", "Unknown"),
-            "position": player.get("pos_sc", "-"),
-            "minutes": minutes,
-            "rebounds": safe_int(player.get("treb_cn"), 0),
-            "assists": safe_int(player.get("assist_cn"), 0),
-            "points": safe_int(player.get("tot_score"), 0)
-        }
+        # API 응답은 대문자(TEAM_ID), 매핑 후는 소문자(team_id)
+        player_team_id = player.get("team_id") or player.get("TEAM_ID", "")
+        player_data = builder(player)
 
         if player_team_id == home_team_id:
             home_players.append(player_data)
         elif player_team_id == away_team_id:
             away_players.append(player_data)
 
+    # 출전 시간 기준 내림차순 정렬
+    home_players.sort(key=lambda x: x.get("minutes", 0), reverse=True)
+    away_players.sort(key=lambda x: x.get("minutes", 0), reverse=True)
+
     return home_players, away_players
+
+
+def _build_soccer_player_data(player: Dict[str, Any]) -> Dict[str, Any]:
+    """축구 선수 개별 데이터 생성.
+
+    프론트엔드 SoccerPlayerStats 인터페이스에 맞춤:
+    - number, name, position, minutes
+    - goals, assists, shots, shotsOnTarget
+    - passes, passAccuracy, tackles, interceptions
+    - fouls, yellowCards, redCards, saves
+    """
+    # 포지션 변환 (formationPlace -> display position)
+    formation_place = str(player.get("formation_place", player.get("formationPlace", "0")))
+    position = _get_soccer_position(formation_place)
+
+    # 출전 시간 (분 단위)
+    mins_played = safe_int(player.get("mins_played", player.get("minsPlayed")), 0)
+
+    # 패스 성공률 계산
+    total_passes = safe_int(player.get("total_passes", player.get("totalPass")), 0)
+    accurate_passes = safe_int(player.get("accurate_passes", player.get("accuratePass")), 0)
+    pass_accuracy = ""
+    if total_passes > 0:
+        pass_accuracy = f"{round(accurate_passes / total_passes * 100)}%"
+
+    return {
+        # 기본 정보 (API: back_no 또는 BACK_NO)
+        "number": safe_int(player.get("back_no") or player.get("BACK_NO"), 0),
+        "name": player.get("player_name") or player.get("PLAYER_NAME", "Unknown"),
+        "position": position,
+        "minutes": mins_played,
+
+        # 공격 스탯
+        "goals": safe_int(player.get("goals", player.get("Goals")), 0),
+        "assists": safe_int(player.get("assists", player.get("goalAssist")), 0),
+        "shots": safe_int(player.get("total_shots", player.get("totalScoringAtt")), 0),
+        "shotsOnTarget": safe_int(player.get("shots_on_target", player.get("ontargetScoringAtt")), 0),
+
+        # 패스 스탯
+        "passes": total_passes,
+        "passAccuracy": pass_accuracy,
+
+        # 수비 스탯
+        "tackles": safe_int(player.get("tackles", player.get("totalTackle")), 0),
+        "interceptions": safe_int(player.get("interceptions", player.get("interception")), 0),
+
+        # 파울/카드
+        "fouls": safe_int(player.get("fouls"), 0),
+        "yellowCards": safe_int(player.get("yellow_cards", player.get("yellowCard")), 0),
+        "redCards": safe_int(player.get("red_cards", player.get("redCard")), 0),
+
+        # 골키퍼 스탯 (GK인 경우만 의미 있음)
+        "saves": safe_int(player.get("saves"), 0),
+    }
+
+
+def _get_soccer_position(formation_place: str) -> str:
+    """포메이션 위치를 포지션 문자열로 변환."""
+    position_map = {
+        "0": "-",       # 벤치/미출전
+        "1": "GK",      # 골키퍼
+        "2": "DF",      # 수비 (RB)
+        "3": "DF",      # 수비 (LB)
+        "4": "DF",      # 수비 (CB)
+        "5": "DF",      # 수비 (CB)
+        "6": "MF",      # 미드필더 (CDM)
+        "7": "FW",      # 공격 (LW)
+        "8": "MF",      # 미드필더 (CM)
+        "9": "FW",      # 공격 (ST)
+        "10": "MF",     # 미드필더 (CAM)
+        "11": "FW",     # 공격 (RW)
+    }
+    return position_map.get(formation_place, "MF")
+
+
+def _build_basketball_player_data(player: Dict[str, Any]) -> Dict[str, Any]:
+    """농구 선수 개별 데이터 생성."""
+    # 출전 시간 파싱 (MM:SS 형식)
+    player_time = player.get("player_time", "0:00")
+    minutes = 0
+    try:
+        time_parts = str(player_time).split(":")
+        if len(time_parts) >= 2:
+            minutes = int(time_parts[0]) * 60 + int(time_parts[1])
+            minutes = round(minutes / 60)
+        else:
+            minutes = safe_int(player_time, 0)
+    except (ValueError, AttributeError):
+        minutes = 0
+
+    return {
+        "number": safe_int(player.get("back_no"), 0),
+        "name": player.get("player_name", "Unknown"),
+        "position": player.get("pos_sc", "-"),
+        "minutes": minutes,
+        "points": safe_int(player.get("tot_score"), 0),
+        "rebounds": safe_int(player.get("treb_cn"), 0),
+        "assists": safe_int(player.get("assist_cn"), 0),
+    }
+
+
+async def get_player_season_stats_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """선수 시즌 통계를 조회하는 핸들러.
+
+    Args:
+        arguments: 요청 파라미터
+            - league_id: 리그 ID (필수)
+            - season_id: 시즌 ID (필수)
+            - team_id: 팀 ID (필수)
+            - player_id: 선수 ID (필수)
+
+    Returns:
+        선수 시즌 통계 딕셔너리
+
+    Raises:
+        ValueError: 필수 파라미터 누락 또는 데이터 없음
+    """
+    league_id = arguments.get("league_id", "").strip()
+    season_id = arguments.get("season_id", "").strip()
+    team_id = arguments.get("team_id", "").strip()
+    player_id = arguments.get("player_id", "").strip()
+
+    # 필수 파라미터 검증
+    missing_params = []
+    if not league_id:
+        missing_params.append("league_id")
+    if not season_id:
+        missing_params.append("season_id")
+    if not team_id:
+        missing_params.append("team_id")
+    if not player_id:
+        missing_params.append("player_id")
+
+    if missing_params:
+        raise ValueError(f"Missing required parameters: {', '.join(missing_params)}")
+
+    # Soccer 클라이언트 생성 (현재 soccer만 지원)
+    from server.services.sports.soccer import SoccerClient
+    client = SoccerClient()
+
+    # 시즌 통계 조회
+    stats_list = await client.get_player_season_stats(
+        league_id=league_id,
+        season_id=season_id,
+        team_id=team_id,
+        player_id=player_id,
+    )
+
+    if not stats_list:
+        raise ValueError(
+            f"No season stats found for player {player_id} "
+            f"(league={league_id}, season={season_id}, team={team_id})"
+        )
+
+    # 첫 번째 결과 반환 (일반적으로 1개만 있음)
+    stats = stats_list[0]
+
+    # 응답 구조화 (카테고리별 그룹화)
+    return {
+        "leagueId": league_id,
+        "seasonId": season_id,
+        "teamId": team_id,
+        "playerId": player_id,
+        "stats": {
+            "passing": {
+                "totalPass": safe_int(stats.get("total_pass"), 0),
+                "accuratePass": safe_int(stats.get("accurate_pass"), 0),
+                "passAccuracy": _calc_percentage(
+                    stats.get("accurate_pass"), stats.get("total_pass")
+                ),
+                "totalFinalThirdPasses": safe_int(stats.get("total_final_third_passes"), 0),
+                "successfulFinalThirdPasses": safe_int(stats.get("successful_final_third_passes"), 0),
+                "totalThroughBall": safe_int(stats.get("total_through_ball"), 0),
+                "successfulPutThrough": safe_int(stats.get("successful_put_through"), 0),
+            },
+            "shooting": {
+                "goals": safe_int(stats.get("goals"), 0),
+                "totalScoringAtt": safe_int(stats.get("total_scoring_att"), 0),
+                "ontargetScoringAtt": safe_int(stats.get("ontarget_scoring_att"), 0),
+                "shotAccuracy": _calc_percentage(
+                    stats.get("ontarget_scoring_att"), stats.get("total_scoring_att")
+                ),
+                "goalsOpenplay": safe_int(stats.get("goals_openplay"), 0),
+                "winningGoal": safe_int(stats.get("winning_goal"), 0),
+                "bigChanceMissed": safe_int(stats.get("big_chance_missed"), 0),
+            },
+            "possession": {
+                "touches": safe_int(stats.get("touches"), 0),
+                "touchesInFinalThird": safe_int(stats.get("touches_in_final_third"), 0),
+                "touchesInOppBox": safe_int(stats.get("touches_in_opp_box"), 0),
+                "carries": safe_int(stats.get("carries"), 0),
+                "progressiveCarries": safe_int(stats.get("progressive_carries"), 0),
+                "dispossessed": safe_int(stats.get("dispossessed"), 0),
+                "turnover": safe_int(stats.get("turnover"), 0),
+            },
+            "duel": {
+                "duelWon": safe_int(stats.get("duel_won"), 0),
+                "duelLost": safe_int(stats.get("duel_lost"), 0),
+                "duelWinRate": _calc_percentage(
+                    stats.get("duel_won"),
+                    safe_int(stats.get("duel_won"), 0) + safe_int(stats.get("duel_lost"), 0)
+                ),
+                "totalTackle": safe_int(stats.get("total_tackle"), 0),
+                "totalContest": safe_int(stats.get("total_contest"), 0),
+                "wonContest": safe_int(stats.get("won_contest"), 0),
+            },
+            "defense": {
+                "ballRecovery": safe_int(stats.get("ball_recovery"), 0),
+                "possWonDef3rd": safe_int(stats.get("poss_won_def_3rd"), 0),
+                "possWonMid3rd": safe_int(stats.get("poss_won_mid_3rd"), 0),
+                "goalsConceded": safe_int(stats.get("goals_conceded"), 0),
+            },
+            "appearance": {
+                "minsPlayed": safe_int(stats.get("mins_played"), 0),
+                "totalSubOn": safe_int(stats.get("total_sub_on"), 0),
+            },
+        },
+    }
+
+
+def _calc_percentage(numerator: Any, denominator: Any) -> str:
+    """백분율 계산 (문자열 반환).
+
+    Args:
+        numerator: 분자
+        denominator: 분모
+
+    Returns:
+        백분율 문자열 (예: "75.0%") 또는 "-"
+    """
+    num = safe_int(numerator, 0)
+    denom = safe_int(denominator, 0)
+    if denom == 0:
+        return "-"
+    return f"{round(num / denom * 100, 1)}%"

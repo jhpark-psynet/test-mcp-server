@@ -42,7 +42,11 @@ class VolleyballClient(BaseSportsClient):
             logger.info(f"[MOCK] Retrieved {len(games)} volleyball games for {date}")
             return games
 
-        params = {"date": date, "sport": "volleyball"}
+        params = {
+            "search_date": date,
+            "compe": "volleyball",
+            "fmt": "json",
+        }
         try:
             endpoint = self._get_endpoint_for_operation("games")
             response = await self._make_request(endpoint, params)

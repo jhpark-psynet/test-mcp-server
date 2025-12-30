@@ -10,6 +10,9 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
   const [activeTab, setActiveTab] = useState<'home' | 'away'>('home');
   const currentTeam = activeTab === 'home' ? homeTeam : awayTeam;
 
+  const homeColor = homeTeam.primaryColor || '#3b82f6';
+  const awayColor = awayTeam.primaryColor || '#ef4444';
+
   if (currentTeam.players.length === 0) return null;
 
   return (
@@ -21,8 +24,8 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
             onClick={() => setActiveTab('home')}
             className="flex-1 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150"
             style={{
-              borderColor: activeTab === 'home' ? homeTeam.primaryColor : 'transparent',
-              color: activeTab === 'home' ? homeTeam.primaryColor : '#6b7280'
+              borderColor: activeTab === 'home' ? homeColor : 'transparent',
+              color: activeTab === 'home' ? homeColor : '#6b7280'
             }}
           >
             {homeTeam.shortName}
@@ -31,8 +34,8 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
             onClick={() => setActiveTab('away')}
             className="flex-1 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150"
             style={{
-              borderColor: activeTab === 'away' ? awayTeam.primaryColor : 'transparent',
-              color: activeTab === 'away' ? awayTeam.primaryColor : '#6b7280'
+              borderColor: activeTab === 'away' ? awayColor : 'transparent',
+              color: activeTab === 'away' ? awayColor : '#6b7280'
             }}
           >
             {awayTeam.shortName}
@@ -62,7 +65,7 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
                     <span className="text-xs w-5" style={{ color: '#6b7280' }}>{player.number}</span>
                     <span
                       className="text-sm"
-                      style={{ color: activeTab === 'home' ? homeTeam.primaryColor : awayTeam.primaryColor }}
+                      style={{ color: activeTab === 'home' ? homeColor : awayColor }}
                     >
                       {player.name}
                     </span>

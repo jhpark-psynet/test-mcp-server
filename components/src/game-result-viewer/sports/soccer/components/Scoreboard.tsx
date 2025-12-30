@@ -23,13 +23,13 @@ export function Scoreboard({
   homeTeam,
   awayTeam,
 }: ScoreboardProps) {
-  const homeColor = homeTeam.primaryColor;
-  const awayColor = awayTeam.primaryColor;
+  const homeColor = homeTeam.primaryColor || '#3b82f6';
+  const awayColor = awayTeam.primaryColor || '#ef4444';
   const homeLeads = homeTeam.score > awayTeam.score;
   const awayLeads = awayTeam.score > homeTeam.score;
-  const isLive = status === '경기중';
-  const isHalfTime = status === '하프타임';
-  const isFinished = status === '경기종료';
+  const isLive = status === '진행중';
+  const isFinished = status === '종료';
+  const isScheduled = status === '예정';
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -43,7 +43,7 @@ export function Scoreboard({
             {league}
           </span>
           <span style={{ color: '#6b7280' }} className="text-sm">{date}</span>
-          {time && status === '경기전' && (
+          {time && isScheduled && (
             <span style={{ color: '#4b5563' }} className="text-sm">{time}</span>
           )}
           {currentMinute && isLive && (
@@ -73,23 +73,20 @@ export function Scoreboard({
               className="text-3xl font-bold tabular-nums"
               style={{ color: homeLeads ? homeColor : '#9ca3af' }}
             >
-              {status === '경기전' ? '-' : homeTeam.score}
+              {isScheduled ? '-' : homeTeam.score}
             </span>
             <span className="text-xl" style={{ color: '#6b7280' }}>-</span>
             <span
               className="text-3xl font-bold tabular-nums"
               style={{ color: awayLeads ? awayColor : '#9ca3af' }}
             >
-              {status === '경기전' ? '-' : awayTeam.score}
+              {isScheduled ? '-' : awayTeam.score}
             </span>
           </div>
           {isLive && currentMinute && (
             <span className="text-xs font-medium" style={{ color: '#dc2626' }}>
               {currentMinute}{addedTime ? `+${addedTime}` : ''}'
             </span>
-          )}
-          {isHalfTime && (
-            <span className="text-xs font-medium" style={{ color: '#f59e0b' }}>하프타임</span>
           )}
         </div>
 
@@ -104,7 +101,7 @@ export function Scoreboard({
       </div>
 
       {/* 전/후반 점수 */}
-      {status !== '경기전' && homeTeam.halfScores && awayTeam.halfScores && (
+      {!isScheduled && homeTeam.halfScores && awayTeam.halfScores && (
         <HalfScoresTable
           homeTeam={homeTeam}
           awayTeam={awayTeam}
@@ -118,18 +115,16 @@ export function Scoreboard({
 
 function StatusBadge({ status }: { status: GameStatus }) {
   switch (status) {
-    case '경기중':
+    case '진행중':
       return (
         <span className="text-sm font-medium flex items-center gap-1" style={{ color: '#dc2626' }}>
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#dc2626' }} />
           LIVE
         </span>
       );
-    case '하프타임':
-      return <span className="text-sm font-medium" style={{ color: '#f59e0b' }}>HT</span>;
-    case '경기종료':
+    case '종료':
       return <span className="text-sm font-medium" style={{ color: '#4b5563' }}>종료</span>;
-    case '경기전':
+    case '예정':
       return <span className="text-sm font-medium" style={{ color: '#2563eb' }}>예정</span>;
     default:
       return null;
@@ -138,6 +133,8 @@ function StatusBadge({ status }: { status: GameStatus }) {
 
 function TeamLogo({ team }: { team: SoccerTeamInfo }) {
   const initials = team.shortName.slice(0, 2);
+  const primaryColor = team.primaryColor || '#3b82f6';
+  const secondaryColor = team.secondaryColor || '#1d4ed8';
 
   return (
     <div className="w-10 h-10 flex items-center justify-center">
@@ -146,7 +143,7 @@ function TeamLogo({ team }: { team: SoccerTeamInfo }) {
       ) : (
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-          style={{ background: `linear-gradient(135deg, ${team.primaryColor}, ${team.secondaryColor})` }}
+          style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
         >
           {initials}
         </div>
@@ -168,6 +165,8 @@ function HalfScoresTable({
 }) {
   const homeS = homeTeam.halfScores!;
   const awayS = awayTeam.halfScores!;
+  const homeColor = homeTeam.primaryColor || '#3b82f6';
+  const awayColor = awayTeam.primaryColor || '#ef4444';
 
   const periods: { label: string; home: number; away: number }[] = [
     { label: '전반', home: homeS.firstHalf, away: awayS.firstHalf },
@@ -204,7 +203,7 @@ function HalfScoresTable({
         </thead>
         <tbody style={{ color: '#1f2937' }}>
           <tr>
-            <td className="text-left py-1 font-medium" style={{ color: homeTeam.primaryColor }}>
+            <td className="text-left py-1 font-medium" style={{ color: homeColor }}>
               {homeTeam.shortName}
             </td>
             {periods.map((p) => {
@@ -224,12 +223,12 @@ function HalfScoresTable({
                 </td>
               );
             })}
-            <td className="text-center py-1 tabular-nums font-bold" style={{ color: homeTeam.primaryColor }}>
+            <td className="text-center py-1 tabular-nums font-bold" style={{ color: homeColor }}>
               {homeTeam.score}
             </td>
           </tr>
           <tr>
-            <td className="text-left py-1 font-medium" style={{ color: awayTeam.primaryColor }}>
+            <td className="text-left py-1 font-medium" style={{ color: awayColor }}>
               {awayTeam.shortName}
             </td>
             {periods.map((p) => {
@@ -249,7 +248,7 @@ function HalfScoresTable({
                 </td>
               );
             })}
-            <td className="text-center py-1 tabular-nums font-bold" style={{ color: awayTeam.primaryColor }}>
+            <td className="text-center py-1 tabular-nums font-bold" style={{ color: awayColor }}>
               {awayTeam.score}
             </td>
           </tr>

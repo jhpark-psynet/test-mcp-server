@@ -9,6 +9,7 @@ from server.models import (
     WIDGET_TOOL_INPUT_SCHEMA,
     GET_GAMES_BY_SPORT_SCHEMA,
     GET_GAME_DETAILS_SCHEMA,
+    GET_PLAYER_SEASON_STATS_SCHEMA,
 )
 from server.services.widget_registry import build_widgets
 
@@ -19,6 +20,7 @@ def build_tools(
     cfg: Config,
     get_games_by_sport_handler=None,
     get_game_details_handler=None,
+    get_player_season_stats_handler=None,
 ) -> List[ToolDefinition]:
     """Build list of available tools (both widget-based and text-based).
 
@@ -26,6 +28,7 @@ def build_tools(
         cfg: Server configuration
         get_games_by_sport_handler: Sports game list handler function
         get_game_details_handler: Game details (widget) handler function
+        get_player_season_stats_handler: Player season stats handler function
 
     Returns:
         List of ToolDefinition instances
@@ -89,6 +92,31 @@ def build_tools(
                 handler=get_game_details_handler,
                 invoking="Loading game details...",
                 invoked="Game details loaded",
+            )
+        )
+
+    # get_player_season_stats: Text-based tool for player season statistics
+    if get_player_season_stats_handler:
+        tools.append(
+            ToolDefinition(
+                name="get_player_season_stats",
+                title="Player Season Stats",
+                description=(
+                    f"[v{cfg.description_version}] Get detailed season statistics for a soccer player. "
+                    "Returns comprehensive stats including:"
+                    "\n- Passing: total passes, accuracy, final third passes, through balls"
+                    "\n- Shooting: goals, shots, shot accuracy, open play goals"
+                    "\n- Possession: touches, carries, progressive carries"
+                    "\n- Duel: duels won/lost, tackles, contests"
+                    "\n- Defense: ball recoveries, possession won"
+                    "\n- Appearance: minutes played, substitute appearances"
+                    "\n\nRequired parameters: league_id, season_id, team_id, player_id"
+                    "\n\nCurrently supports soccer only."
+                ),
+                input_schema=GET_PLAYER_SEASON_STATS_SCHEMA,
+                handler=get_player_season_stats_handler,
+                invoking="Fetching player season stats...",
+                invoked="Player season stats retrieved",
             )
         )
 

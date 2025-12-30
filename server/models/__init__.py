@@ -5,9 +5,11 @@ from server.models.schemas import (
     WidgetToolInput,
     GetGamesBySportInput,
     GetGameDetailsInput,
+    GetPlayerSeasonStatsInput,
     WIDGET_TOOL_INPUT_SCHEMA,
     GET_GAMES_BY_SPORT_SCHEMA,
     GET_GAME_DETAILS_SCHEMA,
+    GET_PLAYER_SEASON_STATS_SCHEMA,
 )
 
 __all__ = [
@@ -16,7 +18,9 @@ __all__ = [
     "WidgetToolInput",
     "GetGamesBySportInput",
     "GetGameDetailsInput",
+    "GetPlayerSeasonStatsInput",
     "WIDGET_TOOL_INPUT_SCHEMA",
     "GET_GAMES_BY_SPORT_SCHEMA",
     "GET_GAME_DETAILS_SCHEMA",
+    "GET_PLAYER_SEASON_STATS_SCHEMA",
 ]
