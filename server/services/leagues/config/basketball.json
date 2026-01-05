@@ -1,0 +1,21 @@
+{
+  "version": "2025-01",
+  "sport": "basketball",
+  "leagues": {
+    "KBL": "32",
+    "WKBL": "33",
+    "NBA": "OT313",
+    "WNBA": "OT314",
+    "CBA": "OT3110",
+    "NBA Summer League": "OT3584",
+    "NBL": "OT330",
+    "유로리그 농구": "OT315",
+    "Liga ACB": "OT33",
+    "B.리그 (일본 농구)": "EB181298",
+    "CBA (중국 농구)": "EB182319",
+    "WCBA (중국 여자농구)": "EB182005",
+    "필리핀컵 (필리핀 농구)": "EB1827",
+    "동아시아 슈퍼리그(EASL)": "L063005",
+    "Basketball Champions League": "OT3239"
+  }
+}

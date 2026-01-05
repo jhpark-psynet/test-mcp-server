@@ -12,7 +12,9 @@ from server.services.sports.soccer.mock_data import (
     MOCK_SOCCER_LINEUP,
     MOCK_SOCCER_PLAYER_SEASON_STATS,
     MOCK_SOCCER_TEAM_RANK,
+    MOCK_SOCCER_TEAM_VS_LIST,
 )
+from server.services.leagues import load_league_config
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,14 @@ class SoccerClient(BaseSportsClient):
     def get_sport_name(self) -> str:
         """Return the sport name."""
         return "soccer"
+
+    def get_league_id_map(self) -> Dict[str, str]:
+        """Return soccer league name -> ID mapping from config file."""
+        return load_league_config("soccer")
+
+    def get_default_league(self) -> str:
+        """Return default league for soccer."""
+        return "프리미어리그"
 
     @property
     def endpoint_config(self):
@@ -247,4 +257,61 @@ class SoccerClient(BaseSportsClient):
             return rankings
         except Exception as e:
             logger.error(f"Failed to fetch team rankings from API: {e}")
+            raise
+
+    async def get_team_vs_list(
+        self,
+        season_id: str,
+        league_id: str,
+        game_id: str,
+        home_team_id: str,
+        away_team_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Get team vs team comparison data (head-to-head) for a soccer game.
+
+        Args:
+            season_id: Season ID (e.g., '2025')
+            league_id: League ID (e.g., 'OT22187')
+            game_id: Game ID
+            home_team_id: Home team ID
+            away_team_id: Away team ID
+
+        Returns:
+            Team comparison data or None
+
+        Raises:
+            ValueError: Comparison data not found
+        """
+        if self.use_mock:
+            data = MOCK_SOCCER_TEAM_VS_LIST.get(game_id)
+
+            if data is None:
+                logger.warning(f"[MOCK] Team vs list not found for game {game_id}")
+                return None
+
+            logger.info(f"[MOCK] Retrieved soccer team vs list for game {game_id}")
+            return data
+
+        params = {
+            "season_id": season_id,
+            "league_id": league_id,
+            "game_id": game_id,
+            "home_team_id": home_team_id,
+            "away_team_id": away_team_id,
+        }
+
+        try:
+            endpoint = self._get_endpoint_for_operation("team_vs_list")
+            response = await self._make_request(endpoint, params)
+            data = self.mapper.map_team_vs_list(response)
+
+            if not data:
+                logger.warning(f"[REAL API] No team vs list found for game {game_id}")
+                return None
+
+            logger.info(f"[REAL API] Retrieved soccer team vs list for game {game_id}")
+            return data
+
+        except Exception as e:
+            logger.error(f"Failed to fetch soccer team vs list from API: {e}")
             raise

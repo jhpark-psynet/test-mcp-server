@@ -13,19 +13,13 @@ from server.services.sports.basketball.mock_data import (
     MOCK_BASKETBALL_TEAM_RANK,
     MOCK_BASKETBALL_TEAM_VS_LIST,
 )
+from server.services.leagues import load_league_config
 
 logger = logging.getLogger(__name__)
 
 
 class BasketballClient(BaseSportsClient):
     """Basketball Sports API client."""
-
-    # League name -> League ID mapping
-    LEAGUE_ID_MAP = {
-        "NBA": "OT313",
-        "KBL": "KBL",
-        "WKBL": "WKBL",
-    }
 
     # Team ID -> Display name mapping
     TEAM_NAME_MAP = {
@@ -65,8 +59,8 @@ class BasketballClient(BaseSportsClient):
         return BASKETBALL_ENDPOINTS
 
     def get_league_id_map(self) -> Dict[str, str]:
-        """Return basketball league name -> ID mapping."""
-        return self.LEAGUE_ID_MAP
+        """Return basketball league name -> ID mapping from config file."""
+        return load_league_config("basketball")
 
     def get_team_name_map(self) -> Dict[str, str]:
         """Return basketball team ID -> name mapping."""
