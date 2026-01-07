@@ -10,8 +10,7 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
   const [activeTab, setActiveTab] = useState<'home' | 'away'>('home');
   const currentTeam = activeTab === 'home' ? homeTeam : awayTeam;
 
-  const homeColor = homeTeam.primaryColor || '#3b82f6';
-  const awayColor = awayTeam.primaryColor || '#ef4444';
+  const accentColor = '#3b82f6';  // 홈/원정 구분 없이 통일된 색상
 
   if (currentTeam.players.length === 0) return null;
 
@@ -24,8 +23,8 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
             onClick={() => setActiveTab('home')}
             className="flex-1 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150"
             style={{
-              borderColor: activeTab === 'home' ? homeColor : 'transparent',
-              color: activeTab === 'home' ? homeColor : '#6b7280'
+              borderColor: activeTab === 'home' ? accentColor : 'transparent',
+              color: activeTab === 'home' ? accentColor : '#6b7280'
             }}
           >
             {homeTeam.shortName}
@@ -34,8 +33,8 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
             onClick={() => setActiveTab('away')}
             className="flex-1 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150"
             style={{
-              borderColor: activeTab === 'away' ? awayColor : 'transparent',
-              color: activeTab === 'away' ? awayColor : '#6b7280'
+              borderColor: activeTab === 'away' ? accentColor : 'transparent',
+              color: activeTab === 'away' ? accentColor : '#6b7280'
             }}
           >
             {awayTeam.shortName}
@@ -63,10 +62,7 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
                 <td className="py-1.5 px-2">
                   <div className="flex items-center gap-1">
                     <span className="text-xs w-5" style={{ color: '#6b7280' }}>{player.number}</span>
-                    <span
-                      className="text-sm"
-                      style={{ color: activeTab === 'home' ? homeColor : awayColor }}
-                    >
+                    <span className="text-sm text-gray-800">
                       {player.name}
                     </span>
                     <span className="text-xs" style={{ color: '#6b7280' }}>{player.position}</span>

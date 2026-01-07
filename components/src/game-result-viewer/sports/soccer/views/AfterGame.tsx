@@ -23,6 +23,7 @@ export function AfterGame({ data }: AfterGameProps) {
         date={data.date}
         time={data.time}
         status={data.status}
+        venue={data.venue}
         homeTeam={data.homeTeam}
         awayTeam={data.awayTeam}
       />

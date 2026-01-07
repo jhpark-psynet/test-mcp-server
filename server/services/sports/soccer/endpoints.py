@@ -19,6 +19,9 @@ SOCCER_ENDPOINTS = SportEndpointConfig(
 
         # Team rank (league standings)
         "team_rank": f"{get_api_base_path()}/soccerTeamRank",
+
+        # Team vs team comparison (head-to-head records, recent form)
+        "team_vs_list": f"{get_api_base_path()}/soccerVsInfo",
     },
     use_common={"games"},
 )

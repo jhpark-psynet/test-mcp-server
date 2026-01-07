@@ -12,7 +12,7 @@ interface TeamComparisonProps {
 
 /**
  * 양팀 비교 컴포넌트
- * - 팀 헤더 (앰블럼만 표시)
+ * - 팀 헤더 (앰블럼 + 팀명)
  * - 최근 5경기
  * - 시즌 통계 비교 (승률, 평균 득점, 필드골% 등)
  */
@@ -30,17 +30,20 @@ export function TeamComparison({
         <h3 className="text-sm font-semibold text-gray-800">양팀 비교</h3>
       </div>
 
-      {/* 팀 헤더 - 앰블럼만 크게 표시 */}
-      <div className="px-4 py-3 border-b border-gray-100">
-        <div className="flex items-center justify-center gap-8">
-          {/* 홈팀 앰블럼 */}
-          <TeamLogo team={homeTeam} size="lg" />
+      {/* 팀 헤더 */}
+      <div className="px-3 py-2 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TeamLogo team={homeTeam} size="sm" />
+            <span className="font-medium text-gray-800">{homeTeam.shortName}</span>
+          </div>
 
-          {/* VS */}
-          <span className="text-xl font-bold text-gray-400">VS</span>
+          <span className="text-gray-400">vs</span>
 
-          {/* 원정팀 앰블럼 */}
-          <TeamLogo team={awayTeam} size="lg" />
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-800">{awayTeam.shortName}</span>
+            <TeamLogo team={awayTeam} size="sm" />
+          </div>
         </div>
       </div>
 

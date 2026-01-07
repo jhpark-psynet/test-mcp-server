@@ -115,6 +115,7 @@ export interface SoccerGameData {
   date: string;
   time?: string;
   status: GameStatus;
+  venue?: string;                  // 경기장
   currentPeriod?: SoccerPeriod;    // 경기중일 때 현재 기간
   currentMinute?: number;          // 현재 경기 시간 (예: 67)
   addedTime?: number;              // 추가시간 (예: 3)
@@ -231,6 +232,7 @@ export const SoccerGameDataSchema = z.object({
   date: z.string(),
   time: z.string().optional(),
   status: GameStatusSchema,
+  venue: z.string().optional(),
   currentPeriod: SoccerPeriodSchema.optional(),
   currentMinute: z.number().optional(),
   addedTime: z.number().optional(),

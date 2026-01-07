@@ -23,7 +23,7 @@ MOCK_BASKETBALL_GAMES: Dict[str, List[Dict[str, Any]]] = {
         {
             "game_id": "KBL2025118001",
             "compe": "basketball",
-            "league_id": "KBL",
+            "league_id": "32",
             "league_name": "KBL",
             "match_date": "20251118",
             "match_time": "19:00",
@@ -39,7 +39,7 @@ MOCK_BASKETBALL_GAMES: Dict[str, List[Dict[str, Any]]] = {
         {
             "game_id": "WKBL2025118001",
             "compe": "basketball",
-            "league_id": "WKBL",
+            "league_id": "33",
             "league_name": "WKBL",
             "match_date": "20251118",
             "match_time": "17:00",

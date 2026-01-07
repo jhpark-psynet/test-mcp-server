@@ -210,6 +210,8 @@ class SoccerMapper(BaseResponseMapper):
             "HOME_AWAY": "home_away",
 
             # 선수 기본 정보
+            "PLAYER_NAME": "player_name",
+            "BACK_NO": "back_no",
             "formationPlace": "formation_place",
             "gameStarted": "game_started",
             "minsPlayed": "mins_played",
@@ -554,3 +556,120 @@ class SoccerMapper(BaseResponseMapper):
             result.append(mapped)
 
         return result
+
+    def get_team_vs_list_field_map(self) -> Dict[str, str]:
+        """Return field mapping for soccer team vs team comparison (head-to-head).
+
+        Maps API field names to internal standardized field names.
+        Based on soccerVsInfo API response structure.
+        """
+        return {
+            # IDs
+            "season_id": "season_id",
+            "league_id": "league_id",
+            "game_id": "game_id",
+            "home_team_id": "home_team_id",
+            "away_team_id": "away_team_id",
+
+            # Team rank
+            "home_team_rank": "home_rank",
+            "away_team_rank": "away_rank",
+
+            # Season record (wins/draws/losses)
+            "home_team_all_w_cn": "home_wins",
+            "home_team_all_d_cn": "home_draws",
+            "home_team_all_l_cn": "home_losses",
+            "away_team_all_w_cn": "away_wins",
+            "away_team_all_d_cn": "away_draws",
+            "away_team_all_l_cn": "away_losses",
+
+            # Recent 5 games
+            "home_team_5_w_cn": "home_recent_wins",
+            "home_team_5_d_cn": "home_recent_draws",
+            "home_team_5_l_cn": "home_recent_losses",
+            "away_team_5_w_cn": "away_recent_wins",
+            "away_team_5_d_cn": "away_recent_draws",
+            "away_team_5_l_cn": "away_recent_losses",
+            "home_team_5_wdl": "home_recent_results",
+            "away_team_5_wdl": "away_recent_results",
+
+            # Head-to-head record
+            "home_team_vs_w_cn": "home_h2h_wins",
+            "home_team_vs_d_cn": "home_h2h_draws",
+            "home_team_vs_l_cn": "home_h2h_losses",
+            "away_team_vs_w_cn": "away_h2h_wins",
+            "away_team_vs_d_cn": "away_h2h_draws",
+            "away_team_vs_l_cn": "away_h2h_losses",
+
+            # Win rates (overall, home, away)
+            "home_team_all_wra_rt": "home_win_rate",
+            "away_team_all_wra_rt": "away_win_rate",
+            "home_team_h_wra_rt": "home_home_win_rate",
+            "away_team_h_wra_rt": "away_home_win_rate",
+            "home_team_a_wra_rt": "home_away_win_rate",
+            "away_team_a_wra_rt": "away_away_win_rate",
+
+            # Scoring (득점/실점)
+            "home_team_all_r_score": "home_avg_goals_for",
+            "home_team_all_l_score": "home_avg_goals_against",
+            "away_team_all_r_score": "away_avg_goals_for",
+            "away_team_all_l_score": "away_avg_goals_against",
+
+            # Home/away specific scoring
+            "home_team_h_r_score": "home_home_goals_for",
+            "home_team_h_l_score": "home_home_goals_against",
+            "away_team_h_r_score": "away_home_goals_for",
+            "away_team_h_l_score": "away_home_goals_against",
+            "home_team_a_r_score": "home_away_goals_for",
+            "home_team_a_l_score": "home_away_goals_against",
+            "away_team_a_r_score": "away_away_goals_for",
+            "away_team_a_l_score": "away_away_goals_against",
+
+            # Average scoring
+            "home_team_all_avg_r_score": "home_avg_goals_for_per_game",
+            "home_team_all_avg_l_score": "home_avg_goals_against_per_game",
+            "away_team_all_avg_r_score": "away_avg_goals_for_per_game",
+            "away_team_all_avg_l_score": "away_avg_goals_against_per_game",
+            "home_team_h_avg_r_score": "home_home_avg_goals_for",
+            "home_team_h_avg_l_score": "home_home_avg_goals_against",
+            "away_team_h_avg_r_score": "away_home_avg_goals_for",
+            "away_team_h_avg_l_score": "away_home_avg_goals_against",
+            "home_team_a_avg_r_score": "home_away_avg_goals_for",
+            "home_team_a_avg_l_score": "home_away_avg_goals_against",
+            "away_team_a_avg_r_score": "away_away_avg_goals_for",
+            "away_team_a_avg_l_score": "away_away_avg_goals_against",
+
+            # Home record (홈에서의 성적)
+            "home_team_h_w_cn": "home_home_wins",
+            "home_team_h_d_cn": "home_home_draws",
+            "home_team_h_l_cn": "home_home_losses",
+            "away_team_h_w_cn": "away_home_wins",
+            "away_team_h_d_cn": "away_home_draws",
+            "away_team_h_l_cn": "away_home_losses",
+
+            # Away record (원정에서의 성적)
+            "home_team_a_w_cn": "home_away_wins",
+            "home_team_a_d_cn": "home_away_draws",
+            "home_team_a_l_cn": "home_away_losses",
+            "away_team_a_w_cn": "away_away_wins",
+            "away_team_a_d_cn": "away_away_draws",
+            "away_team_a_l_cn": "away_away_losses",
+        }
+
+    def map_team_vs_list(self, response: Any) -> Dict[str, Any]:
+        """Map team vs team API response to standardized format.
+
+        Args:
+            response: Raw API response
+
+        Returns:
+            Team comparison data with mapped field names
+        """
+        data = response.get("Data", {})
+        items = data.get("list", [])
+
+        if not items:
+            return {}
+
+        field_map = self.get_team_vs_list_field_map()
+        return self._apply_field_mapping(items[0], field_map)

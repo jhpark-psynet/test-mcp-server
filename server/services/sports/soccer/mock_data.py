@@ -1104,3 +1104,193 @@ MOCK_SOCCER_PLAYER_SEASON_STATS: Dict[str, List[Dict[str, Any]]] = {
         },
     ],
 }
+
+
+# Soccer team vs team comparison mock data (head-to-head)
+# Key: game_id
+MOCK_SOCCER_TEAM_VS_LIST: Dict[str, Dict[str, Any]] = {
+    # MOCK_SOCCER_001: 대한민국 vs 일본
+    "MOCK_SOCCER_001": {
+        "season_id": "2025",
+        "league_id": "OT22187",
+        "game_id": "MOCK_SOCCER_001",
+        "home_team_id": "OT21259",
+        "away_team_id": "OT22253",
+
+        # 순위
+        "home_team_rank": "1",
+        "away_team_rank": "3",
+
+        # 시즌 전체 성적 (승/무/패)
+        "home_team_all_w_cn": "8",
+        "home_team_all_d_cn": "2",
+        "home_team_all_l_cn": "1",
+        "away_team_all_w_cn": "6",
+        "away_team_all_d_cn": "3",
+        "away_team_all_l_cn": "2",
+
+        # 최근 5경기
+        "home_team_5_w_cn": "4",
+        "home_team_5_d_cn": "1",
+        "home_team_5_l_cn": "0",
+        "away_team_5_w_cn": "3",
+        "away_team_5_d_cn": "1",
+        "away_team_5_l_cn": "1",
+        "home_team_5_wdl": "WWWDW",
+        "away_team_5_wdl": "WDWLW",
+
+        # 상대전적 (최근 10경기)
+        "home_team_vs_w_cn": "5",
+        "home_team_vs_d_cn": "3",
+        "home_team_vs_l_cn": "2",
+        "away_team_vs_w_cn": "2",
+        "away_team_vs_d_cn": "3",
+        "away_team_vs_l_cn": "5",
+
+        # 승률
+        "home_team_all_wra_rt": "72.7",
+        "away_team_all_wra_rt": "54.5",
+        "home_team_h_wra_rt": "80.0",
+        "away_team_h_wra_rt": "60.0",
+        "home_team_a_wra_rt": "66.7",
+        "away_team_a_wra_rt": "50.0",
+
+        # 득점/실점
+        "home_team_all_r_score": "22",
+        "home_team_all_l_score": "8",
+        "away_team_all_r_score": "18",
+        "away_team_all_l_score": "12",
+
+        # 홈/원정 득점
+        "home_team_h_r_score": "14",
+        "home_team_h_l_score": "4",
+        "away_team_h_r_score": "10",
+        "away_team_h_l_score": "5",
+        "home_team_a_r_score": "8",
+        "home_team_a_l_score": "4",
+        "away_team_a_r_score": "8",
+        "away_team_a_l_score": "7",
+
+        # 경기당 평균 득점/실점
+        "home_team_all_avg_r_score": "2.0",
+        "home_team_all_avg_l_score": "0.73",
+        "away_team_all_avg_r_score": "1.64",
+        "away_team_all_avg_l_score": "1.09",
+        "home_team_h_avg_r_score": "2.33",
+        "home_team_h_avg_l_score": "0.67",
+        "away_team_h_avg_r_score": "1.67",
+        "away_team_h_avg_l_score": "0.83",
+        "home_team_a_avg_r_score": "1.6",
+        "home_team_a_avg_l_score": "0.8",
+        "away_team_a_avg_r_score": "1.6",
+        "away_team_a_avg_l_score": "1.4",
+
+        # 홈에서의 성적
+        "home_team_h_w_cn": "5",
+        "home_team_h_d_cn": "1",
+        "home_team_h_l_cn": "0",
+        "away_team_h_w_cn": "3",
+        "away_team_h_d_cn": "2",
+        "away_team_h_l_cn": "1",
+
+        # 원정에서의 성적
+        "home_team_a_w_cn": "3",
+        "home_team_a_d_cn": "1",
+        "home_team_a_l_cn": "1",
+        "away_team_a_w_cn": "3",
+        "away_team_a_d_cn": "1",
+        "away_team_a_l_cn": "1",
+    },
+    # MOCK_SOCCER_002: 토트넘 vs 맨체스터 시티
+    "MOCK_SOCCER_002": {
+        "season_id": "2025",
+        "league_id": "OT21306",
+        "game_id": "MOCK_SOCCER_002",
+        "home_team_id": "OT2532",
+        "away_team_id": "OT2524",
+
+        # 순위
+        "home_team_rank": "5",
+        "away_team_rank": "2",
+
+        # 시즌 전체 성적 (승/무/패)
+        "home_team_all_w_cn": "10",
+        "home_team_all_d_cn": "4",
+        "home_team_all_l_cn": "3",
+        "away_team_all_w_cn": "14",
+        "away_team_all_d_cn": "2",
+        "away_team_all_l_cn": "1",
+
+        # 최근 5경기
+        "home_team_5_w_cn": "3",
+        "home_team_5_d_cn": "1",
+        "home_team_5_l_cn": "1",
+        "away_team_5_w_cn": "4",
+        "away_team_5_d_cn": "1",
+        "away_team_5_l_cn": "0",
+        "home_team_5_wdl": "WDWLW",
+        "away_team_5_wdl": "WWWDW",
+
+        # 상대전적 (최근 10경기)
+        "home_team_vs_w_cn": "2",
+        "home_team_vs_d_cn": "1",
+        "home_team_vs_l_cn": "7",
+        "away_team_vs_w_cn": "7",
+        "away_team_vs_d_cn": "1",
+        "away_team_vs_l_cn": "2",
+
+        # 승률
+        "home_team_all_wra_rt": "58.8",
+        "away_team_all_wra_rt": "82.4",
+        "home_team_h_wra_rt": "66.7",
+        "away_team_h_wra_rt": "88.9",
+        "home_team_a_wra_rt": "50.0",
+        "away_team_a_wra_rt": "75.0",
+
+        # 득점/실점
+        "home_team_all_r_score": "32",
+        "home_team_all_l_score": "18",
+        "away_team_all_r_score": "45",
+        "away_team_all_l_score": "12",
+
+        # 홈/원정 득점
+        "home_team_h_r_score": "20",
+        "home_team_h_l_score": "8",
+        "away_team_h_r_score": "28",
+        "away_team_h_l_score": "5",
+        "home_team_a_r_score": "12",
+        "home_team_a_l_score": "10",
+        "away_team_a_r_score": "17",
+        "away_team_a_l_score": "7",
+
+        # 경기당 평균 득점/실점
+        "home_team_all_avg_r_score": "1.88",
+        "home_team_all_avg_l_score": "1.06",
+        "away_team_all_avg_r_score": "2.65",
+        "away_team_all_avg_l_score": "0.71",
+        "home_team_h_avg_r_score": "2.22",
+        "home_team_h_avg_l_score": "0.89",
+        "away_team_h_avg_r_score": "3.11",
+        "away_team_h_avg_l_score": "0.56",
+        "home_team_a_avg_r_score": "1.5",
+        "home_team_a_avg_l_score": "1.25",
+        "away_team_a_avg_r_score": "2.13",
+        "away_team_a_avg_l_score": "0.88",
+
+        # 홈에서의 성적
+        "home_team_h_w_cn": "6",
+        "home_team_h_d_cn": "2",
+        "home_team_h_l_cn": "1",
+        "away_team_h_w_cn": "8",
+        "away_team_h_d_cn": "1",
+        "away_team_h_l_cn": "0",
+
+        # 원정에서의 성적
+        "home_team_a_w_cn": "4",
+        "home_team_a_d_cn": "2",
+        "home_team_a_l_cn": "2",
+        "away_team_a_w_cn": "6",
+        "away_team_a_d_cn": "1",
+        "away_team_a_l_cn": "1",
+    },
+}

@@ -22,6 +22,7 @@ export function LiveGame({ data }: LiveGameProps) {
         date={data.date}
         time={data.time}
         status={data.status}
+        venue={data.venue}
         currentPeriod={data.currentPeriod}
         currentMinute={data.currentMinute}
         addedTime={data.addedTime}

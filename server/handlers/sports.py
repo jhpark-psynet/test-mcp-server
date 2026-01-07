@@ -326,6 +326,7 @@ async def _get_team_vs_data(
         "home_recent_games": [],
         "away_recent_games": [],
         "team_comparison": None,
+        "head_to_head": None,
     }
 
     if not client.has_operation("team_vs_list"):
@@ -400,6 +401,31 @@ async def _get_team_vs_data(
                     "avgTurnovers": safe_float(team_vs_data.get("away_avg_turnovers")),
                 },
             }
+
+            # 축구 상대전적 (head-to-head) 빌드
+            # mock 데이터: home_team_vs_w_cn, real API (mapped): home_h2h_wins
+            home_h2h_wins = safe_int(
+                team_vs_data.get("home_h2h_wins") or team_vs_data.get("home_team_vs_w_cn"), 0
+            )
+            home_h2h_draws = safe_int(
+                team_vs_data.get("home_h2h_draws") or team_vs_data.get("home_team_vs_d_cn"), 0
+            )
+            home_h2h_losses = safe_int(
+                team_vs_data.get("home_h2h_losses") or team_vs_data.get("home_team_vs_l_cn"), 0
+            )
+            away_h2h_wins = safe_int(
+                team_vs_data.get("away_h2h_wins") or team_vs_data.get("away_team_vs_w_cn"), 0
+            )
+
+            total_h2h_games = home_h2h_wins + home_h2h_draws + home_h2h_losses
+
+            if total_h2h_games > 0:
+                result["head_to_head"] = {
+                    "totalGames": total_h2h_games,
+                    "homeWins": home_h2h_wins,
+                    "awayWins": away_h2h_wins,
+                    "draws": home_h2h_draws,
+                }
 
             logger.debug(f"Team vs data: home={result['home_record']}, away={result['away_record']}")
     except Exception as e:
@@ -499,6 +525,8 @@ async def _build_scheduled_game_response(
         result["standings"] = standings
     if vs_data["team_comparison"]:
         result["teamComparison"] = vs_data["team_comparison"]
+    if vs_data["head_to_head"]:
+        result["headToHead"] = vs_data["head_to_head"]
 
     return result
 
@@ -550,8 +578,20 @@ async def _build_live_or_finished_game_response(
 
     # Build player lists (스포츠 타입에 따라 다른 포맷 사용)
     sport_type = client.get_sport_name()
+
+    # 축구의 경우 lineup에서 선수 이름/등번호를 가져와야 함
+    lineup_map: Dict[str, Dict[str, Any]] = {}
+    if sport_type == "soccer":
+        for player in home_lineup + away_lineup:
+            player_id = player.get("playerId", "")
+            if player_id:
+                lineup_map[player_id] = {
+                    "name": player.get("name", ""),
+                    "number": player.get("number", 0),
+                }
+
     home_players, away_players = _build_player_lists(
-        player_stats, home_team_id, away_team_id, sport_type
+        player_stats, home_team_id, away_team_id, sport_type, lineup_map
     )
 
     # Build game records using mapper
@@ -591,6 +631,8 @@ async def _build_live_or_finished_game_response(
         result["standings"] = standings
     if vs_data["team_comparison"]:
         result["teamComparison"] = vs_data["team_comparison"]
+    if vs_data["head_to_head"]:
+        result["headToHead"] = vs_data["head_to_head"]
     if home_lineup:
         result["homeTeam"]["lineup"] = home_lineup
     if away_lineup:
@@ -606,6 +648,7 @@ def _build_player_lists(
     home_team_id: str,
     away_team_id: str,
     sport_type: str = "basketball",
+    lineup_map: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> tuple:
     """선수 통계를 홈/어웨이 리스트로 분리.
 
@@ -614,24 +657,23 @@ def _build_player_lists(
         home_team_id: 홈팀 ID
         away_team_id: 원정팀 ID
         sport_type: 스포츠 종류 (soccer, basketball, etc.)
+        lineup_map: 축구용 선수 정보 매핑 {player_id: {name, number}}
 
     Returns:
         (home_players, away_players) 튜플
     """
-    # 스포츠별 빌더 함수 선택
-    builder_map = {
-        "soccer": _build_soccer_player_data,
-        "basketball": _build_basketball_player_data,
-    }
-    builder = builder_map.get(sport_type, _build_basketball_player_data)
-
     home_players = []
     away_players = []
 
     for player in player_stats:
         # API 응답은 대문자(TEAM_ID), 매핑 후는 소문자(team_id)
         player_team_id = player.get("team_id") or player.get("TEAM_ID", "")
-        player_data = builder(player)
+
+        # 스포츠별 빌더 함수 호출
+        if sport_type == "soccer":
+            player_data = _build_soccer_player_data(player, lineup_map)
+        else:
+            player_data = _build_basketball_player_data(player)
 
         if player_team_id == home_team_id:
             home_players.append(player_data)
@@ -645,7 +687,10 @@ def _build_player_lists(
     return home_players, away_players
 
 
-def _build_soccer_player_data(player: Dict[str, Any]) -> Dict[str, Any]:
+def _build_soccer_player_data(
+    player: Dict[str, Any],
+    lineup_map: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
     """축구 선수 개별 데이터 생성.
 
     프론트엔드 SoccerPlayerStats 인터페이스에 맞춤:
@@ -653,6 +698,10 @@ def _build_soccer_player_data(player: Dict[str, Any]) -> Dict[str, Any]:
     - goals, assists, shots, shotsOnTarget
     - passes, passAccuracy, tackles, interceptions
     - fouls, yellowCards, redCards, saves
+
+    Args:
+        player: 선수 통계 데이터 (soccerPlayerStat API)
+        lineup_map: lineup에서 가져온 선수 정보 {player_id: {name, number}}
     """
     # 포지션 변환 (formationPlace -> display position)
     formation_place = str(player.get("formation_place", player.get("formationPlace", "0")))
@@ -668,10 +717,16 @@ def _build_soccer_player_data(player: Dict[str, Any]) -> Dict[str, Any]:
     if total_passes > 0:
         pass_accuracy = f"{round(accurate_passes / total_passes * 100)}%"
 
+    # 선수 이름/등번호: lineup에서 가져오기 (soccerPlayerStat에는 없음)
+    player_id = player.get("player_id") or player.get("PLAYER_ID", "")
+    lineup_info = lineup_map.get(player_id, {}) if lineup_map else {}
+    player_name = lineup_info.get("name") or player.get("player_name") or "Unknown"
+    player_number = lineup_info.get("number") or safe_int(player.get("back_no"), 0)
+
     return {
-        # 기본 정보 (API: back_no 또는 BACK_NO)
-        "number": safe_int(player.get("back_no") or player.get("BACK_NO"), 0),
-        "name": player.get("player_name") or player.get("PLAYER_NAME", "Unknown"),
+        # 기본 정보 (lineup API에서 가져옴)
+        "number": player_number,
+        "name": player_name,
         "position": position,
         "minutes": mins_played,
 
@@ -878,3 +933,111 @@ def _calc_percentage(numerator: Any, denominator: Any) -> str:
     if denom == 0:
         return "-"
     return f"{round(num / denom * 100, 1)}%"
+
+
+# Sport code mapping
+SPORT_CODE_MAP = {
+    "soccer": 1,
+    "baseball": 2,
+    "basketball": 3,
+    "volleyball": 4,
+    "football": 5,
+    # Numeric codes also supported
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+    5: 5,
+}
+
+SPORT_NAME_MAP = {
+    1: "축구",
+    2: "야구",
+    3: "농구",
+    4: "배구",
+    5: "미식축구",
+}
+
+
+async def get_league_list_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """스포츠별 리그 목록을 조회하는 핸들러.
+
+    Args:
+        arguments: 요청 파라미터
+            - sport: 스포츠 종류 (soccer, baseball, basketball, volleyball, football 또는 1-5)
+
+    Returns:
+        리그 목록 딕셔너리
+
+    Raises:
+        ValueError: 잘못된 스포츠 종류
+    """
+    import httpx
+    from server.config import CONFIG
+
+    sport_input = arguments.get("sport", "basketball")
+
+    # Convert sport name to code
+    if isinstance(sport_input, str):
+        sport_input = sport_input.lower().strip()
+
+    sport_code = SPORT_CODE_MAP.get(sport_input)
+    if sport_code is None:
+        valid_sports = list(SPORT_CODE_MAP.keys())
+        raise ValueError(
+            f"Invalid sport: {sport_input}. Valid options: {valid_sports}"
+        )
+
+    sport_name = SPORT_NAME_MAP.get(sport_code, "Unknown")
+
+    # API 호출
+    url = f"{CONFIG.sports_api_base_url}/data3V1/livescore/leagueList"
+    params = {
+        "auth_key": CONFIG.sports_api_key,
+        "compe": sport_code,
+        "fmt": "json",
+    }
+
+    logger.info(f"Fetching league list for {sport_name} (code={sport_code})")
+
+    try:
+        async with httpx.AsyncClient(timeout=CONFIG.sports_api_timeout_s) as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+        # Parse response
+        leagues_data = data.get("Data", {}).get("list", [])
+
+        leagues = []
+        for league in leagues_data:
+            leagues.append({
+                "league_id": league.get("LEAGUE_ID", ""),
+                "name": league.get("NAME", ""),
+                "full_name": league.get("FULL_NAME") or league.get("NAME", ""),
+                "category": league.get("COMPE_NAME", ""),
+                "category_code": league.get("COMPE", ""),
+                "country_code": league.get("COUNTRY_CODE", ""),
+                "has_games": league.get("GAME_YN", "-") == "Y",
+            })
+
+        logger.info(f"Found {len(leagues)} leagues for {sport_name}")
+
+        return {
+            "sport": sport_name,
+            "sport_code": sport_code,
+            "total_count": len(leagues),
+            "leagues": leagues,
+        }
+
+    except httpx.TimeoutException:
+        logger.error(f"Timeout fetching league list for {sport_name}")
+        raise ValueError(f"API timeout while fetching {sport_name} leagues")
+
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error fetching league list: {e.response.status_code}")
+        raise ValueError(f"API error: {e.response.status_code}")
+
+    except Exception as e:
+        logger.error(f"Failed to fetch league list: {e}")
+        raise ValueError(f"Failed to fetch league list: {e}")
