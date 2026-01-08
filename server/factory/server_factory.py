@@ -394,6 +394,21 @@ def create_app(cfg: Config):
     mcp = create_mcp_server(cfg)
     app = mcp.streamable_http_app()
 
+    # Add health check endpoint
+    from starlette.routing import Route
+    from starlette.responses import JSONResponse
+
+    async def health_check(request):
+        """Health check endpoint for container orchestration."""
+        return JSONResponse({
+            "status": "healthy",
+            "service": cfg.app_name,
+            "environment": cfg.environment,
+        })
+
+    app.routes.insert(0, Route("/health", health_check, methods=["GET"]))
+    logger.info("Health check endpoint registered at /health")
+
     # Mount static files for widget assets FIRST
     try:
         from starlette.staticfiles import StaticFiles
