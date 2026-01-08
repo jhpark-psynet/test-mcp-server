@@ -16,7 +16,6 @@ from server.models import (
     WidgetToolInput,
     GetGamesBySportInput,
     GetGameDetailsInput,
-    GetPlayerSeasonStatsInput,
 )
 from server.services import (
     build_tools,
@@ -26,7 +25,6 @@ from server.services import (
 from server.handlers import (
     get_games_by_sport_handler,
     get_game_details_handler,
-    get_player_season_stats_handler,
 )
 from server.factory.metadata_builder import (
     widget_tool_meta,
@@ -63,7 +61,6 @@ def create_mcp_server(cfg: Config) -> FastMCP:
         cfg,
         get_games_by_sport_handler=get_games_by_sport_handler,
         get_game_details_handler=get_game_details_handler,
-        get_player_season_stats_handler=get_player_season_stats_handler,
     )
     tools_by_name = index_tools(tools)
     widgets_by_uri = index_widgets_by_uri(tools)
@@ -186,8 +183,6 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                 payload = GetGamesBySportInput.model_validate(arguments)
             elif tool.name == "get_game_details":
                 payload = GetGameDetailsInput.model_validate(arguments)
-            elif tool.name == "get_player_season_stats":
-                payload = GetPlayerSeasonStatsInput.model_validate(arguments)
             elif tool.has_widget:
                 payload = WidgetToolInput.model_validate(arguments)
             else:

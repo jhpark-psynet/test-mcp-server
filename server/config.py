@@ -50,6 +50,19 @@ class Config(BaseSettings):
         description="Version shown in tool descriptions"
     )
 
+    # App Submission (ChatGPT App Store)
+    privacy_policy_url: str = Field(
+        default="https://psyappi.psynet.co.kr/license/privacy.html",
+        alias="PRIVACY_POLICY_URL",
+        description="Privacy policy URL for app submission"
+    )
+
+    support_contact_email: str = Field(
+        default="livescore@psynet.co.kr",
+        alias="SUPPORT_CONTACT_EMAIL",
+        description="Support contact email for app submission"
+    )
+
     # Assets
     assets_dir: Path = Field(
         default_factory=lambda: Path(__file__).resolve().parent.parent / "components" / "assets",

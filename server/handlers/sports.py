@@ -941,13 +941,11 @@ SPORT_CODE_MAP = {
     "baseball": 2,
     "basketball": 3,
     "volleyball": 4,
-    "football": 5,
     # Numeric codes also supported
     1: 1,
     2: 2,
     3: 3,
     4: 4,
-    5: 5,
 }
 
 SPORT_NAME_MAP = {
@@ -955,7 +953,6 @@ SPORT_NAME_MAP = {
     2: "야구",
     3: "농구",
     4: "배구",
-    5: "미식축구",
 }
 
 
@@ -964,7 +961,7 @@ async def get_league_list_handler(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     Args:
         arguments: 요청 파라미터
-            - sport: 스포츠 종류 (soccer, baseball, basketball, volleyball, football 또는 1-5)
+            - sport: 스포츠 종류 (soccer, baseball, basketball, volleyball 또는 1-4)
 
     Returns:
         리그 목록 딕셔너리

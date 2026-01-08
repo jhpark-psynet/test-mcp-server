@@ -5,7 +5,6 @@ from server.services.sports.base.client import BaseSportsClient
 from server.services.sports.basketball import BasketballClient
 from server.services.sports.soccer import SoccerClient
 from server.services.sports.volleyball import VolleyballClient
-from server.services.sports.football import FootballClient
 
 __all__ = [
     "SportsClientFactory",
@@ -13,7 +12,6 @@ __all__ = [
     "BasketballClient",
     "SoccerClient",
     "VolleyballClient",
-    "FootballClient",
 ]
 
 
@@ -30,7 +28,6 @@ class SportsClientFactory:
         "basketball": BasketballClient,
         "soccer": SoccerClient,
         "volleyball": VolleyballClient,
-        "football": FootballClient,
     }
 
     @classmethod
@@ -67,11 +64,11 @@ class SportsClientFactory:
     @classmethod
     def create_client(
         cls, sport: str
-    ) -> Union[BasketballClient, SoccerClient, VolleyballClient, FootballClient]:
+    ) -> Union[BasketballClient, SoccerClient, VolleyballClient]:
         """Create a sport-specific API client.
 
         Args:
-            sport: Sport name (basketball, soccer, volleyball, football)
+            sport: Sport name (basketball, soccer, volleyball)
 
         Returns:
             Sport-specific client instance

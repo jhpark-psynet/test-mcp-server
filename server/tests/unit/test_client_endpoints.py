@@ -80,7 +80,6 @@ class TestFactoryWithRegistry:
         assert "basketball" in sports
         assert "soccer" in sports
         assert "volleyball" in sports
-        assert "football" in sports
 
     def test_create_all_sports(self):
         """Factory creates all registered sports."""

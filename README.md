@@ -9,6 +9,7 @@ test-mcp-server/
 ├── server/                      # Python FastMCP server (Modularized!)
 │   ├── main.py                 # Entry point (32 lines!)
 │   ├── config.py               # Configuration (Pydantic BaseSettings)
+│   ├── errors.py               # Error definitions
 │   ├── logging_config.py       # Logging setup
 │   ├── models/                 # Domain models
 │   │   ├── widget.py          # Widget dataclass
@@ -18,14 +19,12 @@ test-mcp-server/
 │   │   ├── asset_loader.py    # HTML asset loading
 │   │   ├── widget_registry.py # Widget registry
 │   │   ├── tool_registry.py   # Tool registry
-│   │   ├── response_formatter.py  # API formatters
-│   │   ├── api_client.py      # ExternalApiClient (generic async)
 │   │   ├── cache.py           # TTL cache for API responses
-│   │   ├── exceptions.py      # Custom exceptions
 │   │   └── sports/            # Modular Sports API (Phase 6)
 │   │       ├── __init__.py    # SportsClientFactory
 │   │       ├── base/          # Base classes
 │   │       │   ├── client.py  # BaseSportsClient
+│   │       │   ├── endpoints.py # Common endpoints
 │   │       │   └── mapper.py  # BaseResponseMapper
 │   │       ├── basketball/    # Basketball module
 │   │       ├── soccer/        # Soccer module
@@ -37,7 +36,14 @@ test-mcp-server/
 │   │   ├── safe_wrapper.py    # SafeFastMCPWrapper (Phase 2)
 │   │   ├── server_factory.py  # MCP server creation
 │   │   └── metadata_builder.py # OpenAI metadata
-│   ├── main.py.backup          # Original (933 lines)
+│   ├── tests/                  # Integration tests
+│   │   ├── test_mcp.py        # MCP integration tests
+│   │   ├── test_sports_api_integration.py  # Sports API tests
+│   │   ├── test_sports_tools.py  # Sports tools tests
+│   │   ├── test_environment.py   # Environment tests
+│   │   └── unit/              # Unit tests
+│   │       ├── test_endpoints.py
+│   │       └── test_client_endpoints.py
 │   └── requirements.txt
 ├── components/                  # React UI components
 │   ├── src/                    # React source code
@@ -49,14 +55,15 @@ test-mcp-server/
 │   ├── tsconfig.json
 │   ├── vite.config.ts
 │   └── build.ts                # Build script
-├── tests/                       # Test suite
+├── tests/                       # Additional tests
 │   └── test_cache.py           # Cache module tests (18 tests)
-├── test_mcp.py                  # MCP integration tests
-├── test_sports_api_integration.py  # Sports API integration tests
-├── test_environment.py          # Environment configuration tests
+├── .env.development            # Development environment
+├── .env.production             # Production environment
 ├── package.json                 # Root build scripts
 ├── API_INTEGRATION.md          # API integration guide
-├── REFACTORING_PLAN.md         # Refactoring plan (Phase 1-6 ✅)
+├── ARCHITECTURE.md             # Architecture documentation
+├── CUSTOMIZATION_GUIDE.md      # Customization guide
+├── REFACTORING_PLAN.md         # Refactoring plan (Phase 1-8 ✅)
 └── README.md
 ```
 
@@ -150,7 +157,7 @@ The server includes widgets for sports data visualization:
 
 ## Available Tools
 
-The server provides sports data MCP tools:
+The server provides 2 sports data MCP tools:
 
 ### 1. Get Games by Sport (Text Tool)
 - **Name**: `get_games_by_sport`
@@ -620,24 +627,25 @@ The project includes comprehensive test coverage:
 
 ### Unit Tests
 
-Test the API client in isolation:
+Test individual modules in isolation:
 
 ```bash
 # Activate virtual environment
 source .venv/bin/activate
 
-# Run API client unit tests
-pytest server/test_api_client.py -v
+# Run cache module tests
+pytest tests/test_cache.py -v
+
+# Run endpoint unit tests
+pytest server/tests/unit/ -v
 ```
 
-**Test Coverage** (`server/test_api_client.py`):
-- ✅ Successful API requests
-- ✅ HTTP error handling (404, 500)
-- ✅ Timeout handling
-- ✅ Connection error handling
-- ✅ Query parameter encoding
+**Test Coverage**:
+- `tests/test_cache.py`: TTL cache functionality (18 tests)
+- `server/tests/unit/test_endpoints.py`: Endpoint configuration
+- `server/tests/unit/test_client_endpoints.py`: Client endpoints
 
-**Results**: 5/5 tests passing
+**Results**: All unit tests passing
 
 ### Integration Tests
 
@@ -645,15 +653,16 @@ Test the complete MCP server:
 
 ```bash
 # Run MCP server integration tests
-.venv/bin/python test_mcp.py
+.venv/bin/python server/tests/test_mcp.py
 
-# With external API (optional)
-env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
-    EXTERNAL_API_KEY=dummy \
-    .venv/bin/python test_mcp.py
+# Run sports tools tests
+.venv/bin/python server/tests/test_sports_tools.py
+
+# Run sports API integration tests
+.venv/bin/python server/tests/test_sports_api_integration.py
 ```
 
-**Test Coverage** (`test_mcp.py`):
+**Test Coverage** (`server/tests/test_mcp.py`):
 - ✅ Widget loading
 - ✅ Tool loading (2 sports tools)
 - ✅ MCP protocol tools list
@@ -664,12 +673,12 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 
 **Results**: Tests passing for sports functionality
 
-**Sports Tools Tests** (`test_sports_tools.py`):
+**Sports Tools Tests** (`server/tests/test_sports_tools.py`):
 - ✅ get_games_by_sport handler
 - ✅ get_game_details handler
 - ✅ Data validation
 
-**Results**: 2/2 tests passing
+**Results**: All tests passing
 
 ## Tech Stack
 

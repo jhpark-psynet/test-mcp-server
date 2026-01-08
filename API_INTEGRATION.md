@@ -229,10 +229,10 @@ TODO: 에러 응답 예시를 입력하세요
 
 ```bash
 # 1. .env 파일에 API Key 설정
-echo "SPORTS_API_KEY=your_key_here" >> .env
+echo "SPORTS_API_KEY=your_key_here" >> .env.development
 
 # 2. 테스트 스크립트 실행
-.venv/bin/python test_sports_api_integration.py
+.venv/bin/python server/tests/test_sports_api_integration.py
 ```
 
 ---

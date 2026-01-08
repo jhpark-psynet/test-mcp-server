@@ -35,18 +35,32 @@ server/services/sports/
 ├── base/
 │   ├── __init__.py
 │   ├── client.py            # BaseSportsClient (추상 클래스)
-│   └── endpoints.py         # CommonEndpoints, SportEndpointConfig
+│   ├── endpoints.py         # CommonEndpoints, SportEndpointConfig
+│   └── mapper.py            # BaseResponseMapper (필드 매핑)
 ├── basketball/
+│   ├── __init__.py
 │   ├── client.py            # BasketballClient
 │   ├── endpoints.py         # BASKETBALL_ENDPOINTS
-│   ├── mapper.py            # API 응답 매핑
+│   ├── mapper.py            # BasketballMapper
 │   └── mock_data.py         # 테스트용 mock 데이터
 ├── soccer/
-│   └── ... (동일 구조)
+│   ├── __init__.py
+│   ├── client.py            # SoccerClient
+│   ├── endpoints.py         # SOCCER_ENDPOINTS
+│   ├── mapper.py            # SoccerMapper
+│   └── mock_data.py
 ├── volleyball/
-│   └── ... (동일 구조)
+│   ├── __init__.py
+│   ├── client.py            # VolleyballClient
+│   ├── endpoints.py         # VOLLEYBALL_ENDPOINTS
+│   ├── mapper.py            # VolleyballMapper
+│   └── mock_data.py
 └── football/
-    └── ... (동일 구조)
+    ├── __init__.py
+    ├── client.py            # FootballClient
+    ├── endpoints.py         # FOOTBALL_ENDPOINTS
+    ├── mapper.py            # FootballMapper
+    └── mock_data.py
 ```
 
 **핵심 클래스:**
@@ -1521,12 +1535,14 @@ curl http://localhost:8000/health
 
 1. **get_games_by_sport** (TEXT)
    - 스포츠 경기 목록 조회
-   - Input: `date`, `sport`
+   - Input: `date`, `sport`, `force_refresh` (optional)
+   - TTL 캐시: 5분
 
 2. **get_game_details** (WIDGET)
    - 경기 상세 통계 표시
    - Input: `game_id`
    - Widget: `game-result-viewer`
+   - 모든 스포츠 지원 (basketball, soccer, volleyball, football)
 
 ### 6.4 실제 사용 예시
 
@@ -1535,7 +1551,7 @@ curl http://localhost:8000/health
 npm run server
 
 # 등록된 툴 확인
-# → 2개 툴만 표시됨 (get_games_by_sport, get_game_details)
+# → 2개 툴 표시됨 (get_games_by_sport, get_game_details)
 ```
 
 ---
@@ -1980,7 +1996,7 @@ BASE_URL=https://cdn.yourdomain.com npm run build
 
 ---
 
-**마지막 업데이트**: 2025-11-30
+**마지막 업데이트**: 2026-01-07
 **작성자**: Claude Code (with junho)
 
 ## 최근 업데이트 내역

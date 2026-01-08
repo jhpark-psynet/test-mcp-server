@@ -579,7 +579,8 @@ DEBUG External API not configured, skipping external-fetch tool
 ```
 server/
 ├── main.py                 # 진입점 (32줄)
-├── config.py               # 설정 관리
+├── config.py               # 설정 관리 (Pydantic BaseSettings)
+├── errors.py               # 에러 정의
 ├── logging_config.py       # 로깅 설정
 │
 ├── models/                 # 도메인 모델
@@ -588,22 +589,33 @@ server/
 │   └── schemas.py         # Pydantic 스키마
 │
 ├── services/              # 비즈니스 로직
-│   ├── asset_loader.py
-│   ├── widget_registry.py
-│   ├── tool_registry.py
-│   ├── metadata_builder.py
-│   ├── response_formatter.py
-│   ├── api_client.py
-│   └── exceptions.py
+│   ├── asset_loader.py    # HTML 자산 로딩
+│   ├── cache.py           # TTL 캐시 (Phase 7)
+│   ├── widget_registry.py # 위젯 레지스트리
+│   ├── tool_registry.py   # 툴 레지스트리
+│   └── sports/            # 스포츠 API 모듈 (Phase 6)
+│       ├── __init__.py    # SportsClientFactory
+│       ├── base/          # 공통 기반 클래스
+│       │   ├── client.py  # BaseSportsClient
+│       │   ├── endpoints.py # 공통 엔드포인트
+│       │   └── mapper.py  # BaseResponseMapper
+│       ├── basketball/    # 농구 모듈
+│       ├── soccer/        # 축구 모듈
+│       ├── volleyball/    # 배구 모듈
+│       └── football/      # 미식축구 모듈
 │
 ├── handlers/              # 툴 핸들러
-│   ├── calculator.py      # AST 기반 안전한 계산기
-│   └── external_fetch.py  # (현재 server_factory에 통합)
+│   └── sports.py          # 스포츠 데이터 핸들러 (factory 패턴)
 │
-└── factory/               # MCP 서버 팩토리
-    ├── server_factory.py  # MCP 서버 생성
-    ├── safe_wrapper.py    # SafeFastMCPWrapper
-    └── metadata_builder.py
+├── factory/               # MCP 서버 팩토리
+│   ├── server_factory.py  # MCP 서버 생성
+│   ├── safe_wrapper.py    # SafeFastMCPWrapper
+│   └── metadata_builder.py # OpenAI 메타데이터
+│
+└── tests/                 # 테스트 스위트
+    ├── test_mcp.py        # MCP 통합 테스트
+    ├── test_sports_tools.py
+    └── unit/              # 유닛 테스트
 ```
 
 ### 의존성 방향
@@ -629,5 +641,5 @@ models/
 
 ---
 
-**마지막 업데이트**: 2025-11-04
+**마지막 업데이트**: 2026-01-07
 **작성자**: Claude Code (with junho)

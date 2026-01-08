@@ -11,7 +11,6 @@ from server.services.sports.base.endpoints import (
 from server.services.sports.basketball.endpoints import BASKETBALL_ENDPOINTS
 from server.services.sports.soccer.endpoints import SOCCER_ENDPOINTS
 from server.services.sports.volleyball.endpoints import VOLLEYBALL_ENDPOINTS
-from server.services.sports.football.endpoints import FOOTBALL_ENDPOINTS
 
 
 class TestGetApiBasePath:
@@ -298,17 +297,6 @@ class TestVolleyballEndpoints:
             assert VOLLEYBALL_ENDPOINTS.has_operation(op)
 
 
-class TestFootballEndpoints:
-    """Tests for football endpoint configuration."""
-
-    def test_sport_name(self):
-        assert FOOTBALL_ENDPOINTS.sport_name == "football"
-
-    def test_required_operations_exist(self):
-        for op in ["games", "team_stats", "player_stats"]:
-            assert FOOTBALL_ENDPOINTS.has_operation(op)
-
-
 class TestAllSportsConsistency:
     """Cross-sport consistency tests."""
 
@@ -316,7 +304,6 @@ class TestAllSportsConsistency:
         BASKETBALL_ENDPOINTS,
         SOCCER_ENDPOINTS,
         VOLLEYBALL_ENDPOINTS,
-        FOOTBALL_ENDPOINTS,
     ])
     def test_all_have_required_operations(self, config):
         """All sports have the required operations."""
@@ -328,7 +315,6 @@ class TestAllSportsConsistency:
         BASKETBALL_ENDPOINTS,
         SOCCER_ENDPOINTS,
         VOLLEYBALL_ENDPOINTS,
-        FOOTBALL_ENDPOINTS,
     ])
     def test_endpoints_start_with_slash(self, config):
         """All endpoint paths start with /."""

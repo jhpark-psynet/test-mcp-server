@@ -19,7 +19,7 @@ class GetGamesBySportInput(BaseModel):
     sport: str = Field(
         ...,
         description="Sport type to query.",
-        pattern="^(basketball|soccer|volleyball|football)$"
+        pattern="^(basketball|soccer|volleyball)$"
     )
     force_refresh: bool = Field(
         default=False,
@@ -89,7 +89,7 @@ GET_GAMES_BY_SPORT_SCHEMA: Dict[str, Any] = {
         },
         "sport": {
             "type": "string",
-            "enum": ["basketball", "soccer", "volleyball", "football"],
+            "enum": ["basketball", "soccer", "volleyball"],
             "description": "Sport type to query."
         },
         "force_refresh": {

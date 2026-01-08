@@ -74,11 +74,13 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
 - **입력**:
   - `date` (string) - 경기 날짜 (YYYYMMDD 형식)
   - `sport` (string) - 스포츠 종류 (basketball, soccer, volleyball, football)
+  - `force_refresh` (boolean, optional) - 캐시 무시하고 새로 조회
 - **출력**: 경기 일정 및 결과 (팀명, 스코어, 시간, 경기장, 경기 상태)
 - **기능**:
   - 특정 날짜의 경기 목록 조회
   - 팀명 필터링 가능 (home_team_name, away_team_name 검색)
   - 일반적인 팀 별칭 지원 (Warriors, Cavs, Thunder 등)
+  - **TTL 캐시**: 5분간 결과 캐싱으로 API 호출 감소
 - **예시**:
   - `{"date": "20251118", "sport": "basketball"}` → NBA/KBL/WKBL 경기 목록
 
@@ -92,18 +94,23 @@ React (TSX) → Vite Build → HTML/JS/CSS → MCP Server → ChatGPT Client
   - 팀 통계 (필드골, 3점슛, 자유투, 리바운드 등)
   - 선수별 상세 통계 (득점, 리바운드, 어시스트, 슈팅 성공률 등)
   - 인터랙티브 UI로 데이터 시각화
-- **제한사항**: 종료된 경기만 지원 (state='f')
+- **지원 상태**:
+  - 경기 전 (state='s'): 팀 비교, 상대전적, 순위
+  - 경기 중 (state='p'): 실시간 스코어, 현재 통계
+  - 경기 후 (state='f'): 최종 스코어, 전체 선수 통계
 - **사용법**: `get_games_by_sport`로 먼저 game_id 확인 후 사용
 
-## 5. Folder Structure (Phase 6 Complete)
+## 5. Folder Structure (Phase 8 Complete)
 
 ```
 test-mcp-server/
 ├── .venv/                          # Python 가상환경
+├── .env.development                # 개발 환경 설정
+├── .env.production                 # 프로덕션 환경 설정
 ├── server/                         # Python MCP 서버 (Modularized!)
-│   ├── main.py                    # 엔트리포인트 (933줄 → 32줄!)
-│   ├── main.py.backup             # 원본 파일 백업 (933줄)
+│   ├── main.py                    # 엔트리포인트 (32줄)
 │   ├── config.py                  # 설정 관리 (Pydantic BaseSettings)
+│   ├── errors.py                  # 에러 정의
 │   ├── logging_config.py          # 로깅 설정
 │   │
 │   ├── models/                    # 도메인 모델
@@ -115,31 +122,39 @@ test-mcp-server/
 │   ├── services/                  # 비즈니스 로직
 │   │   ├── __init__.py
 │   │   ├── asset_loader.py       # HTML 자산 로딩
+│   │   ├── cache.py              # TTL 캐시 (Phase 7)
 │   │   ├── widget_registry.py    # 위젯 빌드
 │   │   ├── tool_registry.py      # 툴 빌드 및 인덱싱
-│   │   ├── response_formatter.py # API 응답 포맷팅
-│   │   ├── api_client.py         # ExternalApiClient (httpx)
-│   │   ├── exceptions.py         # 커스텀 예외
 │   │   │
 │   │   └── sports/               # 스포츠 API (모듈화, Phase 6)
 │   │       ├── __init__.py       # SportsClientFactory
 │   │       ├── base/             # 공통 기반 클래스
+│   │       │   ├── __init__.py
 │   │       │   ├── client.py    # BaseSportsClient (HTTP 로직)
+│   │       │   ├── endpoints.py # 공통 엔드포인트 설정
 │   │       │   └── mapper.py    # BaseResponseMapper (필드 매핑)
 │   │       ├── basketball/       # 농구 전용 모듈
+│   │       │   ├── __init__.py
 │   │       │   ├── client.py    # BasketballClient
+│   │       │   ├── endpoints.py # 농구 API 엔드포인트
 │   │       │   ├── mapper.py    # BasketballMapper
 │   │       │   └── mock_data.py # 농구 Mock 데이터
 │   │       ├── soccer/           # 축구 전용 모듈
+│   │       │   ├── __init__.py
 │   │       │   ├── client.py    # SoccerClient
+│   │       │   ├── endpoints.py # 축구 API 엔드포인트
 │   │       │   ├── mapper.py    # SoccerMapper
 │   │       │   └── mock_data.py # 축구 Mock 데이터
 │   │       ├── volleyball/       # 배구 전용 모듈
+│   │       │   ├── __init__.py
 │   │       │   ├── client.py    # VolleyballClient
+│   │       │   ├── endpoints.py # 배구 API 엔드포인트
 │   │       │   ├── mapper.py    # VolleyballMapper
 │   │       │   └── mock_data.py # 배구 Mock 데이터
 │   │       └── football/         # 미식축구 전용 모듈
+│   │           ├── __init__.py
 │   │           ├── client.py    # FootballClient
+│   │           ├── endpoints.py # 미식축구 API 엔드포인트
 │   │           ├── mapper.py    # FootballMapper
 │   │           └── mock_data.py # 미식축구 Mock 데이터
 │   │
@@ -153,18 +168,28 @@ test-mcp-server/
 │   │   ├── server_factory.py     # MCP 서버 생성
 │   │   └── metadata_builder.py   # OpenAI 메타데이터
 │   │
-│   ├── test_api_client.py         # API 클라이언트 유닛 테스트
+│   ├── tests/                     # 테스트 스위트
+│   │   ├── test_mcp.py           # MCP 통합 테스트
+│   │   ├── test_mcp_get_game_details.py  # 게임 상세 테스트
+│   │   ├── test_environment.py   # 환경 설정 테스트
+│   │   ├── test_sports_api_integration.py  # Sports API 통합 테스트
+│   │   ├── test_sports_tools.py  # 스포츠 툴 테스트
+│   │   └── unit/                 # 유닛 테스트
+│   │       ├── test_endpoints.py
+│   │       └── test_client_endpoints.py
+│   │
 │   └── requirements.txt           # Python 의존성
 │
 ├── components/                     # React 컴포넌트
 │   ├── src/                       # React 소스 코드
 │   │   ├── index.css              # 글로벌 CSS (Tailwind)
+│   │   ├── vite-env.d.ts          # Vite 타입 정의
 │   │   ├── example/               # 예제 위젯 (테스트용)
 │   │   │   └── index.tsx
 │   │   └── game-result-viewer/    # 경기 결과 위젯
 │   │       ├── index.tsx          # 메인 컴포넌트
-│   │       ├── GameResultViewer.tsx  # 위젯 UI
-│   │       └── types.ts           # TypeScript 타입 정의
+│   │       ├── types.ts           # TypeScript 타입 정의
+│   │       └── mock-data.ts       # Mock 데이터
 │   │
 │   ├── assets/                    # 빌드 결과물 (생성됨)
 │   │   ├── example.html           # MCP 서버가 읽는 HTML
@@ -172,20 +197,22 @@ test-mcp-server/
 │   │   ├── example.css
 │   │   ├── game-result-viewer.html
 │   │   ├── game-result-viewer.js
-│   │   └── game-result-viewer.css
+│   │   ├── game-result-viewer.css
+│   │   └── manifest.json          # 빌드 매니페스트
 │   │
 │   ├── package.json               # Node 의존성
 │   ├── tsconfig.json              # TypeScript 설정
-│   ├── tailwind.config.ts         # Tailwind 설정
 │   ├── vite.config.ts             # Vite 설정
 │   └── build.ts                   # 빌드 스크립트
 │
+├── tests/                          # 추가 테스트
+│   └── test_cache.py              # 캐시 모듈 테스트 (18개 테스트)
+│
 ├── package.json                    # 루트 빌드 스크립트
-├── test_mcp.py                     # MCP 통합 테스트
-├── test_sports_api_integration.py  # Sports API 통합 테스트
-├── test_environment.py             # 환경 설정 테스트
 ├── API_INTEGRATION.md              # API 통합 가이드
-├── REFACTORING_PLAN.md            # 리팩토링 계획 (Phase 1-6 ✅)
+├── ARCHITECTURE.md                 # 아키텍처 문서
+├── CUSTOMIZATION_GUIDE.md          # 커스터마이징 가이드
+├── REFACTORING_PLAN.md            # 리팩토링 계획 (Phase 1-8 ✅)
 ├── IMPROVEMENT_RECOMMENDATIONS.md  # 개선 제안
 ├── README.md                       # 사용자 문서
 └── claude.md                       # 이 파일 (Claude용)
@@ -225,40 +252,59 @@ test-mcp-server/
 - ✅ 폴더 기반 구조로 가독성 및 확장성 향상
 - ✅ 통합 테스트: 모든 클라이언트 생성 및 데이터 조회 성공
 
+**Phase 7 성과** (TTL Cache):
+- ✅ 인메모리 TTL 캐시 구현 (`server/services/cache.py`)
+- ✅ 게임 목록 API 응답 캐싱 (기본 5분)
+- ✅ 최대 크기 제한 (기본 100 항목)
+- ✅ 데이터 검증 후 캐싱 (필수 필드 체크)
+- ✅ `force_refresh` 파라미터로 캐시 우회
+- ✅ 캐시 hit/miss 로깅
+- ✅ 18개 유닛 테스트 통과
+
+**Phase 8 성과** (Multi-Sport Handler):
+- ✅ `get_game_details_handler` 모든 스포츠 지원 리팩토링
+- ✅ `BaseSportsClient`에 선택적 메서드 추가 (`get_lineup`, `get_team_rank`, `get_team_vs_list`)
+- ✅ `BaseResponseMapper`에 `build_game_records()` 추상 메서드 추가
+- ✅ 스포츠별 `gameRecords` 구현 (basketball, soccer, volleyball, football)
+- ✅ `has_operation()` 체크로 동적 기능 감지
+- ✅ 핸들러 코드 감소: 713 → 624줄
+- ✅ 새 스포츠 추가 시 핸들러 수정 불필요
+
 ### 파일 역할 요약 (Refactored)
 
 | 파일 | 역할 |
 |------|------|
 | `server/main.py` | 엔트리포인트 (32줄, 로깅 + 앱 생성) |
 | `server/config.py` | Config 클래스 (Pydantic BaseSettings) |
+| `server/errors.py` | 에러 정의 |
 | `server/logging_config.py` | 구조화된 로깅 설정 |
 | `server/models/widget.py` | Widget 도메인 모델 |
 | `server/models/tool.py` | ToolDefinition 도메인 모델 |
 | `server/models/schemas.py` | Pydantic 스키마 (입력 검증) |
 | `server/services/asset_loader.py` | HTML 파일 로딩 (캐싱) |
+| `server/services/cache.py` | TTL 캐시 (Phase 7) |
 | `server/services/widget_registry.py` | 위젯 빌드 및 인덱싱 |
 | `server/services/tool_registry.py` | 툴 빌드 및 인덱싱 |
-| `server/services/response_formatter.py` | API 응답 포맷팅 |
-| `server/services/api_client.py` | ExternalApiClient (httpx async) |
-| `server/services/exceptions.py` | 커스텀 예외 클래스 |
 | `server/services/sports/__init__.py` | SportsClientFactory (Phase 6) |
 | `server/services/sports/base/client.py` | BaseSportsClient (공통 HTTP 로직) |
+| `server/services/sports/base/endpoints.py` | 공통 엔드포인트 설정 |
 | `server/services/sports/base/mapper.py` | BaseResponseMapper (공통 필드 매핑) |
-| `server/services/sports/basketball/` | BasketballClient, Mapper, Mock 데이터 |
-| `server/services/sports/soccer/` | SoccerClient, Mapper, Mock 데이터 |
-| `server/services/sports/volleyball/` | VolleyballClient, Mapper, Mock 데이터 |
-| `server/services/sports/football/` | FootballClient, Mapper, Mock 데이터 |
-| `server/handlers/sports.py` | 스포츠 데이터 핸들러 (Phase 6) |
+| `server/services/sports/basketball/` | BasketballClient, endpoints, Mapper, Mock 데이터 |
+| `server/services/sports/soccer/` | SoccerClient, endpoints, Mapper, Mock 데이터 |
+| `server/services/sports/volleyball/` | VolleyballClient, endpoints, Mapper, Mock 데이터 |
+| `server/services/sports/football/` | FootballClient, endpoints, Mapper, Mock 데이터 |
+| `server/handlers/sports.py` | 스포츠 데이터 핸들러 (factory 패턴) |
 | `server/factory/safe_wrapper.py` | SafeFastMCPWrapper (Phase 2) |
 | `server/factory/server_factory.py` | MCP 서버 생성 팩토리 |
 | `server/factory/metadata_builder.py` | OpenAI 메타데이터 생성 |
+| `server/tests/test_mcp.py` | MCP 통합 테스트 |
+| `server/tests/test_sports_api_integration.py` | Sports API 통합 테스트 |
+| `server/tests/test_environment.py` | 환경 설정 테스트 |
+| `tests/test_cache.py` | 캐시 모듈 테스트 (18개 테스트) |
 | `components/src/example/` | 예제 위젯 (테스트용) |
 | `components/src/game-result-viewer/` | 경기 결과 위젯 (스포츠 통계) |
 | `components/build.ts` | Vite 빌드 (HTML 생성) |
 | `components/assets/*.html` | MCP 리소스로 전달 |
-| `test_mcp.py` | MCP 통합 테스트 |
-| `test_sports_api_integration.py` | Sports API 통합 테스트 |
-| `test_environment.py` | 환경 설정 테스트 |
 
 ## 6. Development Guidelines
 
@@ -439,24 +485,23 @@ BASE_URL=http://your-domain.com:4444 npm run build
 
 ### Unit Tests (유닛 테스트)
 
-API 클라이언트를 독립적으로 테스트:
+캐시 모듈 및 엔드포인트 테스트:
 
 ```bash
 # 가상환경 활성화
 source .venv/bin/activate
 
-# API 클라이언트 유닛 테스트 실행
-pytest server/test_api_client.py -v
+# 캐시 모듈 유닛 테스트 실행
+pytest tests/test_cache.py -v
+
+# 엔드포인트 유닛 테스트
+pytest server/tests/unit/ -v
 ```
 
-**테스트 커버리지** (`server/test_api_client.py`):
-- ✅ 성공적인 API 요청
-- ✅ HTTP 에러 처리 (404, 500)
-- ✅ 타임아웃 처리
-- ✅ 연결 에러 처리
-- ✅ 쿼리 파라미터 인코딩
-
-**결과**: 5/5 테스트 통과
+**테스트 커버리지**:
+- `tests/test_cache.py`: TTL 캐시 동작 (18개 테스트)
+- `server/tests/unit/test_endpoints.py`: 엔드포인트 설정
+- `server/tests/unit/test_client_endpoints.py`: 클라이언트 엔드포인트
 
 ### Integration Tests (통합 테스트)
 
@@ -464,15 +509,16 @@ pytest server/test_api_client.py -v
 
 ```bash
 # MCP 서버 통합 테스트 실행
-.venv/bin/python test_mcp.py
+.venv/bin/python server/tests/test_mcp.py
 
-# 외부 API와 함께 테스트 (선택 사항)
-env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
-    EXTERNAL_API_KEY=dummy \
-    .venv/bin/python test_mcp.py
+# 스포츠 툴 테스트
+.venv/bin/python server/tests/test_sports_tools.py
+
+# Sports API 통합 테스트
+.venv/bin/python server/tests/test_sports_api_integration.py
 ```
 
-**테스트 커버리지** (`test_mcp.py`):
+**테스트 커버리지** (`server/tests/test_mcp.py`):
 - ✅ 위젯 로딩 (2개 위젯)
 - ✅ 도구 로딩 (2개 도구: get_games_by_sport, get_game_details)
 - ✅ MCP 프로토콜 도구 리스트
@@ -485,9 +531,9 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 
 ### 테스트 전략
 
-- **유닛 테스트**: httpx를 mocking하여 API 클라이언트 격리 테스트
+- **유닛 테스트**: 캐시, 엔드포인트 등 개별 모듈 테스트
 - **통합 테스트**: 실제 MCP 프로토콜 흐름 검증
-- **외부 API 테스트**: JSONPlaceholder 공개 API로 실제 HTTP 요청 검증
+- **스포츠 API 테스트**: 4개 스포츠 (basketball, soccer, volleyball, football) API 통합
 
 ## 10. Important Notes
 
@@ -525,34 +571,36 @@ env EXTERNAL_API_BASE_URL=https://jsonplaceholder.typicode.com \
 ### 현재 구현된 기능
 ✅ FastMCP 2.0 기반 MCP 서버 (레이어드 아키텍처)
 ✅ 팩토리 패턴으로 테스트 용이성 확보
-✅ 환경 변수 기반 설정 (Config 클래스)
+✅ 환경 변수 기반 설정 (Config 클래스, .env.development / .env.production)
 ✅ 구조화된 로깅 (DEBUG/INFO/WARNING 레벨)
 ✅ React 컴포넌트 빌드 파이프라인
 ✅ Tailwind CSS + Zod 통합
 ✅ Example Widget (props 전달 + 검증)
 ✅ Hot Reload (서버 자동 재시작)
-✅ Python 테스트 스크립트 (test_mcp.py)
-✅ ExternalApiClient (httpx 기반 async 클라이언트)
-✅ 커스텀 예외 클래스 (ApiTimeoutError, ApiHttpError, ApiConnectionError)
+✅ 통합 테스트 스위트 (server/tests/)
+✅ TTL 캐시 (게임 목록 API 응답 5분 캐싱)
 ✅ Sports API 통합 (4개 스포츠: basketball, soccer, volleyball, football)
-✅ get_games_by_sport 툴 (텍스트 모드)
-✅ get_game_details 툴 (Game Result Viewer 위젯)
-✅ 스포츠별 모듈화 (Factory 패턴)
+✅ get_games_by_sport 툴 (텍스트 모드, TTL 캐시)
+✅ get_game_details 툴 (Game Result Viewer 위젯, 모든 스포츠 지원)
+✅ 스포츠별 모듈화 (Factory 패턴, endpoints.py)
 
 ### 우선순위 작업
 
 #### 1. 서버 테스트
 ```bash
 # Python 테스트 스크립트 실행
-python test_mcp.py
+.venv/bin/python server/tests/test_mcp.py
 
-# 또는 가상환경에서
-.venv/bin/python test_mcp.py
+# 스포츠 툴 테스트
+.venv/bin/python server/tests/test_sports_tools.py
+
+# 캐시 테스트
+pytest tests/test_cache.py -v
 ```
 
 테스트 항목:
-- Widget 로딩
-- Tools 리스트
+- Widget 로딩 (2개)
+- Tools 리스트 (2개)
 - Resources 리스트
 - Tool 호출 (props 전달)
 - Resource 읽기
@@ -631,5 +679,5 @@ python test_mcp.py
 
 ---
 
-**마지막 업데이트**: 2025-11-28
-**프로젝트 버전**: 3.3.0 (Sports 4종목 확장, 미사용 코드 정리)
+**마지막 업데이트**: 2026-01-07
+**프로젝트 버전**: 3.4.0 (Phase 7-8 완료, 문서 동기화)
