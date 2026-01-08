@@ -48,7 +48,7 @@ node --version  # 18 이상 필요
 ```bash
 # 프로젝트를 원하는 위치에 복사
 # 예: git clone 또는 scp 등으로 복사
-cd /opt/test-mcp-server  # 또는 원하는 경로
+cd ~/apps/test-mcp-server  # 홈 디렉토리 아래에 설치
 ```
 
 ### 2. Python 가상환경 설정
@@ -174,15 +174,15 @@ After=network.target
 
 [Service]
 Type=exec
-User=root
-WorkingDirectory=/opt/test-mcp-server
+User=username
+WorkingDirectory=/home/username/apps/test-mcp-server
 Environment="ENV=production"
-ExecStart=/opt/test-mcp-server/.venv/bin/gunicorn server.main:app \
+ExecStart=/home/username/apps/test-mcp-server/.venv/bin/gunicorn server.main:app \
   --worker-class uvicorn.workers.UvicornWorker \
   --workers 4 \
   --bind 0.0.0.0:8000 \
-  --access-logfile /opt/test-mcp-server/logs/access.log \
-  --error-logfile /opt/test-mcp-server/logs/error.log
+  --access-logfile /home/username/apps/test-mcp-server/logs/access.log \
+  --error-logfile /home/username/apps/test-mcp-server/logs/error.log
 ExecReload=/bin/kill -s HUP $MAINPID
 Restart=on-failure
 RestartSec=5
@@ -192,7 +192,7 @@ WantedBy=multi-user.target
 EOF
 ```
 
-> **참고**: `WorkingDirectory`와 `ExecStart` 경로를 실제 설치 경로에 맞게 수정하세요.
+> **참고**: `username`을 실제 사용자명으로 변경하세요. (예: `/home/jhpark/apps/test-mcp-server`)
 
 ```bash
 # systemd 데몬 리로드
@@ -441,15 +441,16 @@ Gunicorn 로그는 logrotate로 관리할 수 있습니다:
 
 ```bash
 # /etc/logrotate.d/mcp-server
+# username을 실제 사용자명으로 변경하세요
 cat > /etc/logrotate.d/mcp-server << 'EOF'
-/opt/test-mcp-server/logs/*.log {
+/home/username/apps/test-mcp-server/logs/*.log {
     daily
     rotate 7
     compress
     delaycompress
     missingok
     notifempty
-    create 644 root root
+    create 644 username username
     postrotate
         systemctl reload mcp-server > /dev/null 2>&1 || true
     endscript
