@@ -436,8 +436,20 @@ def create_app(cfg: Config):
             allow_headers=list(cfg.cors_allow_headers),
             allow_credentials=cfg.cors_allow_credentials,
         )
-        logger.debug("CORS middleware applied")
+        logger.debug(f"CORS middleware applied: origins={cfg.cors_allow_origins}")
     except Exception as e:
         logger.debug(f"CORS middleware not applied: {e}")
+
+    # Add Rate Limiting middleware (보안: 요청 제한)
+    try:
+        from server.middleware import RateLimitMiddleware
+
+        app.add_middleware(
+            RateLimitMiddleware,
+            requests_per_minute=cfg.rate_limit_per_minute,
+            enabled=cfg.rate_limit_enabled,
+        )
+    except Exception as e:
+        logger.warning(f"Rate limiting middleware not applied: {e}")
 
     return app

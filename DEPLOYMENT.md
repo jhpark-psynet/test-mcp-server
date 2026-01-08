@@ -9,6 +9,7 @@
 - [실행](#실행)
 - [프로세스 관리](#프로세스-관리)
 - [환경 변수](#환경-변수)
+- [보안 설정](#보안-설정)
 - [Health Check](#health-check)
 - [로그 관리](#로그-관리)
 - [문제 해결](#문제-해결)
@@ -246,6 +247,133 @@ sudo journalctl -u mcp-server -f
 | `SPORTS_API_BASE_URL` | Sports API 기본 URL | `https://data.psynet.co.kr` |
 | `SPORTS_API_KEY` | Sports API 인증 키 | - |
 | `USE_MOCK_SPORTS_DATA` | Mock 데이터 사용 여부 | `false` |
+| `CORS_ALLOW_ORIGINS` | 허용할 CORS 도메인 (쉼표 구분) | `*` |
+| `RATE_LIMIT_PER_MINUTE` | 분당 최대 요청 수 | `60` |
+| `RATE_LIMIT_ENABLED` | Rate Limiting 활성화 | `true` |
+
+---
+
+## 보안 설정
+
+프로덕션 환경에서는 반드시 보안 설정을 적용하세요.
+
+### 1. API 키 보호
+
+API 키는 절대로 Git에 커밋하지 마세요.
+
+```bash
+# .env.example을 복사하여 사용
+cp .env.example .env.production
+
+# 파일 권한 설정 (본인만 읽기/쓰기 가능)
+chmod 600 .env.production
+
+# 또는 환경 변수로 직접 설정
+export SPORTS_API_KEY="your-secret-key"
+```
+
+### 2. CORS 설정
+
+프로덕션에서는 허용할 도메인만 명시하세요.
+
+```bash
+# .env.production
+CORS_ALLOW_ORIGINS=https://your-domain.com,https://app.your-domain.com
+```
+
+`*`를 사용하면 모든 도메인에서 접근 가능하므로 보안에 취약합니다.
+
+### 3. Rate Limiting
+
+기본적으로 분당 60회 요청 제한이 적용됩니다.
+
+```bash
+# .env.production
+RATE_LIMIT_PER_MINUTE=60
+RATE_LIMIT_ENABLED=true
+```
+
+Rate Limit 초과 시 응답:
+```json
+{
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded. Please try again later.",
+  "retry_after_seconds": 60
+}
+```
+
+응답 헤더에서 현재 상태 확인 가능:
+- `X-RateLimit-Limit`: 분당 최대 요청 수
+- `X-RateLimit-Remaining`: 남은 요청 수
+
+### 4. HTTPS 적용 (권장)
+
+Nginx를 리버스 프록시로 사용하여 HTTPS를 적용하세요.
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /health {
+        proxy_pass http://127.0.0.1:8000/health;
+        access_log off;
+    }
+}
+```
+
+Let's Encrypt로 무료 SSL 인증서 발급:
+```bash
+apt install certbot python3-certbot-nginx
+certbot --nginx -d your-domain.com
+```
+
+### 5. 방화벽 설정
+
+필요한 포트만 개방하세요.
+
+```bash
+# UFW 사용 시
+ufw allow 22/tcp    # SSH
+ufw allow 80/tcp    # HTTP (HTTPS 리다이렉트용)
+ufw allow 443/tcp   # HTTPS
+ufw enable
+
+# 내부 포트 8000은 외부에서 직접 접근 불가
+```
+
+### 6. 보안 체크리스트
+
+배포 전 확인 사항:
+
+- [ ] `.env` 파일이 Git에 커밋되지 않았는지 확인
+- [ ] `.env.production` 파일 권한이 600인지 확인
+- [ ] `CORS_ALLOW_ORIGINS`에 특정 도메인만 설정
+- [ ] `RATE_LIMIT_ENABLED=true` 설정
+- [ ] HTTPS 적용 (Nginx + Let's Encrypt)
+- [ ] 방화벽으로 불필요한 포트 차단
+- [ ] 정기적인 보안 업데이트 적용
 
 ---
 

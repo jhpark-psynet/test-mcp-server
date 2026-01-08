@@ -109,25 +109,41 @@ class Config(BaseSettings):
         description="Component server base URL for fetching widget hashes (e.g., http://localhost:4444 or CDN URL)"
     )
 
-    # CORS
-    cors_allow_origins: Tuple[str, ...] = Field(
-        default=("*",),
-        description="CORS allowed origins"
+    # CORS (보안: 프로덕션에서는 반드시 특정 도메인만 허용)
+    cors_allow_origins_str: str = Field(
+        default="*",
+        alias="CORS_ALLOW_ORIGINS",
+        description="CORS allowed origins (comma-separated, e.g., 'https://example.com,https://app.example.com')"
     )
 
     cors_allow_methods: Tuple[str, ...] = Field(
-        default=("*",),
+        default=("GET", "POST", "OPTIONS"),
         description="CORS allowed methods"
     )
 
     cors_allow_headers: Tuple[str, ...] = Field(
-        default=("*",),
+        default=("Content-Type", "Authorization"),
         description="CORS allowed headers"
     )
 
     cors_allow_credentials: bool = Field(
         default=False,
         description="CORS allow credentials"
+    )
+
+    # Rate Limiting (보안: 요청 제한)
+    rate_limit_per_minute: int = Field(
+        default=60,
+        alias="RATE_LIMIT_PER_MINUTE",
+        ge=1,
+        le=1000,
+        description="Maximum requests per minute per client"
+    )
+
+    rate_limit_enabled: bool = Field(
+        default=True,
+        alias="RATE_LIMIT_ENABLED",
+        description="Enable rate limiting"
     )
 
     # External API
@@ -262,6 +278,15 @@ class Config(BaseSettings):
     def use_real_sports_api(self) -> bool:
         """Check if real sports API should be used."""
         return not self.use_mock_sports_data and self.has_sports_api
+
+    @computed_field
+    @property
+    def cors_allow_origins(self) -> Tuple[str, ...]:
+        """Parse CORS origins from comma-separated string."""
+        if self.cors_allow_origins_str == "*":
+            return ("*",)
+        origins = [o.strip() for o in self.cors_allow_origins_str.split(",") if o.strip()]
+        return tuple(origins) if origins else ("*",)
 
     # Compatibility properties (for backwards compatibility)
     @property
