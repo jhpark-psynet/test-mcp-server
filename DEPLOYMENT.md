@@ -308,9 +308,68 @@ Rate Limit 초과 시 응답:
 
 ### 4. HTTPS 적용 (권장)
 
-Nginx를 리버스 프록시로 사용하여 HTTPS를 적용하세요.
+Nginx를 리버스 프록시로 사용하여 HTTPS를 적용합니다.
 
-```nginx
+#### 4.1 Nginx 설치
+
+```bash
+sudo apt update && sudo apt install -y nginx
+```
+
+#### 4.2 HTTP 기본 설정
+
+```bash
+sudo tee /etc/nginx/sites-available/mcp-server << 'EOF'
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+    }
+
+    location /health {
+        proxy_pass http://127.0.0.1:8000/health;
+        access_log off;
+    }
+}
+EOF
+
+sudo ln -sf /etc/nginx/sites-available/mcp-server /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+#### 4.3 SSL 인증서 설정
+
+**방법 A: Let's Encrypt (무료)**
+
+```bash
+# Certbot 설치
+sudo apt install -y certbot python3-certbot-nginx
+
+# 인증서 발급 및 Nginx 자동 설정
+sudo certbot --nginx -d your-domain.com
+
+# 자동 갱신 확인
+sudo certbot renew --dry-run
+```
+
+**방법 B: 공인 인증서 (유료/와일드카드)**
+
+인증서 파일이 이미 있는 경우:
+```bash
+# 인증서 파일 예시
+# /usr/local/ssl/your-domain.crt     (인증서)
+# /usr/local/ssl/your-domain.key     (개인키)
+
+sudo tee /etc/nginx/sites-available/mcp-server << 'EOF'
 server {
     listen 80;
     server_name your-domain.com;
@@ -321,11 +380,9 @@ server {
     listen 443 ssl http2;
     server_name your-domain.com;
 
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_certificate /usr/local/ssl/your-domain.crt;
+    ssl_certificate_key /usr/local/ssl/your-domain.key;
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
-    ssl_prefer_server_ciphers off;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
@@ -334,6 +391,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
     }
 
     location /health {
@@ -341,12 +399,22 @@ server {
         access_log off;
     }
 }
+EOF
+
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Let's Encrypt로 무료 SSL 인증서 발급:
+#### 4.4 HTTPS 확인
+
 ```bash
-apt install certbot python3-certbot-nginx
-certbot --nginx -d your-domain.com
+# 로컬 확인
+curl -s https://localhost/health
+
+# 외부 확인
+curl -sk https://your-domain.com/health
+
+# 인증서 정보 확인
+echo | openssl s_client -connect your-domain.com:443 2>/dev/null | openssl x509 -noout -dates
 ```
 
 ### 5. 방화벽 설정
