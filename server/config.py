@@ -109,6 +109,28 @@ class Config(BaseSettings):
         description="Component server base URL for fetching widget hashes (e.g., http://localhost:4444 or CDN URL)"
     )
 
+    # Widget settings (OpenAI App Store 제출용)
+    widget_domain: str = Field(
+        default="",
+        alias="WIDGET_DOMAIN",
+        description="Unique domain for widget hosting (required for app submission)"
+    )
+
+    @computed_field
+    @property
+    def effective_widget_domain(self) -> str:
+        """Get widget domain based on environment."""
+        if self.widget_domain:
+            return self.widget_domain
+        # 환경별 기본값: 개발=mcpapps.selfwell.kr, 운영=mcp.psynet.co.kr
+        return "mcp.psynet.co.kr" if self.environment == "production" else "mcpapps.selfwell.kr"
+
+    widget_csp: str = Field(
+        default="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;",
+        alias="WIDGET_CSP",
+        description="Content Security Policy for widgets (required for app submission)"
+    )
+
     # CORS (보안: 프로덕션에서는 반드시 특정 도메인만 허용)
     cors_allow_origins_str: str = Field(
         default="*",

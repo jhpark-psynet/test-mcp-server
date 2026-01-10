@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import mcp.types as types
 
-from server.config import Config
+from server.config import Config, CONFIG
 from server.models import Widget, ToolDefinition
 
 
@@ -25,6 +25,8 @@ def widget_tool_meta(tool: ToolDefinition) -> Dict[str, Any]:
         "openai/toolInvocation/invoked": tool.invoked,
         "openai/widgetAccessible": True,
         "openai/resultCanProduceWidget": True,
+        "openai/widgetDomain": CONFIG.effective_widget_domain,
+        "openai/widgetCSP": CONFIG.widget_csp,
     }
 
 

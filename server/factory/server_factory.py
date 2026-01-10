@@ -255,6 +255,8 @@ def create_mcp_server(cfg: Config) -> FastMCP:
                     "openai/toolInvocation/invoked": tool.invoked,
                     "openai/widgetAccessible": True,
                     "openai/resultCanProduceWidget": True,
+                    "openai/widgetDomain": cfg.effective_widget_domain,
+                    "openai/widgetCSP": cfg.widget_csp,
                 }
 
                 return types.ServerResult(
