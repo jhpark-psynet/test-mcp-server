@@ -17,7 +17,7 @@ ERROR_MESSAGES: Dict[APIErrorCode, str] = {
     APIErrorCode.TIMEOUT: "The server is taking too long to respond. Please try again later.",
     APIErrorCode.NOT_FOUND: "The requested data could not be found.",
     APIErrorCode.SERVER_ERROR: "The external service is temporarily unavailable. Please try again later.",
-    APIErrorCode.CONNECTION_ERROR: "Unable to connect to the data server. The service may be temporarily unavailable.",
+    APIErrorCode.CONNECTION_ERROR: "Unable to connect. The service may be temporarily unavailable.",
     APIErrorCode.VALIDATION_ERROR: "The input provided is invalid.",
     APIErrorCode.UNKNOWN: "An unexpected error occurred. Please try again later.",
 }
