@@ -50,22 +50,10 @@ def create_mcp_server(cfg: Config) -> FastMCP:
         FastMCPInternalAPIError: If FastMCP internal API is incompatible
     """
     # Configure transport security to allow external hosts
+    # DNS rebinding protection disabled for ChatGPT App Store integration
+    # ChatGPT uses various origins (chatgpt.com, cdn.oaistatic.com, etc.)
     transport_security = TransportSecuritySettings(
-        enable_dns_rebinding_protection=True,
-        allowed_hosts=[
-            "localhost",
-            "localhost:*",
-            "127.0.0.1",
-            "127.0.0.1:*",
-            "mcp.psynet.co.kr",
-            "mcpapps.selfwell.kr",
-        ],
-        allowed_origins=[
-            "https://mcp.psynet.co.kr",
-            "https://mcpapps.selfwell.kr",
-            "https://chatgpt.com",
-            "https://chat.openai.com",
-        ],
+        enable_dns_rebinding_protection=False,
     )
 
     mcp = FastMCP(
