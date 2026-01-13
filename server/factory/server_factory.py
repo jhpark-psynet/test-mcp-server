@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import ValidationError
 
 from server.errors import APIError, format_validation_errors
@@ -48,9 +49,29 @@ def create_mcp_server(cfg: Config) -> FastMCP:
     Raises:
         FastMCPInternalAPIError: If FastMCP internal API is incompatible
     """
+    # Configure transport security to allow external hosts
+    transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            "localhost",
+            "localhost:*",
+            "127.0.0.1",
+            "127.0.0.1:*",
+            "mcp.psynet.co.kr",
+            "mcpapps.selfwell.kr",
+        ],
+        allowed_origins=[
+            "https://mcp.psynet.co.kr",
+            "https://mcpapps.selfwell.kr",
+            "https://chatgpt.com",
+            "https://chat.openai.com",
+        ],
+    )
+
     mcp = FastMCP(
         name=cfg.app_name,
         stateless_http=True,
+        transport_security=transport_security,
     )
 
     # Wrap FastMCP with safety layer
@@ -426,24 +447,6 @@ def create_app(cfg: Config):
             logger.warning(f"Assets directory not found: {cfg.assets_dir}")
     except Exception as e:
         logger.warning(f"Static files not mounted: {e}")
-
-    # Add TrustedHost middleware to allow external domains
-    try:
-        from starlette.middleware.trustedhost import TrustedHostMiddleware
-
-        app.add_middleware(
-            TrustedHostMiddleware,
-            allowed_hosts=[
-                "localhost",
-                "127.0.0.1",
-                "mcp.psynet.co.kr",
-                "mcpapps.selfwell.kr",
-                "*",  # Allow all hosts (remove in production if needed)
-            ],
-        )
-        logger.debug("TrustedHost middleware applied")
-    except Exception as e:
-        logger.warning(f"TrustedHost middleware not applied: {e}")
 
     # Add CORS middleware AFTER routes are set up (middleware wraps everything)
     try:
