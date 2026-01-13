@@ -427,6 +427,24 @@ def create_app(cfg: Config):
     except Exception as e:
         logger.warning(f"Static files not mounted: {e}")
 
+    # Add TrustedHost middleware to allow external domains
+    try:
+        from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+        app.add_middleware(
+            TrustedHostMiddleware,
+            allowed_hosts=[
+                "localhost",
+                "127.0.0.1",
+                "mcp.psynet.co.kr",
+                "mcpapps.selfwell.kr",
+                "*",  # Allow all hosts (remove in production if needed)
+            ],
+        )
+        logger.debug("TrustedHost middleware applied")
+    except Exception as e:
+        logger.warning(f"TrustedHost middleware not applied: {e}")
+
     # Add CORS middleware AFTER routes are set up (middleware wraps everything)
     try:
         from starlette.middleware.cors import CORSMiddleware
