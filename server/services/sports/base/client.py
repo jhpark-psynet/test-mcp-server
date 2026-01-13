@@ -87,8 +87,9 @@ class BaseSportsClient(ABC):
                 return response.json()
 
         except httpx.TimeoutException as e:
-            logger.error(f"Request timeout: {url}")
-            raise APIError(APIErrorCode.TIMEOUT, f"timeout={self.timeout}s") from e
+            # Includes ConnectTimeout, ReadTimeout, WriteTimeout, PoolTimeout
+            logger.error(f"Request timeout: {url} - {type(e).__name__}")
+            raise APIError(APIErrorCode.TIMEOUT, f"timeout={self.timeout}s, type={type(e).__name__}") from e
 
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error {e.response.status_code}: {e.response.text}")
@@ -100,12 +101,23 @@ class BaseSportsClient(ABC):
                 raise APIError(APIErrorCode.UNKNOWN, f"status={e.response.status_code}") from e
 
         except httpx.ConnectError as e:
+            # Connection refused, DNS failure, etc.
             logger.error(f"Connection error: {url} - {e}")
             raise APIError(APIErrorCode.CONNECTION_ERROR, str(e)) from e
 
+        except httpx.RequestError as e:
+            # Base class for all request errors (network issues, etc.)
+            logger.error(f"Request error: {url} - {type(e).__name__}: {e}")
+            raise APIError(APIErrorCode.CONNECTION_ERROR, f"{type(e).__name__}: {e}") from e
+
+        except OSError as e:
+            # Low-level socket/network errors
+            logger.error(f"OS/Network error: {url} - {e}")
+            raise APIError(APIErrorCode.CONNECTION_ERROR, f"Network error: {e}") from e
+
         except Exception as e:
-            logger.error(f"Unexpected error during API request: {e}")
-            raise APIError(APIErrorCode.UNKNOWN, str(e)) from e
+            logger.error(f"Unexpected error during API request: {type(e).__name__}: {e}")
+            raise APIError(APIErrorCode.UNKNOWN, f"{type(e).__name__}: {e}") from e
 
     def _get_endpoint_for_operation(self, operation: str) -> str:
         """Get the API endpoint for a specific operation.
