@@ -187,11 +187,14 @@ async function main() {
     artifacts.push(artifact);
   }
 
-  // Get base URL
-  const defaultBaseUrl = "http://localhost:4444";
-  const baseUrlCandidate = process.env.BASE_URL?.trim() ?? "";
-  const baseUrlRaw = baseUrlCandidate.length > 0 ? baseUrlCandidate : defaultBaseUrl;
-  const normalizedBaseUrl = baseUrlRaw.replace(/\/+$/, "") || defaultBaseUrl;
+  // Get base URL from environment variable
+  const baseUrl = process.env.BASE_URL?.trim();
+  if (!baseUrl) {
+    console.error("ERROR: BASE_URL not found in environment");
+    console.error(`Check .env.${ENV} file or set BASE_URL environment variable`);
+    process.exit(1);
+  }
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
 
   console.log(`\nUsing BASE_URL: ${normalizedBaseUrl}`);
   console.log("\nGenerating HTML files...");

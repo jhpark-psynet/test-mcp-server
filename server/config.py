@@ -131,6 +131,7 @@ class Config(BaseSettings):
             "resource_domains": [
                 f"https://*.{domain}",
                 f"https://{domain}",
+                "https://lscdn.psynet.co.kr",
             ],
         }
 
