@@ -132,6 +132,7 @@ class Config(BaseSettings):
                 f"https://*.{domain}",
                 f"https://{domain}",
                 "https://lscdn.psynet.co.kr",
+                "https://cdn.openai.com",
             ],
         }
 
