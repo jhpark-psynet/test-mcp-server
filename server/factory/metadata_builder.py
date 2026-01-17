@@ -25,8 +25,9 @@ def widget_tool_meta(tool: ToolDefinition) -> Dict[str, Any]:
         "openai/toolInvocation/invoked": tool.invoked,
         "openai/widgetAccessible": True,
         "openai/resultCanProduceWidget": True,
-        "openai/widgetDomain": CONFIG.effective_widget_domain,
+        "openai/widgetDomain": f"https://{CONFIG.effective_widget_domain}",
         "openai/widgetCSP": CONFIG.widget_csp,
+        "openai/widgetDescription": tool.description,
     }
 
 

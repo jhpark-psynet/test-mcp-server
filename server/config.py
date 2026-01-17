@@ -102,13 +102,6 @@ class Config(BaseSettings):
         description="Log file path (leave empty to disable file logging)"
     )
 
-    # Component server (for fetching widget manifest)
-    component_base_url: str = Field(
-        default="http://localhost:4444",
-        alias="COMPONENT_BASE_URL",
-        description="Component server base URL for fetching widget hashes (e.g., http://localhost:4444 or CDN URL)"
-    )
-
     # Widget settings (OpenAI App Store 제출용)
     widget_domain: str = Field(
         default="",
@@ -125,11 +118,21 @@ class Config(BaseSettings):
         # 환경별 기본값: 개발=mcpapps.selfwell.kr, 운영=mcp.psynet.co.kr
         return "mcp.psynet.co.kr" if self.environment == "production" else "mcpapps.selfwell.kr"
 
-    widget_csp: str = Field(
-        default="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;",
-        alias="WIDGET_CSP",
-        description="Content Security Policy for widgets (required for app submission)"
-    )
+    @computed_field
+    @property
+    def widget_csp(self) -> dict:
+        """Get widget CSP based on environment."""
+        domain = self.effective_widget_domain
+        return {
+            "connect_domains": [
+                f"https://*.{domain}",
+                f"https://{domain}",
+            ],
+            "resource_domains": [
+                f"https://*.{domain}",
+                f"https://{domain}",
+            ],
+        }
 
     # CORS (보안: 프로덕션에서는 반드시 특정 도메인만 허용)
     cors_allow_origins_str: str = Field(
