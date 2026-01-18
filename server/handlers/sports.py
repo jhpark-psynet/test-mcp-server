@@ -539,33 +539,45 @@ async def _build_live_or_finished_game_response(
     game_info: Optional[Dict[str, Any]],
 ) -> Dict[str, Any]:
     """진행중 또는 종료된 경기 응답 생성."""
-    # Get team stats
+    # Get team stats (may be empty for some leagues like KBL D리그)
     team_stats = await client.get_team_stats(game_id)
-    if not team_stats or len(team_stats) < 2:
-        raise ValueError(f"Team stats not found for game {game_id}")
+    has_team_stats = team_stats and len(team_stats) >= 2
 
-    home_stats = team_stats[0]
-    away_stats = team_stats[1]
+    if not has_team_stats:
+        logger.warning(
+            f"[get_game_details] No team stats for game {game_id} "
+            f"(league={basic_info['league']}). Showing basic score only."
+        )
 
-    # Update team IDs if not set
+    # Extract team stats if available, otherwise use empty dicts
+    home_stats = team_stats[0] if has_team_stats else {}
+    away_stats = team_stats[1] if has_team_stats else {}
+
+    # Update team IDs if not set (prefer basic_info, fallback to team_stats)
     home_team_id = basic_info["home_team_id"] or home_stats.get("home_team_id", "")
     away_team_id = basic_info["away_team_id"] or away_stats.get("away_team_id", "")
 
-    # Get player stats
+    # Get player stats (only if team stats are available)
     player_stats = []
-    try:
-        player_stats = await client.get_player_stats(game_id) or []
-    except Exception as e:
-        logger.warning(f"[WARN] Player stats not available for game {game_id}: {e}")
+    if has_team_stats:
+        try:
+            player_stats = await client.get_player_stats(game_id) or []
+        except Exception as e:
+            logger.warning(f"[WARN] Player stats not available for game {game_id}: {e}")
 
-    # Calculate scores from player stats if finished (basketball only)
-    # For other sports, use scores from game data directly
+    # Use scores from basic_info (game list) as the primary source
     home_score = basic_info["home_score"]
     away_score = basic_info["away_score"]
     sport_type = client.get_sport_name()
+
+    # For basketball with player stats, calculate from player data for accuracy
     if sport_type == "basketball" and basic_info["status"] == "종료" and player_stats:
-        home_score = sum(safe_int(p.get("tot_score"), 0) for p in player_stats if p.get("team_id") == home_team_id)
-        away_score = sum(safe_int(p.get("tot_score"), 0) for p in player_stats if p.get("team_id") == away_team_id)
+        calculated_home = sum(safe_int(p.get("tot_score"), 0) for p in player_stats if p.get("team_id") == home_team_id)
+        calculated_away = sum(safe_int(p.get("tot_score"), 0) for p in player_stats if p.get("team_id") == away_team_id)
+        # Only use calculated scores if they're non-zero
+        if calculated_home > 0 or calculated_away > 0:
+            home_score = calculated_home
+            away_score = calculated_away
 
     # Get additional data
     vs_data = await _get_team_vs_data(
@@ -594,8 +606,8 @@ async def _build_live_or_finished_game_response(
         player_stats, home_team_id, away_team_id, sport_type, lineup_map
     )
 
-    # Build game records using mapper
-    game_records = mapper.build_game_records(home_stats, away_stats)
+    # Build game records using mapper (empty if no team stats)
+    game_records = mapper.build_game_records(home_stats, away_stats) if has_team_stats else []
 
     result: Dict[str, Any] = {
         "sportType": client.get_sport_name(),
