@@ -5,6 +5,7 @@ from server.services.sports.base.client import BaseSportsClient
 from server.services.sports.basketball import BasketballClient
 from server.services.sports.soccer import SoccerClient
 from server.services.sports.volleyball import VolleyballClient
+from server.services.sports.baseball import BaseballClient
 
 __all__ = [
     "SportsClientFactory",
@@ -12,6 +13,7 @@ __all__ = [
     "BasketballClient",
     "SoccerClient",
     "VolleyballClient",
+    "BaseballClient",
 ]
 
 
@@ -28,7 +30,11 @@ class SportsClientFactory:
         "basketball": BasketballClient,
         "soccer": SoccerClient,
         "volleyball": VolleyballClient,
+        "baseball": BaseballClient,
     }
+
+    # Singleton instances - reused across requests to preserve per-instance caches
+    _instances: Dict[str, BaseSportsClient] = {}
 
     @classmethod
     def register(cls, sport: str, client_class: Type[BaseSportsClient]) -> None:
@@ -39,6 +45,7 @@ class SportsClientFactory:
             client_class: Client class that extends BaseSportsClient
         """
         cls._registry[sport] = client_class
+        cls._instances.pop(sport, None)  # Clear cached instance when re-registering
 
     @classmethod
     def unregister(cls, sport: str) -> None:
@@ -51,6 +58,7 @@ class SportsClientFactory:
             KeyError: If sport not registered
         """
         del cls._registry[sport]
+        cls._instances.pop(sport, None)
 
     @classmethod
     def list_sports(cls) -> list[str]:
@@ -64,14 +72,17 @@ class SportsClientFactory:
     @classmethod
     def create_client(
         cls, sport: str
-    ) -> Union[BasketballClient, SoccerClient, VolleyballClient]:
-        """Create a sport-specific API client.
+    ) -> Union[BasketballClient, SoccerClient, VolleyballClient, BaseballClient]:
+        """Return a cached sport-specific API client, creating it if needed.
+
+        Clients are singletons per sport so per-instance caches (e.g.
+        BaseballClient._total_info_cache) persist across requests.
 
         Args:
-            sport: Sport name (basketball, soccer, volleyball)
+            sport: Sport name (basketball, soccer, volleyball, baseball)
 
         Returns:
-            Sport-specific client instance
+            Sport-specific client instance (reused on subsequent calls)
 
         Raises:
             ValueError: Unsupported sport
@@ -83,4 +94,6 @@ class SportsClientFactory:
                 f"Available: {available}"
             )
 
-        return cls._registry[sport]()
+        if sport not in cls._instances:
+            cls._instances[sport] = cls._registry[sport]()
+        return cls._instances[sport]

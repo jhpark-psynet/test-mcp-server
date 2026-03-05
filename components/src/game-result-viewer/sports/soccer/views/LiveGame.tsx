@@ -1,5 +1,5 @@
 import type { SoccerGameData } from '../types';
-import { Scoreboard, GoalTimeline, GameRecords, TeamComparison, LeagueStandings } from '../components';
+import { Scoreboard, GoalTimeline, GameRecords, TeamComparison } from '../components';
 
 interface LiveGameProps {
   data: SoccerGameData;
@@ -11,7 +11,6 @@ interface LiveGameProps {
  * - 골 타임라인
  * - 경기 기록 (팀 스탯)
  * - 양팀 비교 (최근 5경기, 맞대결)
- * - 리그 순위
  */
 export function LiveGame({ data }: LiveGameProps) {
   return (
@@ -50,23 +49,11 @@ export function LiveGame({ data }: LiveGameProps) {
 
       {/* 양팀 비교 */}
       <TeamComparison
-        league={data.league}
-        date={data.date}
-        time={data.time}
-        status={data.status}
         homeTeam={data.homeTeam}
         awayTeam={data.awayTeam}
         headToHead={data.headToHead}
       />
 
-      {/* 리그 순위 */}
-      {data.standings && data.standings.length > 0 && (
-        <LeagueStandings
-          standings={data.standings}
-          homeTeam={data.homeTeam}
-          awayTeam={data.awayTeam}
-        />
-      )}
     </div>
   );
 }

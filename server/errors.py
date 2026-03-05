@@ -10,6 +10,7 @@ class APIErrorCode(Enum):
     SERVER_ERROR = "SERVER_ERROR"
     CONNECTION_ERROR = "CONNECTION_ERROR"
     VALIDATION_ERROR = "VALIDATION_ERROR"
+    DATA_NOT_FOUND = "DATA_NOT_FOUND"
     UNKNOWN = "UNKNOWN"
 
 
@@ -19,6 +20,7 @@ ERROR_MESSAGES: Dict[APIErrorCode, str] = {
     APIErrorCode.SERVER_ERROR: "The external service is temporarily unavailable. Please try again later.",
     APIErrorCode.CONNECTION_ERROR: "Unable to connect. The service may be temporarily unavailable.",
     APIErrorCode.VALIDATION_ERROR: "The input provided is invalid.",
+    APIErrorCode.DATA_NOT_FOUND: "No data available for this game.",
     APIErrorCode.UNKNOWN: "An unexpected error occurred. Please try again later.",
 }
 

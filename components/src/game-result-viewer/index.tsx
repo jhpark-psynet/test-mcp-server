@@ -4,15 +4,20 @@ import { z } from 'zod';
 import { BasketballViewer, BasketballGameDataSchema } from './sports/basketball';
 import { VolleyballViewer, VolleyballGameDataSchema } from './sports/volleyball';
 import { SoccerViewer, SoccerGameDataSchema } from './sports/soccer';
+import { BaseballViewer, BaseballGameDataSchema } from './sports/baseball';
+import { DevPanel } from './DevPanel';
 import '../index.css';
 
 // 개발용 mock 데이터 주입 (VITE_INCLUDE_MOCK=true 일 때만)
 if (import.meta.env.VITE_INCLUDE_MOCK === 'true') {
-  import('./mock-data').then(({ mockBasketballData }) => {
-    window.openai = {
-      toolOutput: mockBasketballData,
-    };
-    console.log('[DEV] Mock data injected:', mockBasketballData);
+  import('./mock-data').then((module) => {
+    const params = new URLSearchParams(window.location.search);
+    const sport = params.get('sport') || 'basketball';
+    const state = params.get('state') || module.SPORT_STATES[sport]?.[0] || '예정';
+    const key = `${sport}_${state}`;
+    const data = module.MOCK_DATA_MAP[key] ?? module.mockBasketballData;
+    window.openai = { toolOutput: data };
+    console.log(`[DEV] Mock injected: ${key}`, data);
   });
 }
 
@@ -76,8 +81,7 @@ const GameDataSchema = z.discriminatedUnion('sportType', [
   BasketballGameDataSchema,
   VolleyballGameDataSchema,
   SoccerGameDataSchema,
-  // 추후 다른 스포츠 스키마 추가
-  // BaseballGameDataSchema,
+  BaseballGameDataSchema,
 ]);
 
 type GameData = z.infer<typeof GameDataSchema>;
@@ -125,9 +129,8 @@ function SportViewer({ data }: { data: GameData }) {
       return <VolleyballViewer data={data} />;
     case 'soccer':
       return <SoccerViewer data={data} />;
-    // 추후 다른 스포츠 뷰어 추가
-    // case 'baseball':
-    //   return <BaseballViewer data={data} />;
+    case 'baseball':
+      return <BaseballViewer data={data} />;
     default:
       return <UnsupportedSport sportType={(data as any).sportType} />;
   }
@@ -196,18 +199,49 @@ function GameResultViewerApp() {
     };
   }, []);
 
+  // DevPanel에서 mock 데이터 변경 시 직접 state 업데이트
+  const handleDevDataChange = (rawData: unknown) => {
+    try {
+      const validatedData = GameDataSchema.parse(rawData);
+      setGameData(validatedData);
+      setError(null);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const errorMessage = err.errors
+          .map((e) => `${e.path.join('.')}: ${e.message}`)
+          .join('\n');
+        setError(errorMessage);
+      } else {
+        setError(String(err));
+      }
+    }
+  };
+
   if (error) {
-    return <ErrorFallback error={error} />;
+    return (
+      <>
+        <DevPanel onDataChange={handleDevDataChange} />
+        <ErrorFallback error={error} />
+      </>
+    );
   }
 
   if (!gameData) {
-    return <Loading />;
+    return (
+      <>
+        <DevPanel onDataChange={handleDevDataChange} />
+        <Loading />
+      </>
+    );
   }
 
   return (
-    <div style={{ maxWidth: '420px', margin: '0 auto' }}>
-      <SportViewer data={gameData} />
-    </div>
+    <>
+      <DevPanel onDataChange={handleDevDataChange} />
+      <div style={{ maxWidth: '420px', margin: '0 auto' }}>
+        <SportViewer data={gameData} />
+      </div>
+    </>
   );
 }
 

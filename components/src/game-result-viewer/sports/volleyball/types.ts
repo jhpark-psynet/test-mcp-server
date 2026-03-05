@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-// 지원하는 배구 리그
-export type VolleyballLeague = 'V리그남자' | 'V리그여자' | 'VNL남자' | 'VNL여자';
+// 배구 리그 (API에서 반환하는 값 그대로 사용)
+export type VolleyballLeague = string;
 
 // 경기 상태
-export type GameStatus = '경기전' | '경기중' | '경기종료';
+export type GameStatus = '예정' | '진행중' | '종료';
 
 // 최근 경기 결과
 export type RecentGameResult = 'W' | 'L';
@@ -172,9 +172,9 @@ export const LeagueStandingsSchema = z.object({
   teams: z.array(StandingsTeamSchema),
 });
 
-export const GameStatusSchema = z.enum(['경기전', '경기중', '경기종료']);
+export const GameStatusSchema = z.enum(['예정', '진행중', '종료']);
 
-export const VolleyballLeagueSchema = z.enum(['V리그남자', 'V리그여자', 'VNL남자', 'VNL여자']);
+export const VolleyballLeagueSchema = z.string();
 
 export const VolleyballGameDataSchema = z.object({
   sportType: z.literal('volleyball'),

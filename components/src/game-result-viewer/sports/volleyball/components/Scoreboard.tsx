@@ -23,22 +23,19 @@ export function Scoreboard({
   const awayColor = awayTeam.primaryColor;
   const homeLeads = homeTeam.setsWon > awayTeam.setsWon;
   const awayLeads = awayTeam.setsWon > homeTeam.setsWon;
-  const isLive = status === '경기중';
-  const isFinished = status === '경기종료';
+  const isLive = status === '진행중';
+  const isFinished = status === '종료';
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
       {/* 헤더 */}
       <div className="flex justify-between items-center px-3 py-2 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <span
-            className="font-medium text-sm px-2 py-0.5 rounded text-white"
-            style={{ background: `linear-gradient(135deg, ${homeColor}, ${awayColor})` }}
-          >
+          <span className="font-bold text-sm text-blue-600">
             {league}
           </span>
           <span style={{ color: '#6b7280' }} className="text-sm">{date}</span>
-          {time && status === '경기전' && (
+          {time && status === '예정' && (
             <span style={{ color: '#4b5563' }} className="text-sm">{time}</span>
           )}
           {currentSet && isLive && (
@@ -65,14 +62,14 @@ export function Scoreboard({
             className="text-3xl font-bold tabular-nums"
             style={{ color: homeLeads ? homeColor : '#9ca3af' }}
           >
-            {status === '경기전' ? '-' : homeTeam.setsWon}
+            {status === '예정' ? '-' : homeTeam.setsWon}
           </span>
           <span className="text-xl" style={{ color: '#6b7280' }}>vs</span>
           <span
             className="text-3xl font-bold tabular-nums"
             style={{ color: awayLeads ? awayColor : '#9ca3af' }}
           >
-            {status === '경기전' ? '-' : awayTeam.setsWon}
+            {status === '예정' ? '-' : awayTeam.setsWon}
           </span>
         </div>
 
@@ -87,7 +84,7 @@ export function Scoreboard({
       </div>
 
       {/* 세트별 점수 */}
-      {status !== '경기전' && homeTeam.setScores && awayTeam.setScores && (
+      {status !== '예정' && homeTeam.setScores && awayTeam.setScores && (
         <SetScoresTable
           homeTeam={homeTeam}
           awayTeam={awayTeam}
@@ -101,16 +98,16 @@ export function Scoreboard({
 
 function StatusBadge({ status }: { status: GameStatus }) {
   switch (status) {
-    case '경기중':
+    case '진행중':
       return (
         <span className="text-sm font-medium flex items-center gap-1" style={{ color: '#dc2626' }}>
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#dc2626' }} />
           LIVE
         </span>
       );
-    case '경기종료':
+    case '종료':
       return <span className="text-sm font-medium" style={{ color: '#4b5563' }}>종료</span>;
-    case '경기전':
+    case '예정':
       return <span className="text-sm font-medium" style={{ color: '#2563eb' }}>예정</span>;
     default:
       return null;

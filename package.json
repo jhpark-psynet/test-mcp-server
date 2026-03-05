@@ -5,7 +5,7 @@
   "scripts": {
     "install:all": "npm run install:components && npm run install:server",
     "install:components": "cd components && npm install",
-    "install:server": "uv pip install -r server/requirements.txt",
+    "install:server": "uv venv --python 3.12 && uv pip install -r server/requirements.txt",
     "build": "cd components && npm run build",
     "build:verify": "cd components && npm run verify",
     "build:watch": "cd components && npm run build:watch",
@@ -14,6 +14,7 @@
     "server:dev": "ENV=development .venv/bin/uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload",
     "server:prod": "ENV=production .venv/bin/uvicorn server.main:app --host 0.0.0.0 --port 8000",
     "dev": "npm run build && npm run server:dev",
+    "dev:widget": "cd components && VITE_INCLUDE_MOCK=true npx vite",
     "start:prod": "npm run build && npm run server:prod"
   },
   "keywords": [

@@ -1,5 +1,5 @@
 import type { BasketballGameData } from '../types';
-import { Scoreboard, TeamComparison, LeagueStandings } from '../components';
+import { Scoreboard, TeamComparison } from '../components';
 
 interface BeforeGameProps {
   data: BasketballGameData;
@@ -32,14 +32,6 @@ export function BeforeGame({ data }: BeforeGameProps) {
         teamComparison={data.teamComparison}
       />
 
-      {/* 리그 순위 */}
-      {data.standings && data.standings.length > 0 && (
-        <LeagueStandings
-          standings={data.standings}
-          homeTeamName={data.homeTeam.shortName}
-          awayTeamName={data.awayTeam.shortName}
-        />
-      )}
     </div>
   );
 }

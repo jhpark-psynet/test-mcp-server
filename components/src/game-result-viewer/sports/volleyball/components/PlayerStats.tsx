@@ -46,9 +46,9 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
           <thead>
             <tr className="border-b border-gray-200" style={{ backgroundColor: '#f9fafb' }}>
               <th className="text-xs font-medium text-left px-2 py-1.5" style={{ color: '#4b5563' }}>선수</th>
-              <th className="text-xs font-medium text-center px-2 py-1.5 w-10" style={{ color: '#4b5563' }}>SET</th>
               <th className="text-xs font-medium text-center px-2 py-1.5 w-10" style={{ color: '#4b5563' }}>득점</th>
               <th className="text-xs font-medium text-center px-2 py-1.5 w-10" style={{ color: '#4b5563' }}>공격</th>
+              <th className="text-xs font-medium text-center px-2 py-1.5 w-12" style={{ color: '#4b5563' }}>공격%</th>
               <th className="text-xs font-medium text-center px-2 py-1.5 w-10" style={{ color: '#4b5563' }}>블킹</th>
               <th className="text-xs font-medium text-center px-2 py-1.5 w-10" style={{ color: '#4b5563' }}>서브</th>
               <th className="text-xs font-medium text-center px-2 py-1.5 w-10" style={{ color: '#4b5563' }}>디그</th>
@@ -69,9 +69,9 @@ export function PlayerStats({ homeTeam, awayTeam }: PlayerStatsProps) {
                     <span className="text-xs" style={{ color: '#6b7280' }}>{player.position}</span>
                   </div>
                 </td>
-                <td className="text-center text-sm tabular-nums px-2" style={{ color: '#1f2937' }}>{player.sets}</td>
                 <td className="text-center text-sm font-medium tabular-nums px-2" style={{ color: '#1f2937' }}>{player.points}</td>
                 <td className="text-center text-sm tabular-nums px-2" style={{ color: '#1f2937' }}>{player.kills}</td>
+                <td className="text-center text-xs tabular-nums px-2" style={{ color: '#6b7280' }}>{player.attackPct ? `${player.attackPct}%` : '-'}</td>
                 <td className="text-center text-sm tabular-nums px-2" style={{ color: '#1f2937' }}>{player.blocks}</td>
                 <td className="text-center text-sm tabular-nums px-2" style={{ color: '#1f2937' }}>{player.aces}</td>
                 <td className="text-center text-sm tabular-nums px-2" style={{ color: '#1f2937' }}>{player.digs}</td>

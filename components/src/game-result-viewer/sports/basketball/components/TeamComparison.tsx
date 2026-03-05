@@ -21,7 +21,7 @@ export function TeamComparison({
   awayTeam,
   teamComparison,
 }: TeamComparisonProps) {
-  const hasRecentGames = homeTeam.recentGames?.length || awayTeam.recentGames?.length;
+  const hasRecentGames = !!(homeTeam.recentGames?.length || awayTeam.recentGames?.length);
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">

@@ -54,7 +54,7 @@ def build_tools(
                     "or user reports incorrect information."
                     "\n\nIMPORTANT: To show game information to users (scores, stats, standings), "
                     "you MUST call get_game_details with the game_id from this tool's result."
-                    "\n\nSupported sports: basketball, soccer, volleyball"
+                    "\n\nSupported sports: basketball, soccer, volleyball, baseball"
                     "\n\nCommon team aliases:"
                     "\n- Warriors, Goldens -> Golden State (NBA)"
                     "\n- Cavs -> Cleveland (NBA)"

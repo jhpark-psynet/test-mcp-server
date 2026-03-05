@@ -156,6 +156,28 @@ class BaseSportsClient(ABC):
 
     # === Sport-specific configuration (override in subclasses) ===
 
+    def get_status_map(self) -> Dict[str, str]:
+        """Return state code -> display status mapping.
+
+        Override in subclasses to provide sport-specific status labels.
+        Default: 'B'→'예정', 'I'→'진행중', 'F'→'종료'
+        """
+        return {"F": "종료", "I": "진행중", "B": "예정"}
+
+    def get_extra_team_fields(self, team_id: str, score: int) -> Dict[str, Any]:
+        """Return sport-specific extra fields to merge into team data.
+
+        Override in subclasses for sport-specific team fields (e.g., setsWon, colors).
+        """
+        return {}
+
+    def normalize_league_name(self, league_name: str, league_id: str = "") -> str:
+        """Normalize API league name to schema-compatible display name.
+
+        Override in subclasses to map raw API league names to frontend enum values.
+        """
+        return league_name
+
     def get_league_id_map(self) -> Dict[str, str]:
         """Return league name -> league ID mapping.
 
@@ -186,6 +208,22 @@ class BaseSportsClient(ABC):
         return {}
 
     # === Optional API methods (override in subclasses that support them) ===
+
+    async def get_player_stats(
+        self,
+        game_id: str,
+        home_team_id: str = "",
+        away_team_id: str = "",
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Get player statistics for a game.
+
+        Override in subclasses that need team IDs for the player stats API
+        (e.g., volleyball requires team_id per request).
+
+        Returns:
+            List of player stats or None if not supported
+        """
+        return None
 
     async def get_lineup(
         self, game_id: str, team_id: str

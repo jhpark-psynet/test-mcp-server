@@ -33,7 +33,7 @@ export function GameRecords({ homeTeam, awayTeam, gameRecords }: GameRecordsProp
               const homeValue = typeof record.home === 'number' ? record.home : parseFloat(String(record.home)) || 0;
               const awayValue = typeof record.away === 'number' ? record.away : parseFloat(String(record.away)) || 0;
 
-              const isLowerBetter = record.label === '서브 실책' || record.label === '실책';
+              const isLowerBetter = ['서브 범실', '공격 범실', '공격 블록당함', '리시브 실패'].includes(record.label);
               const homeWins = isLowerBetter ? homeValue < awayValue : homeValue > awayValue;
               const awayWins = isLowerBetter ? awayValue < homeValue : awayValue > homeValue;
 

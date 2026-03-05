@@ -1,0 +1,11 @@
+{
+  "version": "2025-02",
+  "sport": "baseball",
+  "leagues": {
+    "KBO리그": "11",
+    "KBO 퓨처스리그": "12",
+    "MLB": "OT17",
+    "NPB": "OT18",
+    "WBC": "OT19"
+  }
+}

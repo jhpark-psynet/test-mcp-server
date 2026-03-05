@@ -1,5 +1,5 @@
 import type { VolleyballGameData } from '../types';
-import { TeamComparison, LeagueStandings } from '../components';
+import { Scoreboard, TeamComparison } from '../components';
 
 interface BeforeGameProps {
   data: VolleyballGameData;
@@ -13,25 +13,19 @@ interface BeforeGameProps {
 export function BeforeGame({ data }: BeforeGameProps) {
   return (
     <div className="flex flex-col gap-4">
-      {/* 양팀 비교 */}
-      <TeamComparison
+      <Scoreboard
         league={data.league}
         date={data.date}
         time={data.time}
         status={data.status}
         homeTeam={data.homeTeam}
         awayTeam={data.awayTeam}
+      />
+      <TeamComparison
+        homeTeam={data.homeTeam}
+        awayTeam={data.awayTeam}
         headToHead={data.headToHead}
       />
-
-      {/* 리그 순위 */}
-      {data.standings && data.standings.length > 0 && (
-        <LeagueStandings
-          standings={data.standings}
-          homeTeam={data.homeTeam}
-          awayTeam={data.awayTeam}
-        />
-      )}
     </div>
   );
 }
