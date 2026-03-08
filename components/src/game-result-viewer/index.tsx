@@ -235,11 +235,36 @@ function GameResultViewerApp() {
     );
   }
 
+  const buttonText = gameData.status === '종료'
+    ? '상세 결과 보러가기'
+    : '커뮤니티 예측 보러가기';
+
   return (
     <>
       <DevPanel onDataChange={handleDevDataChange} />
       <div style={{ maxWidth: '420px', margin: '0 auto' }}>
         <SportViewer data={gameData} />
+        <a
+          href="https://home.psynet.co.kr/livescore"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: '14px',
+            marginTop: '12px',
+            backgroundColor: 'rgb(10, 73, 104)',
+            color: 'white',
+            textAlign: 'center',
+            textDecoration: 'none',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '15px',
+            boxSizing: 'border-box',
+          }}
+        >
+          {buttonText}
+        </a>
       </div>
     </>
   );
