@@ -332,6 +332,76 @@ class BasketballClient(BaseSportsClient):
             logger.error(f"Failed to fetch basketball team rankings from API: {e}")
             raise
 
+    async def get_total_info(self, game_id: str) -> Dict[str, Any]:
+        """Get all-in-one game data from basketballGameTotalInfo endpoint.
+
+        Returns gameInfo, homeTeamInfo, awayTeamInfo, vsInfo, scoreInfo,
+        teamStat, lineup in a single API call.
+
+        Args:
+            game_id: Game ID
+
+        Returns:
+            Complete game data dict
+
+        Raises:
+            ValueError: Game not found or mock not available
+        """
+        if self.use_mock:
+            raise ValueError(
+                f"Basketball total_info mock not available for game {game_id}. "
+                "Use real API mode."
+            )
+
+        params = {"game_id": game_id, "fmt": "json"}
+
+        try:
+            endpoint = self._get_endpoint_for_operation("total_info")
+            response = await self._make_request(endpoint, params)
+            logger.debug(f"[DEBUG] basketball total_info raw for {game_id}: {str(response)[:500]}")
+
+            raw_data = response.get("Data", {})
+
+            # Response may be Data.list (dict) or Data directly
+            if isinstance(raw_data, dict):
+                list_val = raw_data.get("list")
+                if isinstance(list_val, list):
+                    data = list_val[0] if list_val else {}
+                elif isinstance(list_val, dict) and list_val:
+                    data = list_val
+                elif "gameInfo" in raw_data:
+                    data = raw_data
+                else:
+                    data = {}
+            elif isinstance(raw_data, list):
+                data = raw_data[0] if raw_data else {}
+            else:
+                data = {}
+
+            if not data or not data.get("gameInfo"):
+                raise ValueError(f"No data returned for basketball game {game_id}")
+
+            # Debug: log structure of each section
+            for section in ["gameInfo", "homeTeamInfo", "awayTeamInfo", "vsInfo", "scoreInfo", "teamStat", "lineup"]:
+                val = data.get(section)
+                if isinstance(val, dict):
+                    logger.debug(f"[STRUCT] {section} keys: {list(val.keys())}")
+                    # teamStat/lineup 는 {"home": [...], "away": [...]} 구조
+                    for sub in ["home", "away"]:
+                        sub_list = val.get(sub)
+                        if isinstance(sub_list, list) and sub_list and isinstance(sub_list[0], dict):
+                            logger.debug(f"[STRUCT] {section}.{sub}[0] keys: {list(sub_list[0].keys())}")
+                elif isinstance(val, list) and val:
+                    logger.debug(f"[STRUCT] {section}[0] keys: {list(val[0].keys()) if isinstance(val[0], dict) else val[0]}")
+                else:
+                    logger.debug(f"[STRUCT] {section}: {repr(val)[:200]}")
+
+            logger.info(f"[REAL API] Retrieved basketball total info for game {game_id}")
+            return data
+        except Exception as e:
+            logger.error(f"Failed to fetch basketball total info from API: {e}")
+            raise
+
     async def get_team_vs_list(
         self,
         season_id: str,

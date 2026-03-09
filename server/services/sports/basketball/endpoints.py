@@ -20,6 +20,9 @@ BASKETBALL_ENDPOINTS = SportEndpointConfig(
         # Team vs team comparison (recent games, records, stats)
         "team_vs_list": f"{get_api_base_path()}/basketballVsInfo",
 
+        # All-in-one game data (teams, lineup, player stats, vs info)
+        "total_info": f"{get_api_base_path()}/basketballGameTotalInfo",
+
         # Future extensibility examples (commented out):
         # "box_score": "/nba/v1/boxscore",
         # "play_by_play": "/nba/v1/playbyplay",

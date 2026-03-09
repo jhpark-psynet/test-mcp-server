@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // 농구 리그 타입
-export type BasketballLeague = 'NBA' | 'KBL' | 'WKBL';
+export type BasketballLeague = string;
 
 // 경기 상태 (서버 반환 값에 맞춤)
 export type GameStatus = '예정' | '진행중' | '종료';
@@ -241,7 +241,7 @@ export const GameStatusSchema = z.enum(['예정', '진행중', '종료']);
 
 export const BasketballGameDataSchema = z.object({
   sportType: z.literal('basketball'),
-  league: z.enum(['NBA', 'KBL', 'WKBL']),
+  league: z.string(),
   date: z.string(),
   time: z.string().optional(),
   status: GameStatusSchema,

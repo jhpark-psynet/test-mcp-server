@@ -93,6 +93,58 @@ export function Scoreboard({ league, date, time, status, venue, homeTeam, awayTe
           </div>
         </div>
       </div>
+
+      {/* 쿼터별 점수 */}
+      {status !== '예정' && (homeTeam.quarterScores || awayTeam.quarterScores) && (() => {
+        const hq = homeTeam.quarterScores;
+        const aq = awayTeam.quarterScores;
+        const otCount = Math.max(hq?.ot?.length ?? 0, aq?.ot?.length ?? 0);
+        const hTotal = homeTeam.score;
+        const aTotal = awayTeam.score;
+        return (
+          <div className="border-t border-gray-100 px-3 pb-2 overflow-x-auto">
+            <table className="w-full text-xs text-center">
+              <thead>
+                <tr className="text-gray-400">
+                  <th className="py-1 text-left font-medium w-16">팀</th>
+                  <th className="py-1 font-medium">Q1</th>
+                  <th className="py-1 font-medium">Q2</th>
+                  <th className="py-1 font-medium">Q3</th>
+                  <th className="py-1 font-medium">Q4</th>
+                  {Array.from({ length: otCount }, (_, i) => (
+                    <th key={i} className="py-1 font-medium">OT{otCount > 1 ? i + 1 : ''}</th>
+                  ))}
+                  <th className="py-1 font-semibold text-gray-600">합계</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-gray-100">
+                  <td className="py-1 text-left text-gray-600 font-medium truncate">{homeTeam.shortName}</td>
+                  <td className="py-1 text-gray-700">{hq?.q1 ?? '-'}</td>
+                  <td className="py-1 text-gray-700">{hq?.q2 ?? '-'}</td>
+                  <td className="py-1 text-gray-700">{hq?.q3 ?? '-'}</td>
+                  <td className="py-1 text-gray-700">{hq?.q4 ?? '-'}</td>
+                  {Array.from({ length: otCount }, (_, i) => (
+                    <td key={i} className="py-1 text-gray-700">{hq?.ot?.[i] ?? '-'}</td>
+                  ))}
+                  <td className="py-1 font-bold text-gray-900">{hTotal}</td>
+                </tr>
+                <tr className="border-t border-gray-100">
+                  <td className="py-1 text-left text-gray-600 font-medium truncate">{awayTeam.shortName}</td>
+                  <td className="py-1 text-gray-700">{aq?.q1 ?? '-'}</td>
+                  <td className="py-1 text-gray-700">{aq?.q2 ?? '-'}</td>
+                  <td className="py-1 text-gray-700">{aq?.q3 ?? '-'}</td>
+                  <td className="py-1 text-gray-700">{aq?.q4 ?? '-'}</td>
+                  {Array.from({ length: otCount }, (_, i) => (
+                    <td key={i} className="py-1 text-gray-700">{aq?.ot?.[i] ?? '-'}</td>
+                  ))}
+                  <td className="py-1 font-bold text-gray-900">{aTotal}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
     </div>
   );
 }

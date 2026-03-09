@@ -1,5 +1,6 @@
 import type {
   BasketballTeamInfo,
+  HeadToHeadRecord,
   RecentGameResult,
   TeamComparisonData,
 } from '../types';
@@ -8,18 +9,21 @@ interface TeamComparisonProps {
   homeTeam: BasketballTeamInfo;
   awayTeam: BasketballTeamInfo;
   teamComparison?: TeamComparisonData;
+  headToHead?: HeadToHeadRecord;
 }
 
 /**
  * 양팀 비교 컴포넌트
  * - 팀 헤더 (앰블럼 + 팀명)
  * - 최근 5경기
+ * - 상대 전적
  * - 시즌 통계 비교 (승률, 평균 득점, 필드골% 등)
  */
 export function TeamComparison({
   homeTeam,
   awayTeam,
   teamComparison,
+  headToHead,
 }: TeamComparisonProps) {
   const hasRecentGames = !!(homeTeam.recentGames?.length || awayTeam.recentGames?.length);
 
@@ -54,6 +58,24 @@ export function TeamComparison({
           <div className="flex items-center justify-between">
             <RecentGamesDisplay games={homeTeam.recentGames} align="left" />
             <RecentGamesDisplay games={awayTeam.recentGames} align="right" />
+          </div>
+        </div>
+      )}
+
+      {/* 상대 전적 */}
+      {headToHead && headToHead.totalGames > 0 && (
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="text-xs font-medium text-gray-500 mb-2 text-center">
+            상대 전적 (최근 {headToHead.totalGames}경기)
+          </div>
+          <div className="flex items-center justify-center gap-4 text-sm">
+            <span className={headToHead.homeWins > headToHead.awayWins ? 'text-blue-600 font-bold' : 'text-gray-600'}>
+              {headToHead.homeWins}승
+            </span>
+            <span className="text-gray-400">vs</span>
+            <span className={headToHead.awayWins > headToHead.homeWins ? 'text-blue-600 font-bold' : 'text-gray-600'}>
+              {headToHead.awayWins}승
+            </span>
           </div>
         </div>
       )}

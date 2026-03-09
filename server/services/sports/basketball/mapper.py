@@ -156,6 +156,11 @@ class BasketballMapper(BaseResponseMapper):
             "away_team_all_w_cn": "away_wins",
             "home_team_all_l_cn": "home_losses",
             "away_team_all_l_cn": "away_losses",
+            # Head-to-head (상대전적)
+            "home_team_vs_w_cn": "home_h2h_wins",
+            "home_team_vs_l_cn": "home_h2h_losses",
+            "away_team_vs_w_cn": "away_h2h_wins",
+            "away_team_vs_l_cn": "away_h2h_losses",
             # Recent 5 games
             "home_team_5_w_cn": "home_recent_wins",
             "home_team_5_l_cn": "home_recent_losses",

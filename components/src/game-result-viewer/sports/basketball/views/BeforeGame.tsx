@@ -30,6 +30,7 @@ export function BeforeGame({ data }: BeforeGameProps) {
         homeTeam={data.homeTeam}
         awayTeam={data.awayTeam}
         teamComparison={data.teamComparison}
+        headToHead={data.headToHead}
       />
 
     </div>
