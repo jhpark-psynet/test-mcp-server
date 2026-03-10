@@ -7,6 +7,43 @@ from server.handlers._common import safe_int, get_team_logo_url, build_recent_ga
 logger = logging.getLogger(__name__)
 
 
+def _calc_rate(numerator: int, denominator: int, decimals: int = 3) -> str:
+  """원시 카운트에서 비율 계산. 분모 0이면 .000 반환."""
+  if denominator <= 0:
+    return f"0.{'0' * decimals}"
+  return f"{numerator / denominator:.{decimals}f}"
+
+
+_ZERO_RATE_3 = {"0.000", ".000", "0", ""}
+_ZERO_RATE_2 = {"0.00", "0", ""}
+
+
+def _resolve_batter_avg(b: Dict[str, Any]) -> str:
+  api_val = str(b.get("hra_rt", ".000"))
+  if api_val not in _ZERO_RATE_3:
+    return api_val
+  ab = safe_int(b.get("ab_cn"))
+  hits = safe_int(b.get("hit_cn"))
+  return _calc_rate(hits, ab) if ab > 0 else "0.000"
+
+
+def _resolve_batter_obp(b: Dict[str, Any]) -> str:
+  api_val = str(b.get("obp_rt", ".000"))
+  if api_val not in _ZERO_RATE_3:
+    return api_val
+  ab = safe_int(b.get("ab_cn"))
+  hits = safe_int(b.get("hit_cn"))
+  walks = safe_int(b.get("bb_cn"))
+  return _calc_rate(hits + walks, ab + walks) if ab > 0 else "0.000"
+
+
+def _resolve_batter_ops(b: Dict[str, Any]) -> str:
+  api_val = b.get("ops_rt") or ".000"  # None/falsy → ".000" → _ZERO_RATE_3 → "-"
+  if str(api_val) not in _ZERO_RATE_3:
+    return str(api_val)
+  return "-"
+
+
 def _build_inning_scores(inning_scores_raw: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
   """야구 이닝별 점수 파싱."""
   result = []
@@ -23,29 +60,53 @@ def _build_inning_scores(inning_scores_raw: List[Dict[str, Any]]) -> List[Dict[s
 
 
 def _build_baseball_batters(batters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-  """야구 타자 스탯 빌드."""
-  result = []
+  """야구 타자 스탯 빌드. player_id로 중복 제거 (API가 타석별로 중복 반환)."""
+  seen: Dict[str, Dict[str, Any]] = {}
   for b in batters:
-    result.append({
+    player_id = b.get("player_id") or b.get("player_name", "")
+    seen[player_id] = {
       "batOrder": safe_int(b.get("bat_order_no")),
       "name": b.get("player_name", "Unknown"),
-      "position": b.get("pos_sc", "-"),
+      "position": b.get("pos_sc") or b.get("position", "-"),
       "atBats": safe_int(b.get("ab_cn")),
       "hits": safe_int(b.get("hit_cn")),
       "homeRuns": safe_int(b.get("hr_cn")),
       "rbi": safe_int(b.get("rbi_cn")),
       "walks": safe_int(b.get("bb_cn")),
       "strikeouts": safe_int(b.get("kk_cn")),
-      "avg": str(b.get("hra_rt", ".000")),
-      "obp": str(b.get("obp_rt", ".000")),
-      "ops": str(b.get("ops_rt", ".000")),
-    })
-  return result
+      "avg": _resolve_batter_avg(b),
+      "obp": _resolve_batter_obp(b),
+      "ops": _resolve_batter_ops(b),
+    }
+  return sorted(seen.values(), key=lambda x: x["batOrder"])
 
 
-def _build_baseball_pitchers(pitchers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-  """야구 투수 스탯 빌드."""
-  result = []
+def _resolve_pitcher_era(p: Dict[str, Any]) -> str:
+  """ERA 반환. API 응답값 그대로 사용, 없거나 0이면 "-"."""
+  api_val = p.get("era_rt")
+  if not api_val or str(api_val) in _ZERO_RATE_2:
+    return "-"
+  return str(api_val)
+
+
+def _resolve_pitcher_whip(p: Dict[str, Any]) -> str:
+  api_val = p.get("whip_rt")
+  if not api_val:
+    return "-"
+  val_str = str(api_val)
+  return "-" if val_str in _ZERO_RATE_2 else val_str
+
+
+def _build_baseball_pitchers(
+  pitchers: List[Dict[str, Any]], starter_id: str = ""
+) -> List[Dict[str, Any]]:
+  """야구 투수 스탯 빌드. player_id로 중복 제거 (API가 이닝별로 중복 반환).
+
+  Args:
+    pitchers: Raw pitcher data from API
+    starter_id: Starting pitcher player_id to mark as isStarter=True
+  """
+  seen: Dict[str, Dict[str, Any]] = {}
   for p in pitchers:
     result_str = ""
     if p.get("w_yn") == "Y":
@@ -59,9 +120,11 @@ def _build_baseball_pitchers(pitchers: List[Dict[str, Any]]) -> List[Dict[str, A
     elif p.get("bs_yn") == "Y":
       result_str = "BS"
 
-    result.append({
+    player_id = p.get("player_id") or p.get("player_name", "")
+    seen[player_id] = {
       "turnNo": safe_int(p.get("turn_no")),
       "name": p.get("player_name", "Unknown"),
+      "isStarter": bool(starter_id and player_id == starter_id),
       "result": result_str,
       "innings": str(p.get("pitch_inning", "0")),
       "pitchCount": safe_int(p.get("pit_cn")),
@@ -69,10 +132,11 @@ def _build_baseball_pitchers(pitchers: List[Dict[str, Any]]) -> List[Dict[str, A
       "strikeouts": safe_int(p.get("kk_cn")),
       "runs": safe_int(p.get("r_cn")),
       "earnedRuns": safe_int(p.get("er_cn")),
-      "era": str(p.get("era_rt", "0.00")),
-      "whip": str(p.get("whip_rt", "0.00")),
-    })
-  return result
+      "era": _resolve_pitcher_era(p),
+      "whip": _resolve_pitcher_whip(p),
+    }
+  # 선발투수 맨 위, 나머지는 turnNo 순
+  return sorted(seen.values(), key=lambda x: (0 if x["isStarter"] else 1, x["turnNo"]))
 
 
 def _build_baseball_recent_games(vs_info: Dict[str, Any], side: str) -> List[str]:
@@ -115,10 +179,16 @@ async def build_baseball_game_response(
 
   game_info = total_info.get("gameInfo", {})
 
-  home_team_name = game_info.get("home_team_name") or ""
-  away_team_name = game_info.get("away_team_name") or ""
-  if not home_team_name and not away_team_name:
-    raise ValueError("경기 데이터를 불러올 수 없습니다")
+  home_team_name = (
+    game_info.get("home_team_name")
+    or total_info.get("homeTeamInfo", {}).get("home_team_name")
+    or "홈팀"
+  )
+  away_team_name = (
+    game_info.get("away_team_name")
+    or total_info.get("awayTeamInfo", {}).get("away_team_name")
+    or "원정팀"
+  )
 
   home_team_info = total_info.get("homeTeamInfo", {})
   away_team_info = total_info.get("awayTeamInfo", {})
@@ -138,6 +208,8 @@ async def build_baseball_game_response(
 
   home_team_id = game_info.get("home_team_id", "")
   away_team_id = game_info.get("away_team_id", "")
+  home_starter_id = game_info.get("home_starter_id", "")
+  away_starter_id = game_info.get("away_starter_id", "")
 
   # Inning scores (shared between home and away teams)
   inning_scores = _build_inning_scores(inning_scores_raw)
@@ -145,8 +217,8 @@ async def build_baseball_game_response(
   # Batter/pitcher lists
   home_batters = _build_baseball_batters(batter_stat.get("home", []))
   away_batters = _build_baseball_batters(batter_stat.get("away", []))
-  home_pitchers = _build_baseball_pitchers(pitcher_stat.get("home", []))
-  away_pitchers = _build_baseball_pitchers(pitcher_stat.get("away", []))
+  home_pitchers = _build_baseball_pitchers(pitcher_stat.get("home", []), home_starter_id)
+  away_pitchers = _build_baseball_pitchers(pitcher_stat.get("away", []), away_starter_id)
 
   # Game records from totalStatInfo
   game_records: List[Dict[str, Any]] = []
@@ -171,8 +243,12 @@ async def build_baseball_game_response(
       home_score = calc_home
       away_score = calc_away
 
-  # League normalization
-  league_name = game_info.get("league_name") or "KBO리그"
+  # League normalization: API name → fallback to ID lookup → default
+  league_name = (game_info.get("league_name") or "").strip()
+  if not league_name:
+    league_id = str(game_info.get("league_id", ""))
+    id_to_name = {v: k for k, v in client.get_league_id_map().items()}
+    league_name = id_to_name.get(league_id, "KBO리그")
   league = league_name
 
   result: Dict[str, Any] = {

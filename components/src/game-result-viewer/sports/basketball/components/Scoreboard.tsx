@@ -11,15 +11,6 @@ interface ScoreboardProps {
 }
 
 export function Scoreboard({ league, date, time, status, venue, homeTeam, awayTeam }: ScoreboardProps) {
-  const getLeagueColor = (league: string) => {
-    switch (league) {
-      case 'NBA': return 'text-blue-600';
-      case 'KBL': return 'text-orange-600';
-      case 'WKBL': return 'text-purple-600';
-      default: return 'text-gray-700';
-    }
-  };
-
   const getStatusColor = (status: GameStatus) => {
     switch (status) {
       case '종료': return 'text-gray-600';
@@ -47,7 +38,7 @@ export function Scoreboard({ league, date, time, status, venue, homeTeam, awayTe
       <div className="flex justify-between items-center px-3 py-1.5 border-b border-gray-100">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <span className={`font-semibold text-sm ${getLeagueColor(league)}`}>{league}</span>
+            <span className="font-semibold text-sm text-blue-600">{league}</span>
             <span className="text-gray-600 text-sm">{date}</span>
             {time && status === '예정' && (
               <span className="text-gray-700 text-sm">{time}</span>

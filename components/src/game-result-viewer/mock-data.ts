@@ -286,15 +286,15 @@ export const mockBaseballLiveData: BaseballGameData = {
       { inning: 5, homeScore: '-', awayScore: '-' },
     ],
     batters: [
-      { batOrder: 1, name: '홍창기', position: 'LF', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '.310', obp: '.380', ops: '.830' },
-      { batOrder: 2, name: '오지환', position: 'SS', atBats: 2, hits: 2, homeRuns: 0, rbi: 1, walks: 0, strikeouts: 0, avg: '.295', obp: '.365', ops: '.820' },
-      { batOrder: 3, name: '김현수', position: 'DH', atBats: 2, hits: 1, homeRuns: 1, rbi: 2, walks: 0, strikeouts: 1, avg: '.302', obp: '.375', ops: '.920' },
-      { batOrder: 4, name: '박해민', position: 'CF', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '.278', obp: '.340', ops: '.760' },
-      { batOrder: 5, name: '문보경', position: '3B', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '.255', obp: '.320', ops: '.720' },
-      { batOrder: 6, name: '박동원', position: 'C', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 1, strikeouts: 0, avg: '.245', obp: '.325', ops: '.695' },
-      { batOrder: 7, name: '문성주', position: 'RF', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '.260', obp: '.318', ops: '.715' },
-      { batOrder: 8, name: '신민재', position: '2B', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '.235', obp: '.290', ops: '.660' },
-      { batOrder: 9, name: '김범석', position: '1B', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '.218', obp: '.275', ops: '.610' },
+      { batOrder: 1, name: '홍창기', position: 'LF', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '0.310', obp: '0.380', ops: '0.830' },
+      { batOrder: 2, name: '오지환', position: 'SS', atBats: 2, hits: 2, homeRuns: 0, rbi: 1, walks: 0, strikeouts: 0, avg: '0.295', obp: '0.365', ops: '0.820' },
+      { batOrder: 3, name: '김현수', position: 'DH', atBats: 2, hits: 1, homeRuns: 1, rbi: 2, walks: 0, strikeouts: 1, avg: '0.302', obp: '0.375', ops: '0.920' },
+      { batOrder: 4, name: '박해민', position: 'CF', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '0.278', obp: '0.340', ops: '0.760' },
+      { batOrder: 5, name: '문보경', position: '3B', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.255', obp: '0.320', ops: '0.720' },
+      { batOrder: 6, name: '박동원', position: 'C', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 1, strikeouts: 0, avg: '0.245', obp: '0.325', ops: '0.695' },
+      { batOrder: 7, name: '문성주', position: 'RF', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '0.260', obp: '0.318', ops: '0.715' },
+      { batOrder: 8, name: '신민재', position: '2B', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.235', obp: '0.290', ops: '0.660' },
+      { batOrder: 9, name: '김범석', position: '1B', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.218', obp: '0.275', ops: '0.610' },
     ],
     pitchers: [
       { turnNo: 1, name: '고영표', result: '', innings: '4.0', pitchCount: 68, hits: 4, strikeouts: 5, runs: 2, earnedRuns: 2, era: '3.24', whip: '1.18' },
@@ -317,15 +317,15 @@ export const mockBaseballLiveData: BaseballGameData = {
       { inning: 5, homeScore: '-', awayScore: '-' },
     ],
     batters: [
-      { batOrder: 1, name: '박찬호', position: 'SS', atBats: 2, hits: 1, homeRuns: 0, rbi: 1, walks: 0, strikeouts: 0, avg: '.288', obp: '.350', ops: '.790' },
-      { batOrder: 2, name: '소크라테스', position: 'LF', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '.305', obp: '.372', ops: '.875' },
-      { batOrder: 3, name: '최형우', position: 'DH', atBats: 2, hits: 1, homeRuns: 0, rbi: 1, walks: 0, strikeouts: 0, avg: '.315', obp: '.390', ops: '.910' },
-      { batOrder: 4, name: '나성범', position: 'RF', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 1, strikeouts: 1, avg: '.275', obp: '.345', ops: '.790' },
-      { batOrder: 5, name: '김도영', position: '3B', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '.298', obp: '.362', ops: '.840' },
-      { batOrder: 6, name: '한준수', position: 'C', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 2, avg: '.230', obp: '.288', ops: '.640' },
-      { batOrder: 7, name: '이우성', position: 'CF', atBats: 1, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '.248', obp: '.308', ops: '.695' },
-      { batOrder: 8, name: '박민', position: '2B', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '.220', obp: '.278', ops: '.620' },
-      { batOrder: 9, name: '김태군', position: '1B', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '.210', obp: '.265', ops: '.590' },
+      { batOrder: 1, name: '박찬호', position: 'SS', atBats: 2, hits: 1, homeRuns: 0, rbi: 1, walks: 0, strikeouts: 0, avg: '0.288', obp: '0.350', ops: '0.790' },
+      { batOrder: 2, name: '소크라테스', position: 'LF', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.305', obp: '0.372', ops: '0.875' },
+      { batOrder: 3, name: '최형우', position: 'DH', atBats: 2, hits: 1, homeRuns: 0, rbi: 1, walks: 0, strikeouts: 0, avg: '0.315', obp: '0.390', ops: '0.910' },
+      { batOrder: 4, name: '나성범', position: 'RF', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 1, strikeouts: 1, avg: '0.275', obp: '0.345', ops: '0.790' },
+      { batOrder: 5, name: '김도영', position: '3B', atBats: 2, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '0.298', obp: '0.362', ops: '0.840' },
+      { batOrder: 6, name: '한준수', position: 'C', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 2, avg: '0.230', obp: '0.288', ops: '0.640' },
+      { batOrder: 7, name: '이우성', position: 'CF', atBats: 1, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.248', obp: '0.308', ops: '0.695' },
+      { batOrder: 8, name: '박민', position: '2B', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.220', obp: '0.278', ops: '0.620' },
+      { batOrder: 9, name: '김태군', position: '1B', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '0.210', obp: '0.265', ops: '0.590' },
     ],
     pitchers: [
       { turnNo: 1, name: '안우진', result: '', innings: '4.0', pitchCount: 72, hits: 5, strikeouts: 4, runs: 3, earnedRuns: 3, era: '3.80', whip: '1.35' },
@@ -335,6 +335,85 @@ export const mockBaseballLiveData: BaseballGameData = {
 
 // 야구 종료 목 데이터 (baseball/mockData.ts에서 re-export)
 export { mockBaseballFinishedData };
+
+// 야구 국제대회 목 데이터 (WBC 등 - ops/whip 없음)
+export const mockBaseballInternationalData: BaseballGameData = {
+  sportType: 'baseball',
+  league: 'WBC',
+  date: '03.10',
+  status: '종료',
+  venue: 'Tokyo Dome',
+  homeStarterName: '류현진',
+  awayStarterName: 'Shane Baz',
+  homeTeam: {
+    name: '대한민국',
+    shortName: '대한민국',
+    logo: '',
+    score: 3,
+    record: '',
+    teamHits: 8,
+    teamErrors: 1,
+    inningScores: [
+      { inning: 1, homeScore: '1', awayScore: '0' },
+      { inning: 2, homeScore: '0', awayScore: '2' },
+      { inning: 3, homeScore: '2', awayScore: '0' },
+      { inning: 4, homeScore: '0', awayScore: '0' },
+      { inning: 5, homeScore: '0', awayScore: '1' },
+      { inning: 6, homeScore: '0', awayScore: '0' },
+      { inning: 7, homeScore: '0', awayScore: '0' },
+      { inning: 8, homeScore: '0', awayScore: '0' },
+      { inning: 9, homeScore: 'X', awayScore: '0' },
+    ],
+    batters: [
+      { batOrder: 1, name: '이정후', position: 'CF', atBats: 4, hits: 2, homeRuns: 0, rbi: 1, walks: 0, strikeouts: 1, avg: '0.500', obp: '0.500' },
+      { batOrder: 2, name: '김하성', position: 'SS', atBats: 4, hits: 1, homeRuns: 0, rbi: 0, walks: 1, strikeouts: 0, avg: '0.250', obp: '0.400' },
+      { batOrder: 3, name: '박병호', position: '1B', atBats: 3, hits: 1, homeRuns: 1, rbi: 2, walks: 1, strikeouts: 1, avg: '0.333', obp: '0.500' },
+      { batOrder: 4, name: '바자나', position: 'DH', atBats: 4, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 2, avg: '0.250', obp: '0.250' },
+      { batOrder: 5, name: '양의지', position: 'C', atBats: 4, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.250', obp: '0.250' },
+      { batOrder: 6, name: '허경민', position: '3B', atBats: 3, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 0, avg: '0.333', obp: '0.333' },
+      { batOrder: 7, name: '나성범', position: 'RF', atBats: 3, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 2, avg: '0.333', obp: '0.333' },
+      { batOrder: 8, name: '오지환', position: '2B', atBats: 3, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.000', obp: '0.000' },
+      { batOrder: 9, name: '이용규', position: 'LF', atBats: 2, hits: 0, homeRuns: 0, rbi: 0, walks: 1, strikeouts: 0, avg: '0.000', obp: '0.333' },
+    ],
+    pitchers: [
+      { turnNo: 1, name: '류현진', isStarter: true, result: '승', innings: '5.0', pitchCount: 82, hits: 4, strikeouts: 5, runs: 2, earnedRuns: 2, era: '-' },
+      { turnNo: 2, name: '고우석', result: '홀', innings: '2.0', pitchCount: 28, hits: 1, strikeouts: 3, runs: 0, earnedRuns: 0, era: '-' },
+      { turnNo: 3, name: '오승환', result: '세', innings: '2.0', pitchCount: 24, hits: 0, strikeouts: 2, runs: 0, earnedRuns: 0, era: '-' },
+    ],
+  },
+  awayTeam: {
+    name: '미국',
+    shortName: '미국',
+    logo: '',
+    score: 3,
+    record: '',
+    teamHits: 5,
+    teamErrors: 0,
+    inningScores: [
+      { inning: 1, homeScore: '1', awayScore: '0' },
+      { inning: 2, homeScore: '0', awayScore: '2' },
+      { inning: 3, homeScore: '2', awayScore: '0' },
+      { inning: 4, homeScore: '0', awayScore: '0' },
+      { inning: 5, homeScore: '0', awayScore: '1' },
+      { inning: 6, homeScore: '0', awayScore: '0' },
+      { inning: 7, homeScore: '0', awayScore: '0' },
+      { inning: 8, homeScore: '0', awayScore: '0' },
+      { inning: 9, homeScore: 'X', awayScore: '0' },
+    ],
+    batters: [
+      { batOrder: 1, name: 'Trea Turner', position: 'SS', atBats: 4, hits: 1, homeRuns: 0, rbi: 1, walks: 0, strikeouts: 1, avg: '0.250', obp: '0.250' },
+      { batOrder: 2, name: 'Mike Trout', position: 'CF', atBats: 4, hits: 2, homeRuns: 1, rbi: 2, walks: 0, strikeouts: 1, avg: '0.500', obp: '0.500' },
+      { batOrder: 3, name: 'Mookie Betts', position: 'RF', atBats: 3, hits: 1, homeRuns: 0, rbi: 0, walks: 1, strikeouts: 0, avg: '0.333', obp: '0.500' },
+      { batOrder: 4, name: 'Paul Goldschmidt', position: '1B', atBats: 4, hits: 0, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 2, avg: '0.000', obp: '0.000' },
+      { batOrder: 5, name: 'Nolan Arenado', position: '3B', atBats: 3, hits: 1, homeRuns: 0, rbi: 0, walks: 0, strikeouts: 1, avg: '0.333', obp: '0.333' },
+    ],
+    pitchers: [
+      { turnNo: 1, name: 'Shane Baz', isStarter: true, result: '패', innings: '4.0', pitchCount: 76, hits: 6, strikeouts: 4, runs: 3, earnedRuns: 3, era: '-' },
+      { turnNo: 2, name: 'Devin Williams', result: '', innings: '3.0', pitchCount: 42, hits: 2, strikeouts: 4, runs: 0, earnedRuns: 0, era: '-' },
+      { turnNo: 3, name: 'Edwin Diaz', result: '', innings: '2.0', pitchCount: 28, hits: 0, strikeouts: 3, runs: 0, earnedRuns: 0, era: '-' },
+    ],
+  },
+};
 
 // ============================================================
 // SOCCER
@@ -660,6 +739,7 @@ export const MOCK_DATA_MAP: Record<string, GameData> = {
   'baseball_예정': mockBaseballBeforeData,
   'baseball_진행중': mockBaseballLiveData,
   'baseball_종료': mockBaseballFinishedData,
+  'baseball_국제': mockBaseballInternationalData,
   // 축구
   'soccer_예정': mockSoccerBeforeData,
   'soccer_진행중': mockSoccerLiveData,
@@ -673,7 +753,7 @@ export const MOCK_DATA_MAP: Record<string, GameData> = {
 // DevPanel에서 스포츠별 선택 가능한 상태 목록
 export const SPORT_STATES: Record<string, string[]> = {
   basketball: ['예정', '진행중', '종료'],
-  baseball: ['예정', '진행중', '종료'],
+  baseball: ['예정', '진행중', '종료', '국제'],
   soccer: ['예정', '진행중', '종료'],
   volleyball: ['예정', '진행중', '종료'],
 };

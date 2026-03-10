@@ -76,7 +76,7 @@ class VolleyballClient(BaseSportsClient):
 
     def get_status_map(self) -> Dict[str, str]:
         """Return volleyball-specific status mapping."""
-        return {"F": "경기종료", "I": "경기중", "B": "경기전"}
+        return {"F": "종료", "I": "진행중", "B": "예정"}
 
     def get_extra_team_fields(self, team_id: str, score: int) -> Dict[str, Any]:
         """Return volleyball-specific extra team fields (setsWon, colors)."""

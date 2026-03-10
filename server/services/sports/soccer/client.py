@@ -94,7 +94,7 @@ class SoccerClient(BaseSportsClient):
             logger.error(f"Failed to fetch soccer team stats from API: {e}")
             raise
 
-    async def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+    async def get_player_stats(self, game_id: str, home_team_id: str = "", away_team_id: str = "") -> Optional[List[Dict[str, Any]]]:
         """Get player statistics for a soccer game."""
         if self.use_mock:
             stats = MOCK_SOCCER_PLAYER_STATS.get(game_id)

@@ -165,7 +165,7 @@ class BasketballClient(BaseSportsClient):
             logger.error(f"Failed to fetch basketball team stats from API: {e}")
             raise
 
-    async def get_player_stats(self, game_id: str) -> Optional[List[Dict[str, Any]]]:
+    async def get_player_stats(self, game_id: str, home_team_id: str = "", away_team_id: str = "") -> Optional[List[Dict[str, Any]]]:
         """Get player statistics for a basketball game.
 
         Args:

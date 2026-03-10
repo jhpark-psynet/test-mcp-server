@@ -27,15 +27,16 @@ export interface BaseballBatterStats {
   rbi: number;
   walks: number;
   strikeouts: number;
-  avg: string;   // ".312" 형식
+  avg: string;   // "0.312" 형식
   obp: string;
-  ops: string;
+  ops?: string;
 }
 
 // 투수 스탯
 export interface BaseballPitcherStats {
   turnNo: number;
   name: string;
+  isStarter?: boolean;
   result: string;      // "승", "패", "세", "홀", "BS", ""
   innings: string;     // "6.0" 형식
   pitchCount: number;
@@ -43,8 +44,8 @@ export interface BaseballPitcherStats {
   strikeouts: number;
   runs: number;
   earnedRuns: number;
-  era: string;
-  whip: string;
+  era?: string;
+  whip?: string;
 }
 
 // 팀 정보
@@ -115,12 +116,13 @@ export const BaseballBatterStatsSchema = z.object({
   strikeouts: z.number(),
   avg: z.string(),
   obp: z.string(),
-  ops: z.string(),
+  ops: z.string().optional(),
 });
 
 export const BaseballPitcherStatsSchema = z.object({
   turnNo: z.number(),
   name: z.string(),
+  isStarter: z.boolean().optional(),
   result: z.string(),
   innings: z.string(),
   pitchCount: z.number(),
@@ -128,8 +130,8 @@ export const BaseballPitcherStatsSchema = z.object({
   strikeouts: z.number(),
   runs: z.number(),
   earnedRuns: z.number(),
-  era: z.string(),
-  whip: z.string(),
+  era: z.string().optional(),
+  whip: z.string().optional(),
 });
 
 export const BaseballTeamInfoSchema = z.object({

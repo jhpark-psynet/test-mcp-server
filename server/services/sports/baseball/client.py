@@ -49,7 +49,7 @@ class BaseballClient(BaseSportsClient):
 
         Baseball uses '경기전' instead of '예정'.
         """
-        return {"F": "종료", "I": "진행중", "B": "경기전"}
+        return {"F": "종료", "I": "진행중", "B": "예정"}
 
     async def get_games_by_sport(self, date: str) -> List[Dict[str, Any]]:
         """Get baseball games for a specific date.

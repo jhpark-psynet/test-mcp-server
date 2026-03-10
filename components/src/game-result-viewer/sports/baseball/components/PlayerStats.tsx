@@ -80,20 +80,22 @@ function BatterTable({ batters }: { batters: BaseballBatterStats[] }) {
     return <div className="text-center text-gray-400 text-sm py-4">데이터 없음</div>;
   }
 
+  const showOps = batters.some(b => b.ops !== undefined && b.ops !== '-');
+
   return (
     <table className="w-full text-xs">
       <thead>
         <tr className="border-b border-gray-200">
           <th className="text-left px-1 py-1 text-gray-600 font-semibold">타자</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">타석</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">안타</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">홈런</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">타점</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">볼</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">삼진</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10">타율</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10">출루</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10">OPS</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">타석</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">안타</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">홈런</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">타점</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">볼</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">삼진</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10 whitespace-nowrap">타율</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10 whitespace-nowrap">출루</th>
+          {showOps && <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10 whitespace-nowrap">OPS</th>}
         </tr>
       </thead>
       <tbody>
@@ -118,7 +120,7 @@ function BatterTable({ batters }: { batters: BaseballBatterStats[] }) {
             <td className="text-center tabular-nums px-1 text-gray-700">{batter.strikeouts}</td>
             <td className="text-center tabular-nums px-1 text-gray-600">{batter.avg}</td>
             <td className="text-center tabular-nums px-1 text-gray-600">{batter.obp}</td>
-            <td className="text-center tabular-nums px-1 text-gray-600">{batter.ops}</td>
+            {showOps && <td className="text-center tabular-nums px-1 text-gray-600">{batter.ops}</td>}
           </tr>
         ))}
       </tbody>
@@ -138,19 +140,22 @@ function PitcherTable({ pitchers }: { pitchers: BaseballPitcherStats[] }) {
     return 'text-gray-600';
   };
 
+  const showEra = pitchers.some(p => p.era !== undefined && p.era !== '-');
+  const showWhip = pitchers.some(p => p.whip !== undefined && p.whip !== '-');
+
   return (
     <table className="w-full text-xs">
       <thead>
         <tr className="border-b border-gray-200">
           <th className="text-left px-1 py-1 text-gray-600 font-semibold">투수</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-8">이닝</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">구수</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">피안</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">탈삼</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">실점</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6">자책</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10">ERA</th>
-          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10">WHIP</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-8 whitespace-nowrap">이닝</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">구수</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">피안</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">탈삼</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">실점</th>
+          <th className="text-center px-1 py-1 text-gray-600 font-semibold w-6 whitespace-nowrap">자책</th>
+          {showEra && <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10 whitespace-nowrap">ERA</th>}
+          {showWhip && <th className="text-center px-1 py-1 text-gray-600 font-semibold w-10 whitespace-nowrap">WHIP</th>}
         </tr>
       </thead>
       <tbody>
@@ -158,6 +163,9 @@ function PitcherTable({ pitchers }: { pitchers: BaseballPitcherStats[] }) {
           <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
             <td className="py-1 px-1">
               <div className="flex items-center gap-1">
+                {pitcher.isStarter && (
+                  <span className="text-xs bg-gray-100 text-gray-500 px-1 rounded">선발</span>
+                )}
                 <span className="text-gray-800">{pitcher.name}</span>
                 {pitcher.result && (
                   <span className={`text-xs ${getResultColor(pitcher.result)}`}>
@@ -172,8 +180,8 @@ function PitcherTable({ pitchers }: { pitchers: BaseballPitcherStats[] }) {
             <td className="text-center tabular-nums px-1 text-gray-700">{pitcher.strikeouts}</td>
             <td className="text-center tabular-nums px-1 text-gray-700">{pitcher.runs}</td>
             <td className="text-center tabular-nums px-1 text-gray-700">{pitcher.earnedRuns}</td>
-            <td className="text-center tabular-nums px-1 text-gray-600">{pitcher.era}</td>
-            <td className="text-center tabular-nums px-1 text-gray-600">{pitcher.whip}</td>
+            {showEra && <td className="text-center tabular-nums px-1 text-gray-600">{pitcher.era}</td>}
+            {showWhip && <td className="text-center tabular-nums px-1 text-gray-600">{pitcher.whip}</td>}
           </tr>
         ))}
       </tbody>

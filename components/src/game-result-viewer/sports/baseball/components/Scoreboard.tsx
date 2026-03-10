@@ -83,6 +83,25 @@ export function Scoreboard({
         </div>
       )}
 
+      {/* 승리/패전/세이브 투수 */}
+      {status !== '예정' && (() => {
+        const allPitchers = [
+          ...homeTeam.pitchers.map(p => ({ ...p, teamName: homeTeam.shortName })),
+          ...awayTeam.pitchers.map(p => ({ ...p, teamName: awayTeam.shortName })),
+        ];
+        const win = allPitchers.find(p => p.result === '승');
+        const lose = allPitchers.find(p => p.result === '패');
+        const save = allPitchers.find(p => p.result === '세');
+        if (!win && !lose) return null;
+        return (
+          <div className="px-3 py-1.5 border-t border-gray-100 flex gap-4 text-xs text-gray-600">
+            {win && <span><span className="text-blue-600 font-semibold">승</span> {win.name}</span>}
+            {lose && <span><span className="text-red-600 font-semibold">패</span> {lose.name}</span>}
+            {save && <span><span className="text-green-600 font-semibold">세</span> {save.name}</span>}
+          </div>
+        );
+      })()}
+
       {/* 이닝별 점수표 */}
       {status !== '예정' && hasInnings && (
         <div className="border-t border-gray-100 overflow-x-auto">
