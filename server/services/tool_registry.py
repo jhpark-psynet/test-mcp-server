@@ -62,9 +62,6 @@ def build_tools(
                     "\n- Bluemings -> Yongin Samsung Life (WKBL)"
                     "\n- S-Birds -> Incheon Shinhan Bank (WKBL)"
                     "\n\nDo not expose the game_id to the user."
-                    "\nShow the list of games to the user in a table format."
-                    "\nChoose one important game from the list and call get_game_details to show it as a widget."
-                    "\n\nDo not expose the game_id to the user."
                     "\nShow the game list to the user in a table format."
                     "\nSelect one important match from the game list and call get_game_details to show it to the user with a widget."
                 ),
