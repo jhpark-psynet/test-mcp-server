@@ -2,6 +2,8 @@
 
 이 문서는 Test MCP Server를 Linux 서버에 직접 배포하는 방법을 설명합니다.
 
+> **지원 배포판**: Rocky Linux 8+, AlmaLinux 8+, RHEL 8+
+
 ## 목차
 
 - [사전 요구사항](#사전-요구사항)
@@ -19,7 +21,7 @@
 ## 사전 요구사항
 
 ### 시스템 요구사항
-- Linux (Ubuntu 20.04+, Debian 11+, 또는 호환 배포판)
+- Rocky Linux 8+, AlmaLinux 8+, RHEL 8+
 - Python 3.11 이상
 - Node.js 18 이상 (프론트엔드 빌드용)
 - 최소 1GB RAM
@@ -28,15 +30,38 @@
 ### 필수 패키지 설치
 
 ```bash
-# Ubuntu/Debian
-apt update
-apt install -y python3 python3-venv python3-pip nodejs npm curl
+# 패키지 업데이트
+sudo dnf update -y
+
+# 기본 패키지 설치
+sudo dnf install -y curl git
+
+# Python 3.12 설치
+# Rocky Linux 8: AppStream 모듈 사용
+sudo dnf install -y python3.12
+# Rocky Linux 9: 기본 python3가 3.12+
+# sudo dnf install -y python3
 
 # Python 버전 확인
-python3 --version  # 3.11 이상 필요
+python3.12 --version  # 3.11 이상 필요
 
-# Node.js 버전 확인
-node --version  # 18 이상 필요
+# uv 설치 (공식 인스톨러)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env   # 현재 쉘에 uv PATH 적용
+
+# Node.js 22 설치 (nvm)
+# nvm 설치
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.bashrc   # 현재 쉘에 nvm 활성화
+
+# Node.js 22 LTS 설치
+nvm install 22
+nvm use 22
+nvm alias default 22
+
+# 버전 확인
+node --version   # v22.x.x
+npm --version
 ```
 
 ---
@@ -54,17 +79,14 @@ cd ~/apps/test-mcp-server  # 홈 디렉토리 아래에 설치
 ### 2. Python 가상환경 설정
 
 ```bash
-# 가상환경 생성
-python3 -m venv .venv
+# 가상환경 생성 (Python 3.11 명시)
+uv venv --python 3.12 .venv
 
 # 가상환경 활성화
 source .venv/bin/activate
 
-# pip 업그레이드
-pip install --upgrade pip
-
 # 의존성 설치
-pip install -r server/requirements.txt
+uv pip install -r server/requirements.txt
 ```
 
 ### 3. 프론트엔드 빌드
@@ -313,13 +335,26 @@ Nginx를 리버스 프록시로 사용하여 HTTPS를 적용합니다.
 #### 4.1 Nginx 설치
 
 ```bash
-sudo apt update && sudo apt install -y nginx
+sudo dnf install -y nginx
+sudo systemctl enable --now nginx
 ```
 
-#### 4.2 HTTP 기본 설정
+#### 4.2 SELinux 설정 (Rocky Linux 필수)
+
+Rocky Linux는 SELinux가 기본 활성화되어 있습니다. Nginx가 백엔드로 프록시하려면 아래 설정이 필요합니다.
 
 ```bash
-sudo tee /etc/nginx/sites-available/mcp-server << 'EOF'
+# Nginx → 백엔드 프록시 연결 허용
+sudo setsebool -P httpd_can_network_connect 1
+
+# 현재 상태 확인
+getsebool httpd_can_network_connect
+```
+
+#### 4.3 HTTP 기본 설정
+
+```bash
+sudo tee /etc/nginx/conf.d/mcp-server.conf << 'EOF'
 server {
     listen 80;
     server_name your-domain.com;
@@ -341,18 +376,17 @@ server {
 }
 EOF
 
-sudo ln -sf /etc/nginx/sites-available/mcp-server /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-#### 4.3 SSL 인증서 설정
+#### 4.4 SSL 인증서 설정
 
 **방법 A: Let's Encrypt (무료)**
 
 ```bash
-# Certbot 설치
-sudo apt install -y certbot python3-certbot-nginx
+# Certbot 설치 (EPEL 저장소 필요)
+sudo dnf install -y epel-release
+sudo dnf install -y certbot python3-certbot-nginx
 
 # 인증서 발급 및 Nginx 자동 설정
 sudo certbot --nginx -d your-domain.com
@@ -369,7 +403,7 @@ sudo certbot renew --dry-run
 # /usr/local/ssl/your-domain.crt     (인증서)
 # /usr/local/ssl/your-domain.key     (개인키)
 
-sudo tee /etc/nginx/sites-available/mcp-server << 'EOF'
+sudo tee /etc/nginx/conf.d/mcp-server.conf << 'EOF'
 server {
     listen 80;
     server_name your-domain.com;
@@ -404,7 +438,7 @@ EOF
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-#### 4.4 HTTPS 확인
+#### 4.5 HTTPS 확인
 
 ```bash
 # 로컬 확인
@@ -422,11 +456,14 @@ echo | openssl s_client -connect your-domain.com:443 2>/dev/null | openssl x509 
 필요한 포트만 개방하세요.
 
 ```bash
-# UFW 사용 시
-ufw allow 22/tcp    # SSH
-ufw allow 80/tcp    # HTTP (HTTPS 리다이렉트용)
-ufw allow 443/tcp   # HTTPS
-ufw enable
+# firewalld 사용 (Rocky Linux 기본)
+sudo firewall-cmd --permanent --add-service=ssh    # SSH (22)
+sudo firewall-cmd --permanent --add-service=http   # HTTP (80)
+sudo firewall-cmd --permanent --add-service=https  # HTTPS (443)
+sudo firewall-cmd --reload
+
+# 현재 규칙 확인
+sudo firewall-cmd --list-all
 
 # 내부 포트 8000은 외부에서 직접 접근 불가
 ```
@@ -551,7 +588,7 @@ source .venv/bin/activate
 which python  # .venv/bin/python 이어야 함
 
 # 의존성 확인
-pip list | grep -E "fastmcp|uvicorn|gunicorn"
+uv pip list | grep -E "fastmcp|uvicorn|gunicorn"
 
 # 수동 실행으로 에러 확인
 ENV=production python -c "from server.main import app; print('OK')"
@@ -630,11 +667,11 @@ ps aux --sort=-%mem | head -10
 
 ```bash
 # 1. 의존성 설치
-python3 -m venv .venv
+uv venv --python 3.11 .venv
 source .venv/bin/activate
-pip install -r server/requirements.txt
+uv pip install -r server/requirements.txt
 
-# 2. 프론트엔드 빌드
+# 2. 프론트엔드 빌드 (nvm으로 Node.js 20 활성화 후 실행)
 cd components && npm install && npm run build && cd ..
 
 # 3. 환경 설정
