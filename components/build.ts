@@ -63,6 +63,11 @@ async function buildWidget(file: string): Promise<BuildArtifact> {
 
   const createConfig = (): InlineConfig => ({
     plugins: [tailwindcss(), react()],
+    define: {
+      __WIDGET_EXTERNAL_LINK_URL__: JSON.stringify(
+        process.env.WIDGET_EXTERNAL_LINK_URL || 'https://myscorebot.ai/livescore'
+      ),
+    },
     esbuild: {
       jsx: "automatic",
       jsxImportSource: "react",

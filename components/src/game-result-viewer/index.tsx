@@ -247,7 +247,7 @@ function GameResultViewerApp() {
       <div style={{ maxWidth: '420px', margin: '0 auto' }}>
         <SportViewer data={gameData} />
         <a
-          href="https://home.psynet.co.kr/livescore"
+          href={__WIDGET_EXTERNAL_LINK_URL__}
           target="_blank"
           rel="noopener noreferrer"
           style={{
