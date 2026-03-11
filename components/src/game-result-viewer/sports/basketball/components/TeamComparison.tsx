@@ -206,10 +206,11 @@ function StatCompareRow({
   awayRaw: number;
   lowerIsBetter?: boolean;
 }) {
-  // 우위 판단
-  let homeBetter = homeRaw > awayRaw;
-  if (lowerIsBetter) homeBetter = homeRaw < awayRaw;
-  const awayBetter = !homeBetter && homeRaw !== awayRaw;
+  // 우위 판단 (NaN인 경우 비교 불가)
+  const bothValid = !isNaN(homeRaw) && !isNaN(awayRaw);
+  let homeBetter = bothValid && homeRaw > awayRaw;
+  if (lowerIsBetter) homeBetter = bothValid && homeRaw < awayRaw;
+  const awayBetter = bothValid && !homeBetter && homeRaw !== awayRaw;
 
   return (
     <div className="flex items-center justify-between text-sm">
@@ -229,7 +230,7 @@ function StatCompareRow({
 // - 58.60 -> 58.6% (이미 퍼센트로 전달된 경우)
 function formatPercent(value: string): string {
   const num = parseFloat(value);
-  if (isNaN(num)) return value;
+  if (isNaN(num)) return '-';
   // 이미 퍼센트 값인지 확인 (1보다 크면 이미 퍼센트)
   if (num > 1) {
     return `${num.toFixed(1)}%`;

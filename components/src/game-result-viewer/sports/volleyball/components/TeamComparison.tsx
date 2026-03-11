@@ -120,7 +120,7 @@ function TeamLogo({ team, size = 'md' }: { team: VolleyballTeamInfo; size?: 'sm'
       ) : (
         <div
           className={`${sizeClass} rounded-full flex items-center justify-center ${textSize} font-semibold text-white`}
-          style={{ background: `linear-gradient(135deg, ${team.primaryColor}, ${team.secondaryColor})` }}
+          style={{ background: `linear-gradient(135deg, ${team.primaryColor ?? '#3b82f6'}, ${team.secondaryColor ?? '#1d4ed8'})` }}
         >
           {team.shortName.slice(0, 2)}
         </div>

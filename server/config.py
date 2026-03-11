@@ -45,7 +45,7 @@ class Config(BaseSettings):
     )
 
     description_version: str = Field(
-        default="1.0.0",
+        default="1.0.1",
         alias="DESCRIPTION_VERSION",
         description="Version shown in tool descriptions"
     )

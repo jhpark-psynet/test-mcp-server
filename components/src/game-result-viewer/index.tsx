@@ -236,8 +236,10 @@ function GameResultViewerApp() {
   }
 
   const buttonText = gameData.status === '종료'
-    ? '상세 결과 보러가기'
-    : '커뮤니티 예측 보러가기';
+    ? '세부 경기기록 보기'
+    : gameData.status === '진행중'
+    ? '실시간 경기기록 및 알림 받기'
+    : '세부 전력비교 및 알림 받기';
 
   return (
     <>
